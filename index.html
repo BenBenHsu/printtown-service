@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 設備保養系統 v55</title>
+<title>普印通 設備保養系統 v60</title>
 <style>
 :root{--yellow:#ca8a04;--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -126,7 +126,7 @@ details.tag-editor>summary{cursor:pointer;font-weight:600}
 </head>
 <body>
 <header>
-  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v55</span></h1>
+  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v60</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="dash" class="active" onclick="go('dash')">儀表板</button>
     <button data-v="plan" onclick="go('plan')">保養客戶一覽</button>
@@ -151,7 +151,7 @@ const WIN = 183, M = WIN / MONTH;          // 近六個月視窗
 const WARN_CONS = 60, URGENT_DAYS = 21;   // 備料提醒：60 天內需備料；立即提醒：21 天內可能用完
 const WARN_SVC = 14, WARN_ABN_DAYS = 180;
 const EARLY_RATIO = 0.6, REPEAT_DAYS = 60;
-const KIND = {copier:'複合機', printer:'印表機', purifier:'商用空氣清淨機', ozone:'商用臭氧機', phi:'PHI商用除味機', nex:'NEX除味系統'};
+const KIND = {copier:'事務設備', printer:'事務設備', purifier:'商用空氣清淨機', ozone:'商用臭氧機', phi:'PHI商用除味機', nex:'NEX除味系統'};
 const kindIsPrint = k => !['purifier','phi','ozone','nex'].includes(k);   // V47：非列印機型不計張數、無色彩與選用功能
 const CYCLE_OPTS = [{m:1,label:'一個月',days:30},{m:2,label:'雙月',days:60},{m:3,label:'每季',days:90},{m:6,label:'半年',days:180}];
 const cycleOf = c => CYCLE_OPTS.find(o => o.m === (c && c.cycleMonths)) || CYCLE_OPTS[2];
@@ -163,8 +163,11 @@ const REPAIR_WARN = 1.5;   // 近30日維修 ≥ 前六個月月均 × 1.5 才�
 const TYPES = ['定期保養','維修','換耗材','建立客戶關係','軟體服務','送貨','抄表','其他'];
 // V55：「抄表」只記錄讀數（例如客戶回報、計價系統登打），不算到府保養：不影響保養週期、本月已保養與逾期判斷
 const isSvcLog = l => !!l && l.type !== '抄表';
-const CONTRACTS = ['計張','賣斷','零元機'];
-const CONTRACT_CLS = {計張:'t-info', 賣斷:'t-gray', 零元機:'t-warn'};
+// V57：合約型態改在「設備」上設定，選項依設備類別不同
+const OFFICE_CONTRACTS = ['計張', '賣斷', '零元機'];              // 事務設備（複合機、印表機）
+const AIR_CONTRACTS = ['租賃', '服務合約', '賣斷', '專案'];        // 異味處理與空氣設備（清淨機、臭氧機、PHI、NEX）
+const CONTRACTS = ['計張', '賣斷', '零元機', '租賃', '服務合約', '專案'];
+const CONTRACT_CLS = {計張:'t-info', 賣斷:'t-gray', 零元機:'t-warn', 租賃:'t-info', 服務合約:'t-ok', 專案:'t-warn'};
 const CATS = ['黑色碳粉','藍色碳粉','紅色碳粉','黃色碳粉','感光滾筒','回收盒','濾網','其他'];
 const CAT_COLOR = ['藍色碳粉','紅色碳粉','黃色碳粉'];
 const BASIS_LABEL = {bw:'黑色張數', color:'彩色張數', total:'總計張數', days:'天數'};
@@ -273,7 +276,8 @@ function cacheLocal() {
 const FEAT_LABEL = {warranty: '原廠保固資訊', tune: '設備優化確認', large: '彩色大尺寸張數'};
 let lastSavedLogId = null;   // V51：剛儲存的服務紀錄（列表中以淡黃色標示）
 let planCust = null, editLogId = null, planDevId = null, lastStockAlert = null, planCustEdit = false;           // 保養客戶一覽：目前展開的客戶、正在修改的服務紀錄
-function featOn(d, k) { return !!(d && d.feat && d.feat[k]); }
+// V60：選用功能為事務設備專用；商用空氣清淨機、臭氧機、PHI、NEX（異味處理）一律不顯示、不啟用
+function featOn(d, k) { return !!(d && kindIsPrint(d.kind) && d.feat && d.feat[k]); }
 function isLarge(d) { return !!d && isPrint(d) && !!d.hasColor && featOn(d, 'large'); }
 // 彩色張數（含大尺寸合併）：每張彩色大尺寸＝一張一般彩色。
 // 啟用大尺寸的設備若該次未填大尺寸讀數，該次不計入彩色（避免缺值造成數字跳動）
@@ -290,7 +294,7 @@ function featFormHtml(d) {
   const f = (d && d.feat) || {}, w = (d && d.warranty) || {}, t = (d && d.tune) || {};
   const box = (key, on) => `<div class="fx" data-for="${key}" style="display:${on ? 'grid' : 'none'};gap:8px;margin-left:26px">`;
   const sw = (name, on, label) => `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="${name}" value="1" ${on ? 'checked' : ''} onchange="toggleFeat(this)"> ${label}</label>`;
-  return `<div class="feat-box f-feat" style="grid-column:1/-1;display:${d && NEW_KINDS.includes(d.kind) ? 'none' : 'grid'};gap:10px;border:1px dashed #cbd5e1;border-radius:8px;padding:10px 12px">
+  return `<div class="feat-box f-feat" style="grid-column:1/-1;display:${d && !kindIsPrint(d.kind) ? 'none' : 'grid'};gap:10px;border:1px dashed #cbd5e1;border-radius:8px;padding:10px 12px">
     <div class="muted">選用功能（不需要的機種請保持關閉，畫面較簡潔）</div>
     ${sw('fWarranty', f.warranty, FEAT_LABEL.warranty)}
     ${box('fWarranty', f.warranty)}
@@ -310,7 +314,7 @@ function toggleFeat(cb) {
 }
 // 由表單取值：長度限制與格式檢查
 function featFrom(f, kind) {
-  const on = n => !NEW_KINDS.includes(kind) && f.get(n) === '1';
+  const on = n => kindIsPrint(kind) && f.get(n) === '1';
   const cut = (n, m) => (f.get(n) || '').toString().trim().slice(0, m);
   const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(cut('wDate', 10));
   return {
@@ -599,7 +603,6 @@ function openPlanFromCust(id) { planCust = id; planCustEdit = false; planDevId =
 // 保養客戶一覽：展開後可直接編輯客戶資料、新增與修改保養紀錄（刪除僅管理者，且需連續按兩次）
 // V51：保養客戶一覽 —「新增客戶」與「歷史服務紀錄」
 let planNewCust = false, histCust = null, histDev = null, histVisit = null, histEdit = null, planVisit = null;   // V53：histVisit／histEdit／planVisit 皆為紀錄編號
-function togglePlanNewCust() { planNewCust = !planNewCust; render(); if (planNewCust) setTimeout(() => { const el = document.getElementById('planNewCustForm'); if (el) { el.scrollIntoView({block: 'start'}); const n = el.querySelector('input[name=name]'); if (n) n.focus({preventScroll: true}); } }, 0); }
 function openHist(cid) {
   histCust = histCust === cid ? null : cid; histVisit = null; histEdit = null; planCust = null; planCustEdit = false; editLogId = null;
   const ds = histCust ? devsOf(histCust) : []; histDev = ds.length === 1 ? ds[0].id : null;
@@ -1215,7 +1218,18 @@ async function uploadPhoto(e, devId) {
 /* ================= 客戶與設備 ================= */
 const custOf = d => S.customers.find(x => x.id === d.customerId) || null;
 const custName = d => (custOf(d) || {}).name || '（未指定客戶）';
-const contractOf = d => (custOf(d) || {}).contract || '未設定';
+const contractsFor = kind => kindIsPrint(kind) ? OFFICE_CONTRACTS : AIR_CONTRACTS;
+// 設備的合約型態：設備上有設定就用設備的；舊資料（V56 以前）由客戶原本的合約與「計費方式」帶入
+function devContract(d) {
+  if (!d) return '';
+  if (d.contract && contractsFor(d.kind).includes(d.contract)) return d.contract;
+  if (!kindIsPrint(d.kind)) return '';
+  if (d.billing === true) return '計張';
+  const cc = (custOf(d) || {}).contract;
+  if (d.billing === false) return cc && cc !== '計張' && OFFICE_CONTRACTS.includes(cc) ? cc : '';
+  return OFFICE_CONTRACTS.includes(cc) ? cc : '';
+}
+const contractOf = d => devContract(d) || '未設定';
 const siteLabel = d => `${esc(custName(d))}｜${esc(d.location || '')}`;
 const contractTag = d => `<span class="tag ${CONTRACT_CLS[contractOf(d)] || 't-gray'}">${esc(contractOf(d))}</span>`;
 const siteName = d => `${siteLabel(d)} ${contractTag(d)}<div class="muted">${esc(KIND[d.kind])}${isPrint(d) ? (d.hasColor ? '・彩色' : '・黑白') : ''} ${esc(d.model)}</div>`;
@@ -1601,7 +1615,7 @@ function toast(msg) {
   clearTimeout(toast._t); toast._t = setTimeout(() => el.style.display = 'none', 4800);
 }
 const custOpts = sel => S.customers.map(c =>
-  `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}（${esc(c.contract)}）</option>`).join('');
+  `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}${contractText(c) ? '（' + esc(contractText(c)) + '）' : ''}</option>`).join('');
 
 /* ================= 儀表板 ================= */
 
@@ -1734,7 +1748,7 @@ function exportRosterCsv() {
   const head = ['月份','客戶','契約','安裝地點','設備種類','機型','保養週期','上次保養','本月狀態'];
   const label = {done:'本月已保養', overdue:'逾期未保養', due:'本月待保養', new:'尚無紀錄・首次保養'};
   const rows = rosterRows(ms).map(r => [`${ms.getFullYear()}-${String(ms.getMonth() + 1).padStart(2, '0')}`,
-    r.c ? r.c.name : '', r.c ? r.c.contract : '', r.d.location, KIND[r.d.kind], r.d.model, r.label, r.last || '', label[r.status]]);
+    r.c ? r.c.name : '', devContract(r.d), r.d.location, KIND[r.d.kind], r.d.model, r.label, r.last || '', label[r.status]]);
   download(`printtown_roster_${ms.getFullYear()}${String(ms.getMonth() + 1).padStart(2, '0')}.csv`, toCsv([head, ...rows]), 'text/csv', true);
   toast('已匯出本月名單');
 }
@@ -1776,7 +1790,7 @@ function planMonthHtml() {
       <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
         <div><label>行程月份</label><input type="month" value="${mStr}" onchange="setPlanMonth(this.value)"></div>
         <button class="primary" onclick="window.print()">列印本月行程</button></div>
-      <div class="muted">共 ${rows.length} 台${KIND_ORDER.map(k => '｜' + KIND[k] + ' ' + cnt(k)).join('')}｜尚待保養 ${pending}｜已完成 ${rows.length - pending}</div></div>
+      <div class="muted">共 ${rows.length} 台${KIND_CATS.map(c => '｜' + c.label + ' ' + c.kinds.reduce((n, k) => n + cnt(k), 0)).join('')}｜尚待保養 ${pending}｜已完成 ${rows.length - pending}</div></div>
     <div id="printArea">
       <h2 style="margin:12px 0 2px">${ms.getFullYear()} 年 ${ms.getMonth() + 1} 月 保養行程表</h2>
       <div class="muted print-only" style="margin-bottom:8px">列印日期：${iso(today())}　排序：客戶地址（方便串接路線）　共 ${rows.length} 台，尚待保養 ${pending} 台</div>
@@ -1785,8 +1799,43 @@ function planMonthHtml() {
     </div></div>`;
 }
 
-let planYear = null;
+let planYear = null, planQ = '', planKind = 'all';
 function setPlanYear(y) { planYear = y; render(); }
+function setPlanKind(k) { planKind = okKindCat(k) ? k : 'all'; render(); }
+// 分類按鈕：點選篩選，再點一次同一個分類就取消（回到全部客戶）
+function togglePlanKind(k) { setPlanKind(planKind === k ? 'all' : k); }
+// 搜尋時只更新表格，輸入框不會失去焦點
+function filterPlan(v) { planQ = String(v || '').slice(0, 100); const g = document.getElementById('planGrid'); if (g) g.innerHTML = planGridHtml(); }
+// 本月應保養（與「月保養名單」相同定義與用詞）：逾期未保養、本月應保養、首次保養、本月已保養
+function planMonthStatus() { const t = today(); return new Map(rosterRows(new Date(t.getFullYear(), t.getMonth(), 1)).map(r => [r.d.id, r])); }
+function planRows() {
+  const st = planKind === 'all' ? null : planMonthStatus();
+  const rows = [];
+  S.customers.forEach(c => {
+    if (!custMatch(c, planQ)) return;
+    if (planKind === 'all') { rows.push({c, devs: devsOf(c.id), due: null}); return; }
+    const devs = devsOf(c.id).filter(d => catOfKind(d.kind) === planKind);
+    const due = devs.map(d => st.get(d.id)).filter(Boolean);
+    if (due.length) rows.push({c, devs, due});
+  });
+  if (planKind !== 'all') {
+    const rank = r => Math.min(...r.due.map(x => ({overdue: 0, due: 1, new: 2, done: 3})[x.status]));
+    rows.sort((a, b) => rank(a) - rank(b) || (a.c.name || '').localeCompare(b.c.name || '', 'zh-TW'));
+  }
+  return rows;
+}
+function planFilterHtml() {
+  const st = planMonthStatus(), t = today(), ym = `${t.getFullYear()} 年 ${t.getMonth() + 1} 月`;
+  const n = k => new Set([...st.values()].filter(r => catOfKind(r.d.kind) === k).map(r => r.d.customerId)).size;
+  const tabs = KIND_CATS.map(c => c.k).map(k => `<button class="${planKind === k ? 'primary' : 'ghost'}" onclick="togglePlanKind('${k}')">${kindCatLabel(k)} ${n(k)}</button>`).join('');
+  return `<div class="card" id="planFilter">
+    <label for="planSearch">客戶搜尋</label>
+    <input type="search" id="planSearch" value="${esc(planQ)}" placeholder="客戶名稱、聯絡人、電話、地址、標籤（可輸入多個關鍵字）" oninput="filterPlan(this.value)">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${tabs}</div>
+    <p class="note" style="margin:8px 0 0">${planKind === 'all'
+      ? `目前顯示全部 ${S.customers.length} 位客戶的全年保養狀況。點設備分類，只列出該分類<b>本月（${ym}）應保養</b>的客戶：逾期未保養、本月應保養、首次保養與本月已保養。分類按鈕上的數字是本月應保養的客戶數。`
+      : `目前顯示：<b>${esc(kindCatLabel(planKind))}</b>本月（${ym}）應保養的客戶；表格中的台數只計算此分類的設備。再點一次「${esc(kindCatLabel(planKind))}」取消篩選。`}</p></div>`;
+}
 const MON = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 // 每台設備：依最近一次保養推算應保養月（每 cm 個月一次）
 function devPlanState(d, c, idx, curIdx) {
@@ -1807,18 +1856,27 @@ function devPlanState(d, c, idx, curIdx) {
 function viewPlan() {
   const t = today(), Y = planYear || t.getFullYear(), curIdx = t.getFullYear() * 12 + t.getMonth();
   const head = `<div class="card">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="primary" id="planNewCustBtn" onclick="togglePlanNewCust()">${planNewCust ? '收合新增客戶' : '＋ 新增客戶'}</button></div>
     <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
       <button class="ghost" onclick="setPlanYear(${Y - 1})">← ${Y - 1} 年</button>
       <h2 style="margin:0">保養客戶一覽表（${Y} 年）</h2>
       <button class="ghost" onclick="setPlanYear(${Y + 1})">${Y + 1} 年 →</button></div>
     <p class="note" style="margin-top:10px">每列是一位客戶，每欄是一個月。依客戶的保養週期與各設備上次保養月推算應保養月份。
       <span class="tag t-ok">✓ 已保養</span> <span class="tag t-warn">⚠ 應保養未完成</span> <span class="tag t-info">○ 應保養（未到期）</span> 空白 ＝ 非保養月。本月欄位已標示。</p></div>`;
-  const body = S.customers.length ? `<div class="card" style="overflow-x:auto"><table style="min-width:1220px"><thead><tr>
-      <th style="min-width:170px">客戶</th><th style="width:250px">操作</th><th>週期</th><th class="num">設備</th>
+  const body = `<div id="planGrid">${planGridHtml()}</div>`;
+  return planFilterHtml() + head + histPanelHtml() + planCustHtml() + body + planMonthHtml();
+}
+function planGridHtml() {
+  const t = today(), Y = planYear || t.getFullYear(), curIdx = t.getFullYear() * 12 + t.getMonth();
+  if (!S.customers.length) return '<div class="card"><div class="empty">尚無客戶。請到「設備資料總覽」最上方新增客戶。</div></div>';
+  const rows = planRows();
+  if (!rows.length) return `<div class="card"><div class="empty">${planKind === 'all' ? '找不到符合搜尋條件的客戶。' : `本月沒有需要保養的「${esc(kindCatLabel(planKind))}」客戶${planQ.trim() ? '（符合搜尋條件）' : ''}。`}</div></div>`;
+  const cat = planKind !== 'all';
+  const stTags = due => ['overdue', 'due', 'new', 'done'].map(k => { const n = due.filter(x => x.status === k).length;
+    return n ? `<span class="tag ${k === 'done' ? 't-ok' : k === 'new' ? 't-info' : 't-warn'}">${PLAN_ST[k]} ${n}</span>` : ''; }).join(' ');
+  return `<div class="card" style="overflow-x:auto"><div class="muted" style="margin-bottom:8px">共 ${rows.length} 位客戶${cat ? `、${rows.reduce((a, r) => a + r.due.length, 0)} 台本月應保養` : ''}</div><table style="min-width:${cat ? 1360 : 1220}px"><thead><tr>
+      <th style="min-width:170px">客戶</th><th style="width:250px">操作</th>${cat ? '<th style="min-width:140px">本月狀態</th>' : ''}<th>週期</th><th class="num">設備</th>
       ${MON.map((m, i) => `<th style="text-align:center;${Y * 12 + i === curIdx ? 'background:#eff6ff;color:var(--brand,#1e5fbf)' : ''}">${m}</th>`).join('')}
-    </tr></thead><tbody>${S.customers.map(c => {
-      const devs = devsOf(c.id);
+    </tr></thead><tbody>${rows.map(({c, devs, due}) => {
       const hasLog = devs.some(d => svcVisitsOf(d.id).length);
       const cells = MON.map((m, i) => {
         const idx = Y * 12 + i;
@@ -1830,12 +1888,10 @@ function viewPlan() {
         if (plan) parts.push(`<span class="tag t-info">○ ${plan}</span>`);
         return `<td style="text-align:center;${idx === curIdx ? 'background:#f5f9ff' : ''}">${parts.join(' ')}</td>`;
       }).join('');
-      return `<tr><td><div><a href="#" class="cust-link" title="點擊修改客戶資料" onclick="custEditFromPlan(event,'${c.id}')"><b>${esc(c.name)}</b></a> ${contractTagOf(c)}</div>${!devs.length ? '<div class="muted">尚無設備</div>' : !hasLog ? '<div class="muted">尚無保養紀錄，請先登錄首次保養</div>' : ''}</td><td style="white-space:nowrap"><div style="display:flex;gap:6px"><button class="ghost" style="padding:4px 8px;white-space:nowrap" onclick="openPlanCust('${c.id}')">${planCust === c.id ? '收合' : '新增保養紀錄'}</button><button class="ghost" style="padding:4px 8px;white-space:nowrap" onclick="openHist('${c.id}')">${histCust === c.id ? '收合紀錄' : '歷史服務紀錄'}</button></div></td>
-        <td>${cycleOf(c).label}</td><td class="num">${devs.length}</td>${cells}</tr>`;
+      return `<tr data-cust="${esc(c.id)}"><td><div><a href="#" class="cust-link" title="點擊修改客戶資料" onclick="custEditFromPlan(event,'${c.id}')"><b>${esc(c.name)}</b></a> ${contractTagOf(c)}</div>${!devs.length ? '<div class="muted">尚無設備</div>' : !hasLog ? '<div class="muted">尚無保養紀錄，請先登錄首次保養</div>' : ''}</td><td style="white-space:nowrap"><div style="display:flex;gap:6px"><button class="ghost" style="padding:4px 8px;white-space:nowrap" onclick="openPlanCust('${c.id}')">${planCust === c.id ? '收合' : '新增保養紀錄'}</button><button class="ghost" style="padding:4px 8px;white-space:nowrap" onclick="openHist('${c.id}')">${histCust === c.id ? '收合紀錄' : '歷史服務紀錄'}</button></div></td>
+        ${cat ? `<td>${stTags(due)}</td>` : ''}<td>${cycleOf(c).label}</td><td class="num">${devs.length}</td>${cells}</tr>`;
     }).join('')}</tbody></table>
-    <p class="note">數字為台數。⚠ 表示該月應保養但未到府（僅計算該設備第一次保養之後的月份）。</p></div>`
-    : '<div class="card"><div class="empty">尚無客戶。請到「設備資料總覽」最上方新增客戶。</div></div>';
-  return head + (planNewCust ? customerFormHtml(true) : '') + histPanelHtml() + planCustHtml() + body + planMonthHtml();
+    <p class="note">數字為台數。⚠ 表示該月應保養但未到府（僅計算該設備第一次保養之後的月份）。</p></div>`;
 }
 
 
@@ -1917,7 +1973,7 @@ function monthTableHtml() {
       <div style="overflow-x:auto;margin-top:8px"><table style="min-width:900px"><thead><tr><th>客戶／設備</th><th>來源</th>
       <th class="num">本月黑白</th><th>黑白增減</th><th class="num">本月彩色</th><th>彩色增減</th><th class="num">上月黑白</th><th class="num">上月彩色</th></tr></thead>
       <tbody>${body}</tbody></table></div></details>`
-      : '<div class="empty">尚無複合機或印表機。</div>'}
+      : '<div class="empty">尚無事務設備。</div>'}
     <p class="note">本欄為「平均印量」（整月）：每台 ＝（本次抄表張數 − 上次抄表張數）÷ 實際天數 × 當月天數；該月無抄表則以近六個月月均張數估計（標示「本月無抄表・以平均估計」）。當月尚未過完的部分也以月均推算，所以本月數字是整月預估，用來看整體印量上升或下降。增減 ＝ 本月相對上月的比例（≥30% 以黃色標示）。</p>`;
 }
 
@@ -2008,7 +2064,7 @@ function periodSummaryHtml() {
     <details class="fold" style="margin-top:10px" ${periodAllOpen ? 'open' : ''} ontoggle="periodAllOpen = this.open"><summary>各客戶印量明細（共 ${groups.size} 位客戶，點開展開）</summary>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0"><button class="ghost" onclick="periodToggleAll(true)">全部展開</button><button class="ghost" onclick="periodToggleAll(false)">全部收合</button></div>
     <div id="periodList">${cards}</div></details>`
-    : '<div class="empty">尚無複合機或印表機。</div>')
+    : '<div class="empty">尚無事務設備。</div>')
     + `<p class="note">依客戶收折，展開可看各設備。資料齊全 ＝ 區間內每個月都有實際抄表（月底附近有讀數）。資料不齊全的設備不計入合計，也不做增減比較。增減比較的對象是緊接在區間前、長度相同的期間，且兩期皆齊全才顯示。區間最長 36 個月。</p>`;
 }
 
@@ -2153,7 +2209,19 @@ function viewDash() {
 /* ================= 設備資料總覽（單一頁面） ================= */
 let selCust = null, selDev = null, chartIdx = null;
 const devsOf = cid => S.devices.filter(d => d.customerId === cid);
-const contractTagOf = c => `<span class="tag ${CONTRACT_CLS[c.contract] || 't-gray'}">${esc(c.contract)}</span>`;
+// 客戶的合約：由其設備彙總（例：計張 2、租賃 1、未設定 1）
+function contractCounts(c) {
+  const m = new Map();
+  devsOf(c.id).forEach(d => { const k = devContract(d) || '未設定'; m.set(k, (m.get(k) || 0) + 1); });
+  return [...CONTRACTS, '未設定'].filter(k => m.has(k)).map(k => [k, m.get(k)]);
+}
+const contractText = c => contractCounts(c).map(([k, n]) => `${k} ${n}`).join('、');
+const contractTagOf = c => contractCounts(c).map(([k, n]) => `<span class="tag ${CONTRACT_CLS[k] || 't-gray'}">${esc(k)} ${n}</span>`).join(' ');
+// 設備表單的合約型態選項（依設備類別）
+function contractOptsHtml(kind, cur) {
+  return `<option value="">請選擇合約型態</option>` + contractsFor(kind).map(x => `<option ${x === cur ? 'selected' : ''}>${x}</option>`).join('');
+}
+const contractFieldHtml = (kind, cur) => `<div><label>合約型態</label><select name="contract" required>${contractOptsHtml(kind, cur)}</select></div>`;
 function ensureSel() {
   if (!S.devices.some(d => d.id === selDev)) selDev = S.devices.length ? S.devices[0].id : null;
   const dev = S.devices.find(d => d.id === selDev);
@@ -2229,6 +2297,16 @@ const NEW_KINDS = ['ozone', 'phi', 'nex'];      // 只需要安裝時間、保�
 const KIND_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const NEW_KIND_OPTS = NEW_KINDS.map(k => `<option value="${k}">${KIND[k]}</option>`).join('');
 // V48：設備類別標籤顏色（列印機＝鵝黃；商用空氣清淨機、臭氧、PHI、NEX＝橘）
+// 設備分類（設備資料總覽、保養客戶一覽共用）。V57 起複合機與印表機一律顯示為「事務設備」（舊資料內部仍可能是 printer，功能相同）
+const KIND_CATS = [
+  {k: 'office', label: '事務設備', kinds: ['copier', 'printer']},
+  {k: 'purifier', label: '商用空氣清淨機', kinds: ['purifier']},
+  {k: 'ozone', label: '商用臭氧機', kinds: ['ozone']},
+  {k: 'phi', label: 'PHI商用除味機', kinds: ['phi']},
+  {k: 'nex', label: 'NEX除味系統', kinds: ['nex']}];
+const catOfKind = kind => (KIND_CATS.find(c => c.kinds.includes(kind)) || {}).k || '';
+const kindCatLabel = k => k === 'all' ? '全部設備' : (KIND_CATS.find(c => c.k === k) || {}).label || '';
+const okKindCat = k => k === 'all' || KIND_CATS.some(c => c.k === k);
 function kindTag(d) { return `<span class="tag ${kindIsPrint(d.kind) ? 'k-print' : 'k-other'}">${esc(KIND[d.kind])}</span>`; }
 function newKindFrom(f) {
   const cut = (n, m) => (f.get(n) || '').toString().trim().slice(0, m);
@@ -2248,7 +2326,9 @@ function syncKindFields(sel) {
   form.querySelectorAll('.f-print').forEach(el => el.style.display = pr ? '' : 'none');
   form.querySelectorAll('.f-rate').forEach(el => el.style.display = np ? 'none' : 'contents');
   form.querySelectorAll('.f-new').forEach(el => el.style.display = np ? '' : 'none');
-  form.querySelectorAll('.f-feat').forEach(el => el.style.display = np ? 'none' : 'grid');
+  form.querySelectorAll('.f-feat').forEach(el => el.style.display = pr ? 'grid' : 'none');
+  const cs = form.querySelector('select[name=contract]');
+  if (cs) { const cur = cs.value; cs.innerHTML = contractOptsHtml(k, contractsFor(k).includes(cur) ? cur : ''); }
 }
 function newKindInfoHtml(d) {
   if (!d || !NEW_KINDS.includes(d.kind) || (!d.installDate && !d.warrantyText && !d.devNote)) return '';
@@ -2328,18 +2408,18 @@ function saveTagNames(e) {
   save(); toast('已儲存標籤設定'); render();
 }
 function devMatch(d, q) {
-  if (devKind !== 'all' && d.kind !== devKind) return false;
+  if (devKind !== 'all' && catOfKind(d.kind) !== devKind) return false;
   if (devCust && d.customerId !== devCust) return false;
   const c = S.customers.find(x => x.id === d.customerId) || {};
   if (tagFilter && !tagsOf(d).includes(tagFilter) && !tagsOf(c).includes(tagFilter)) return false;
   if (!q || !q.trim()) return true;
-  const hay = [c.name, c.contract, c.phone, c.phone2, c.contact, c.address, tagNamesOf(c), d.location, d.brand, d.model, KIND[d.kind],
+  const hay = [c.name, devContract(d) || '未設定合約', c.phone, c.phone2, c.contact, c.address, tagNamesOf(c), d.location, d.brand, d.model, KIND[d.kind], kindCatLabel(catOfKind(d.kind)), kindIsPrint(d.kind) ? '複合機 印表機 影印機 複印機' : '',
     tagNamesOf(d), d.kind === 'purifier' ? '商用空氣清淨機 空氣清淨機 淨化' : ''].join(' ').toLowerCase();
   return q.trim().toLowerCase().split(/\s+/).every(w => hay.includes(w));
 }
 function custMatch(c, q) {
   if (!q || !q.trim()) return true;
-  const hay = [c.name, c.contract, c.phone, c.phone2, c.contact, c.address, tagNamesOf(c)].join(' ').toLowerCase();
+  const hay = [c.name, contractText(c), c.phone, c.phone2, c.contact, c.address, tagNamesOf(c)].join(' ').toLowerCase();
   return q.trim().toLowerCase().split(/\s+/).every(w => hay.includes(w));
 }
 let preDevCust = null;   // 從「尚無設備」的客戶列按下新增設備時，預先選取該客戶
@@ -2347,11 +2427,12 @@ function startEditDev(id) { editDevId = id; render(); }
 function cancelEditDev() { editDevId = null; render(); }
 function devEditFormHtml(d) {
   return `<tr><td colspan="4"><form onsubmit="saveDeviceInfo(event,'${d.id}')" class="form-row" style="margin:6px 0">
-    <div><label>設備類別</label><select name="kind" onchange="syncKindFields(this)">${KIND_ORDER.map(k => `<option value="${k}" ${k === d.kind ? 'selected' : ''}>${KIND[k]}</option>`).join('')}</select></div>
+    <div><label>設備類別</label><select name="kind" onchange="syncKindFields(this)">${KIND_ORDER.filter(k => k !== 'printer').map(k => `<option value="${k}" ${k === d.kind || (k === 'copier' && d.kind === 'printer') ? 'selected' : ''}>${k === 'copier' ? '事務設備（複合機、印表機）' : KIND[k]}</option>`).join('')}</select></div>
     <div><label>品牌</label><input name="brand" value="${esc(d.brand || '')}"></div>
     <div><label>型號</label><input name="model" required value="${esc(d.model || '')}"></div>
     <div><label>安裝地點</label><input name="location" value="${esc(d.location || '')}"></div>
     <div class="f-print" style="display:${kindIsPrint(d.kind) ? '' : 'none'}"><label>色彩</label><select name="hasColor"><option value="1" ${d.hasColor ? 'selected' : ''}>彩色</option><option value="0" ${d.hasColor ? '' : 'selected'}>黑白</option></select></div>
+    ${contractFieldHtml(d.kind, devContract(d))}
     ${newKindFieldsHtml(d)}
     ${featFormHtml(d)}
     ${tagCheckHtml(d)}
@@ -2362,9 +2443,13 @@ function saveDeviceInfo(e, id) {
   const d = S.devices.find(x => x.id === id); if (!d) return toast('找不到此設備');
   const f = new FormData(e.target), t = n => (f.get(n) || '').toString().trim();
   if (!t('model')) return toast('請填寫型號');
-  const kind = KIND_ORDER.includes(f.get('kind')) ? f.get('kind') : d.kind;
+  let kind = KIND_ORDER.includes(f.get('kind')) ? f.get('kind') : d.kind;
+  if (kind === 'copier' && d.kind === 'printer') kind = 'printer';   // 事務設備：保留原本的內部類別
+  const contract = String(f.get('contract') || '');
+  if (!contractsFor(kind).includes(contract)) return toast('請選擇合約型態');
+  if (devContract(d) !== contract) logOp('修改合約型態', `${custName(d)}｜${t('model')}｜${devContract(d) || '未設定'} → ${contract}`);
   Object.assign(d, {kind, brand: t('brand'), model: t('model'), location: t('location'),
-    hasColor: kindIsPrint(kind) && f.get('hasColor') === '1'});
+    hasColor: kindIsPrint(kind) && f.get('hasColor') === '1', contract, billing: kindIsPrint(kind) && contract === '計張'});
   d.tags = readTags(f);
   Object.assign(d, featFrom(f, kind));
   if (NEW_KINDS.includes(kind)) Object.assign(d, newKindFrom(f)); else ['installDate', 'warrantyText', 'devNote'].forEach(k => delete d[k]);
@@ -2375,7 +2460,7 @@ function devRowHtml(d) {
   const sv = svcStatus(d), n = reminderItems(d).length;
   const svTxt = svcMonthTag(d);
   return `<tr style="${d.id === selDev ? 'background:#eff6ff' : ''}">
-    <td>${kindTag(d)} <b>${esc(d.model || '—')}</b>${isPrint(d) ? (d.hasColor ? '・彩色' : '・黑白') : ''}
+    <td>${kindTag(d)} <b>${esc(d.model || '—')}</b>${isPrint(d) ? (d.hasColor ? '・彩色' : '・黑白') : ''}${' ' + contractTag(d)}
       <div class="muted">${esc(d.brand || '')}${d.brand ? '　' : ''}${esc(d.location || '—')}　保養：${devCycle(d).label}</div>${newKindInfoHtml(d)}${tagsOf(d).length ? `<div>${tagChipsHtml(d)}</div>` : ''}</td>
     <td>${svTxt}</td>
     <td class="num">${n ? `<span class="tag t-warn">${n}</span>` : '0'}</td>
@@ -2389,8 +2474,9 @@ function devNewFormHtml(c) {
   return `<form onsubmit="addDevice(event)" class="form-row" style="margin-top:8px">
     <input type="hidden" name="customerId" value="${esc(c.id)}">
     <div><label>安裝地點</label><input name="location" placeholder="例如：行政中心"></div>
-    <div><label>設備類型</label><select name="kind" onchange="syncKindFields(this)"><option value="copier">複合機</option><option value="printer">印表機</option><option value="purifier">商用空氣清淨機</option>${NEW_KIND_OPTS}</select></div>
+    <div><label>設備類型</label><select name="kind" onchange="syncKindFields(this)"><option value="copier">事務設備（複合機、印表機）</option><option value="purifier">商用空氣清淨機</option>${NEW_KIND_OPTS}</select></div>
     <div class="f-print"><label>色彩（列印機型）</label><select name="hasColor"><option value="1">彩色</option><option value="0">黑白</option></select></div>
+    ${contractFieldHtml('copier', '')}
     <div><label>品牌</label><input name="brand"></div>
     <div><label>型號</label><input name="model" required></div>
     <div class="muted" style="grid-column:1/-1;font-size:13px">保養週期一律沿用客戶設定（目前：${esc(cycleOf(c).label)}），不需在設備個別設定。</div>
@@ -2473,8 +2559,9 @@ function addDeviceForm() {
   return `<form onsubmit="addDevice(event)"><div class="form-row">
     <div><label>客戶</label><select name="customerId">${S.customers.map(c => `<option value="${c.id}" ${c.id === pick ? 'selected' : ''}>${esc(c.name)}${c.contact ? '｜' + esc(c.contact) : ''}${c.address ? '｜' + esc(c.address) : ''}</option>`).join('')}</select></div>
     <div><label>安裝地點</label><input name="location" placeholder="例如：行政中心"></div>
-    <div><label>設備類型</label><select name="kind" onchange="syncKindFields(this)"><option value="copier">複合機</option><option value="printer">印表機</option><option value="purifier">商用空氣清淨機</option>${NEW_KIND_OPTS}</select></div>
+    <div><label>設備類型</label><select name="kind" onchange="syncKindFields(this)"><option value="copier">事務設備（複合機、印表機）</option><option value="purifier">商用空氣清淨機</option>${NEW_KIND_OPTS}</select></div>
     <div class="f-print"><label>色彩（列印機型）</label><select name="hasColor"><option value="1">彩色</option><option value="0">黑白</option></select></div>
+    ${contractFieldHtml('copier', '')}
     <div><label>品牌</label><input name="brand"></div>
     <div><label>型號</label><input name="model" required></div>
     <div class="muted" style="grid-column:1/-1;font-size:13px">保養週期一律沿用該客戶的設定，不需在設備個別設定。</div>
@@ -2484,8 +2571,9 @@ function addDeviceForm() {
     <div><button class="primary" type="submit">新增設備</button></div></div></form>`;
 }
 function overviewHtml() {
-  const count = k => k === 'all' ? S.devices.length : S.devices.filter(d => d.kind === k).length;
-  const tabs = ['all', ...KIND_ORDER].map(k => `<button class="${devKind === k ? 'primary' : 'ghost'}" onclick="setDevKind('${k}')">${k === 'all' ? '全部設備' : KIND[k]} ${count(k)}</button>`).join('');
+  const count = k => k === 'all' ? S.devices.length : S.devices.filter(d => catOfKind(d.kind) === k).length;
+  const tabs = KIND_CATS.map(c => c.k).map(k => `<button class="${devKind === k ? 'primary' : 'ghost'}" onclick="toggleDevKind('${k}')">${kindCatLabel(k)} ${count(k)}</button>`).join('')
+    + `<span class="muted" style="align-self:center;font-size:13px">${devKind === 'all' ? `目前顯示全部 ${S.devices.length} 台；點分類可篩選` : `目前只顯示「${esc(kindCatLabel(devKind))}」；再點一次取消篩選`}</span>`;
   const custOpts = S.customers.map(c => `<option value="${c.id}" ${c.id === devCust ? 'selected' : ''}>${esc(c.name)}${c.contact ? '｜' + esc(c.contact) : ''}${c.address ? '｜' + esc(c.address) : ''}</option>`).join('');
   return `<div class="card"><h2>設備資料總覽</h2>
     <p class="note" style="margin-top:0">以客戶為主：每位客戶底下列出其設備，可在該客戶下新增設備。保養完成後按「快速紀錄」，紀錄區會直接展開在該客戶的設備下方。</p>
@@ -2500,7 +2588,9 @@ function overviewHtml() {
       <div style="margin-top:10px">${addDeviceForm()}</div></details>
   </div>`;
 }
-function setDevKind(k) { devKind = k; render(); }
+function setDevKind(k) { devKind = okKindCat(k) ? k : 'all'; render(); }
+// 分類按鈕：點選篩選，再點一次同一個分類就取消（回到顯示全部）
+function toggleDevKind(k) { setDevKind(devKind === k ? 'all' : k); }
 function setDevCust(v) { devCust = v; render(); }
 function quickLog(id) { selDev = id; devPanel = id; chartIdx = null; quickDev = id; pendingScroll = true; render(); }
 // 最近 30 日保養紀錄（含主管簽核）
@@ -2552,12 +2642,11 @@ function latestOpinion(devId) {
   return visitsOf(devId).filter(l => l.supOpinion).pop() || null;
 }
 
-function customerFormHtml(open) {
-  return `<details class="card" id="${open ? 'planNewCustForm' : 'newCustForm'}" ${open ? 'open' : ''} style="border:2px solid var(--brand,#1e5fbf)">
+function customerFormHtml() {
+  return `<details class="card" id="newCustForm" style="border:2px solid var(--brand,#1e5fbf)">
     <summary style="cursor:pointer;list-style:none;font-weight:700;font-size:16px">＋ 新增客戶 <span class="muted" style="font-size:13px;font-weight:400">（點此展開）</span></summary>
     <form onsubmit="addCustomer(event)" style="margin-top:12px"><div class="form-row">
       <div><label>客戶名稱</label><input name="name" required placeholder="例如：範例客戶 D"></div>
-      <div><label>合約型態</label><select name="contract">${CONTRACTS.map(c => `<option>${c}</option>`).join('')}</select></div>
       <div><label>聯繫電話</label><input name="phone" type="tel" placeholder="例如：02-2345-6789"></div>
       <div><label>備用電話</label><input name="phone2" type="tel" placeholder="選填"></div>
       <div><label>聯絡人</label><input name="contact" placeholder="例如：王小姐"></div>
@@ -2847,8 +2936,8 @@ function addCustomer(e) {
   const name = f.get('name').trim();
   if (!name) return toast('請填寫客戶名稱');
   const t = n => (f.get(n) || '').toString().trim();
-  const c = {id:uid(), name, contract:f.get('contract'), phone:t('phone'), phone2:t('phone2'), contact:t('contact'), address:t('address'), note:t('note'), cycleMonths:+f.get('cycleMonths') || 3};
-  logOp('新增客戶', `${c.name}（${c.contract}）`);
+  const c = {id:uid(), name, phone:t('phone'), phone2:t('phone2'), contact:t('contact'), address:t('address'), note:t('note'), cycleMonths:+f.get('cycleMonths') || 3};
+  logOp('新增客戶', c.name);
   S.customers.push(c); selCust = c.id; selDev = null; planNewCust = false;
   save(); toast(`已新增客戶「${c.name}」`); render();
 }
@@ -2857,12 +2946,15 @@ function addDevice(e) {
   const f = new FormData(e.target);
   const kind = f.get('kind');
   if (!KIND_ORDER.includes(kind)) return toast('設備類別不正確');
-  const d = {id:uid(), customerId:f.get('customerId'), kind,
+  const contract = String(f.get('contract') || '');
+  if (!contractsFor(kind).includes(contract)) return toast('請選擇合約型態');
+  const d = {id:uid(), customerId:f.get('customerId'), kind, contract,
              hasColor: kindIsPrint(kind) && f.get('hasColor') === '1',
              brand:f.get('brand').trim(), model:f.get('model').trim(), location:f.get('location').trim(),
+             billing: kindIsPrint(kind) && contract === '計張',
              tags: readTags(f), ...featFrom(f, kind), ...(NEW_KINDS.includes(kind) ? newKindFrom(f) : {})};
   if (!d.model) return toast('請填寫型號');
-  logOp('新增設備', `${custName(d)}｜${d.model}`);
+  logOp('新增設備', `${custName(d)}｜${d.model}｜${contract}`);
   S.devices.push(d); selCust = d.customerId; selDev = d.id; chartIdx = null; devQuery = ''; preDevCust = null; openCusts.add(d.customerId);
   if (!editCustId) devPanel = d.id;
   save(); toast('已新增設備'); render();
@@ -2975,7 +3067,7 @@ function addLog(e) {
   const color = isP && dev.hasColor && coRaw !== null && coRaw !== '' ? +coRaw : null;
   const lgRaw = f.get('colorLarge');
   const colorLarge = isLarge(dev) && lgRaw !== null && lgRaw !== '' ? +lgRaw : null;
-  if (isP && bw == null && !confirmTwice('此為複合機或印表機，尚未填黑白張數。確定要儲存嗎？')) return;
+  if (isP && bw == null && !confirmTwice('此為事務設備，尚未填黑白張數。確定要儲存嗎？')) return;
   if (isP && dev.hasColor && bw != null && color == null && !confirmTwice('彩色機未填彩色張數，確定要儲存嗎？')) return;
   const coComb = colorOf(dev, {color, colorLarge});
   const rIss = readingIssues(dev, txt('date'), null, bw, coComb, colorLarge);
@@ -3146,7 +3238,6 @@ let editCustId = null;   // 目前正在編輯的客戶（設備資料總覽）
 let custDevEdit = null;  // 目前在客戶編輯區內展開「設備資料」的客戶
 function customerFieldsHtml(c) {
   return `<div><label>客戶名稱</label><input name="name" required value="${esc(c.name)}"></div>
-      <div><label>合約型態</label><select name="contract">${CONTRACTS.map(x => `<option ${x === c.contract ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       <div><label>聯絡人</label><input name="contact" value="${esc(c.contact || '')}"></div>
       <div><label>聯繫電話</label><input name="phone" type="tel" value="${esc(c.phone || '')}"></div>
       <div><label>備用電話</label><input name="phone2" type="tel" value="${esc(c.phone2 || '')}"></div>
@@ -3178,7 +3269,7 @@ function customerInfoCard() {
       <tr><th>地址</th><td colspan="3">${esc(c.address || '—')}</td></tr>
       <tr><th>備註</th><td colspan="3" style="white-space:pre-wrap">${esc(c.note || '—')}</td></tr>
       <tr><th>標籤</th><td colspan="3">${tagChipsHtml(c) || '—'}</td></tr>
-      <tr><th>合約</th><td>${contractTagOf(c)}</td><th>設備數</th><td>${devsOf(c.id).length} 台</td></tr>
+      <tr><th>合約</th><td>${contractTagOf(c) || '—'}<div class="muted">合約型態在各設備設定</div></td><th>設備數</th><td>${devsOf(c.id).length} 台</td></tr>
     </tbody></table>${customerEditHtml(c)}
     ${delCustBtnHtml(c)}</div></details>`;
 }
@@ -3189,7 +3280,6 @@ function saveCustomerInfo(e, cid) {
   if (!t('name')) return toast('客戶名稱不可空白');
   Object.assign(c, {name: t('name'), contact: t('contact'), phone: t('phone'), phone2: t('phone2'),
     address: t('address'), note: t('note'),
-    contract: CONTRACTS.includes(f.get('contract')) ? f.get('contract') : c.contract,
     cycleMonths: +f.get('cycleMonths') || c.cycleMonths});
   c.tags = readTags(f);
   editCustId = null; custDevEdit = null; planCustEdit = false;
@@ -3227,7 +3317,7 @@ function exportLogsCsv(from, to) {
   const head = ['日期','客戶','契約','安裝地點','設備種類','品牌','機型','保養週期(天)','服務類型','擔當工程師','黑白張數','彩色張數','彩色大尺寸張數','服務紀錄','客戶交代事宜','耗材庫存','採購信號','客戶已親簽','主管已簽核','主管意見','主管簽核日','備註'];
   const rows = logsInRange(from, to).map(l => {
     const d = devOfLog(l) || {}; const c = S.customers.find(x => x.id === d.customerId) || {};
-    return [l.date, c.name, c.contract, d.location, d.kind ? KIND[d.kind] : '', d.brand, d.model, devCycleDays(d), l.type, l.engineer,
+    return [l.date, c.name, devContract(d), d.location, d.kind ? KIND[d.kind] : '', d.brand, d.model, devCycleDays(d), l.type, l.engineer,
       l.bw, l.color, l.colorLarge ?? '', l.serviceRecord, l.customerInstruction, l.consumableStock, l.purchaseSignal,
       l.engConfirmed ? '是' : '否', l.supSigned ? '是' : '否', l.supOpinion, l.supDate, l.note];
   });
@@ -3266,7 +3356,7 @@ function exportMonthlyCsv(from, to) {
 }
 function exportCustomersCsv() {
   const head = ['客戶名稱','契約','聯絡人','聯繫電話','備用電話','地址','保養週期','備註','設備數'];
-  const rows = S.customers.map(c => [c.name, c.contract, c.contact, c.phone, c.phone2, c.address, cycleOf(c).label, c.note, devsOf(c.id).length]);
+  const rows = S.customers.map(c => [c.name, contractText(c), c.contact, c.phone, c.phone2, c.address, cycleOf(c).label, c.note, devsOf(c.id).length]);
   download(`printtown_customers_${stampNow()}.csv`, toCsv([head, ...rows]), 'text/csv', true);
   toast('已匯出客戶資料 CSV');
 }
@@ -3444,7 +3534,7 @@ function parseCsv(text) {
   return rows.filter(r => !(r.length === 1 && r[0].trim() === '')).map(r => r.map(c => /^'[=+\-@\t\r]/.test(c) ? c.slice(1) : c));   // 還原匯出時加的防注入符號
 }
 const CYC_BY_LABEL = {'一個月': 1, '雙月': 2, '每季': 3, '半年': 6};
-const DEVICE_KIND_BY_LABEL = {'複合機': 'copier', '印表機': 'printer', '商用空氣清淨機': 'purifier', '商用臭氧機': 'ozone', 'PHI商用除味機': 'phi', 'NEX除味系統': 'nex',
+const DEVICE_KIND_BY_LABEL = {'事務設備': 'copier', '複合機': 'copier', '印表機': 'printer', '商用空氣清淨機': 'purifier', '商用臭氧機': 'ozone', 'PHI商用除味機': 'phi', 'NEX除味系統': 'nex',
   '空氣清淨機': 'purifier', 'PHI除味機': 'phi'};   // 舊名稱仍可匯入
 function importCustomers(rows) {
   const head = rows[0].map(x => x.trim()); const at = k => head.indexOf(k);
@@ -3453,16 +3543,16 @@ function importCustomers(rows) {
   rows.slice(1).forEach(r => {
     const g = k => { const i = at(k); return i >= 0 ? (r[i] || '').trim() : ''; };
     const c = {id: uid(), name: g('客戶名稱') || '（未填名稱）',
-      contract: CONTRACTS.includes(g('契約')) ? g('契約') : '計張',
       contact: g('聯絡人'), phone: g('聯繫電話') || g('電話'), phone2: g('備用電話'), address: g('地址'), note: g('備註'),
       cycleMonths: CYC_BY_LABEL[g('保養週期')] || 3};
     S.customers.push(c); addC++;
     const model = g('機型');
     if (model) {
-      const kind = DEVICE_KIND_BY_LABEL[g('設備類別') || '複合機'] || 'copier';
+      const kind = DEVICE_KIND_BY_LABEL[g('設備類別') || '事務設備'] || 'copier';
+      const ct = g('契約'), contract = contractsFor(kind).includes(ct) ? ct : '';
       const dnote = g('設備備註');
       S.devices.push({id: uid(), customerId: c.id, kind, hasColor: kindIsPrint(kind) && g('色彩') === '彩色',
-        brand: g('品牌'), model, location: g('安裝地點') + (dnote ? `（${dnote}）` : '')});
+        brand: g('品牌'), model, location: g('安裝地點') + (dnote ? `（${dnote}）` : ''), contract, billing: kindIsPrint(kind) && contract === '計張'});
       addD++;
     }
   });
@@ -3499,7 +3589,7 @@ function importFile(e, kind) {
 function downloadTemplate(kind) {
   if (!denyIO()) return;
   const rows = kind === 'customers'
-    ? [['客戶名稱','契約','聯絡人','聯繫電話','備用電話','地址','保養週期','備註','設備類別','設備備註','品牌','機型','安裝地點','色彩'], ['範例客戶 D','計張','王小姐','02-2345-6789','0912-345-678','台北市大安區和平東路一段1號','每季','','複合機','','Ricoh','IM C3000','行政中心','彩色']]
+    ? [['客戶名稱','契約','聯絡人','聯繫電話','備用電話','地址','保養週期','備註','設備類別','設備備註','品牌','機型','安裝地點','色彩'], ['範例客戶 D','計張','王小姐','02-2345-6789','0912-345-678','台北市大安區和平東路一段1號','每季','','事務設備','','Ricoh','IM C3000','行政中心','彩色']]
     : [['姓名','職稱','電話','在職'], ['王小明','擔當工程師','0912-345-678','是']];
   download(`printtown_template_${kind}.csv`, toCsv(rows), 'text/csv', true);
 }
@@ -3507,7 +3597,7 @@ function importPanelHtml() {
   return `<div class="card sec-set"><h2>資料匯入（CSV）</h2>
     <p class="note"><b>匯入規則：</b>每一列建立一位客戶，不過濾、不去重：名稱重複或空白的列也會匯入（空白名稱顯示為「（未填名稱）」）。「機型」有填時，會在該客戶底下建立一台設備。匯入只新增，不覆蓋既有資料；重複匯入同一檔案會再次建立。檔案編碼用 UTF-8，請先下載範本填寫。</p>
     <div class="form-row" style="margin:0">
-      <div><b>客戶（含設備）</b><div class="muted">欄位：客戶名稱、契約、聯絡人、聯繫電話、備用電話、地址、保養週期（一個月／雙月／每季／半年）、備註、設備類別（複合機／印表機／商用空氣清淨機／商用臭氧機／PHI商用除味機／NEX除味系統）、設備備註、品牌、機型、安裝地點、色彩（彩色／黑白）</div>
+      <div><b>客戶（含設備）</b><div class="muted">欄位：客戶名稱、契約（設備的合約型態：事務設備為計張／賣斷／零元機；其他設備為租賃／服務合約／賣斷／專案）、聯絡人、聯繫電話、備用電話、地址、保養週期（一個月／雙月／每季／半年）、備註、設備類別（事務設備／商用空氣清淨機／商用臭氧機／PHI商用除味機／NEX除味系統）、設備備註、品牌、機型、安裝地點、色彩（彩色／黑白）</div>
         <div style="margin:6px 0"><button class="ghost" onclick="downloadTemplate('customers')">下載客戶範本</button></div>
         <input type="file" accept=".csv,text/csv" onchange="importFile(event,'customers')"></div>
       <div><b>擔當工程師人員</b><div class="muted">欄位：姓名、職稱、電話、在職（是／否）</div>
@@ -3769,7 +3859,7 @@ function addCons(e) {
   if (!dev || !k) return toast('請選擇耗材項目（規格由管理者在「設定」維護）');
   const isDays = k.basis === 'days';
   if (!isPrint(dev) && !isDays) return toast('此耗材為張數依據，不適用商用空氣清淨機');
-  if (isPrint(dev) && isDays) return toast('此耗材為天數依據，不適用複合機或印表機');
+  if (isPrint(dev) && isDays) return toast('此耗材為天數依據，不適用事務設備');
   if (k.basis === 'color' && !dev.hasColor) return toast('此為黑白機，不能以彩色張數計算');
   if (CAT_COLOR.includes(k.category) && !dev.hasColor) return toast(`${k.category}只適用彩色機`);
   let ib = null, ic = null, it = null;

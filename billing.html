@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 計張計價系統 v1</title>
+<title>普印通 計張計價系統 v3</title>
 <style>
 :root{--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#7c2d12;--brand2:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -100,7 +100,7 @@ body.busy button{pointer-events:none;opacity:.6}
 </head>
 <body>
 <header>
-  <h1>普印通 計張計價系統 <span style="font-weight:400;font-size:13px;opacity:.85">v1</span></h1>
+  <h1>普印通 計張計價系統 <span style="font-weight:400;font-size:13px;opacity:.85">v3</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="due" onclick="go('due')">本期待開單</button>
     <button data-v="build" onclick="go('build')">開單</button>
@@ -183,7 +183,7 @@ function addMonths(s, n) {
 const fmt = n => n == null || n === '' ? '—' : Number(n).toLocaleString('zh-TW', {maximumFractionDigits: 4});
 const money = n => (n < 0 ? '-' : '') + Math.abs(Math.round(n)).toLocaleString('zh-TW');
 const clone = x => JSON.parse(JSON.stringify(x));
-const KIND = {copier: '複合機', printer: '印表機', purifier: '商用空氣清淨機', ozone: '商用臭氧機', phi: 'PHI商用除味機', nex: 'NEX除味系統'};
+const KIND = {copier: '事務設備', printer: '事務設備', purifier: '商用空氣清淨機', ozone: '商用臭氧機', phi: 'PHI商用除味機', nex: 'NEX除味系統'};
 const kindIsPrint = k => !['purifier', 'phi', 'ozone', 'nex'].includes(k);
 const isPrint = d => !!d && kindIsPrint(d.kind);
 const isLarge = d => isPrint(d) && !!d.hasColor && !!(d.feat && d.feat.large);
@@ -210,7 +210,10 @@ let busy = false;
 async function run(fn) {
   if (busy) return;
   busy = true; document.body.classList.add('busy');
-  try { await fn(); }
+  let timer = null;
+  try {
+    await Promise.race([fn(), new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('雲端回應逾時（30 秒）。請重新整理頁面確認這次的動作是否已完成。')), 30000); })]);
+  }
   catch (e) {
     console.error(e);
     const m = String(e && e.message || e);
@@ -221,7 +224,7 @@ async function run(fn) {
       else if (view === 'plans' && PE) { const cid = PE.cid; PE = null; afterRun = () => openPlan(cid); }
       else afterRun = render;
     }
-  } finally { busy = false; document.body.classList.remove('busy'); }
+  } finally { clearTimeout(timer); busy = false; document.body.classList.remove('busy'); }
   if (afterRun) { const f = afterRun; afterRun = null; f(); }
 }
 let afterRun = null;
@@ -304,10 +307,22 @@ const custById = id => D.customers.find(c => c.id === id) || null;
 const devById = id => D.devices.find(d => d.id === id) || null;
 const invById = id => INVOICES.find(i => i.id === id) || null;
 const memberName = email => { const m = MEMBERS.find(x => x.email === email); return m && m.name ? m.name : (email || ''); };
-const printDevsOf = cid => D.devices.filter(d => d.customerId === cid && isPrint(d))
+// v3：只有「合約型態＝計張」的事務設備列入計價；合約型態在設備保養系統的設備資料設定
+// 判斷方式與設備保養系統 V57 的 devContract() 相同（舊資料由客戶原本的合約與 V56 的計費方式帶入）
+const OFFICE_CONTRACTS = ['計張', '賣斷', '零元機'];
+function devContract(d) {
+  if (!d || !isPrint(d)) return '';
+  if (d.contract && OFFICE_CONTRACTS.includes(d.contract)) return d.contract;
+  if (d.billing === true) return '計張';
+  const cc = (custById(d.customerId) || {}).contract;
+  if (d.billing === false) return cc && cc !== '計張' && OFFICE_CONTRACTS.includes(cc) ? cc : '';
+  return OFFICE_CONTRACTS.includes(cc) ? cc : '';
+}
+const isBillDev = d => !!d && isPrint(d) && devContract(d) === '計張';
+const billDevsOf = cid => D.devices.filter(d => d.customerId === cid && isBillDev(d))
   .sort((a, b) => String(a.location || '').localeCompare(String(b.location || ''), 'zh-TW') || String(a.model || '').localeCompare(String(b.model || '')));
 const devLabel = d => d ? `${KIND[d.kind] || ''} ${d.brand || ''} ${d.model || ''}`.replace(/\s+/g, ' ').trim() : '（已刪除的設備）';
-const billableCustomers = () => D.customers.filter(c => c.contract === '計張' || PLANS.has(c.id))
+const billableCustomers = () => D.customers.filter(c => PLANS.has(c.id) || D.devices.some(d => d.customerId === c.id && isBillDev(d)))
   .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'zh-TW'));
 // 有讀數的紀錄（依日期、同日依讀數排序；與保養系統相同）
 function readingsOf(devId) {
@@ -329,7 +344,14 @@ const draftOf = cid => INVOICES.filter(i => i.customer_id === cid && i.status ==
 /* ===================== 畫面切換 ===================== */
 let view = 'due';
 function go(v) { view = v; render(); window.scrollTo(0, 0); }
+// 重畫期間若輸入框因被移除而觸發 change（又要求重畫），延到這次重畫完成後再執行，避免畫面錯亂
+let rendering = false;
 function render() {
+  if (rendering) { setTimeout(render, 0); return; }
+  rendering = true;
+  try { renderNow(); } finally { rendering = false; }
+}
+function renderNow() {
   const nav = $('#nav');
   if (phase !== 'ready') {
     nav.style.display = 'none';
@@ -351,10 +373,11 @@ function render() {
 let dueAll = false;
 function custStatus(c) {
   const pe = PLANS.get(c.id), plan = pe && pe.data;
-  const devs = printDevsOf(c.id);
+  const devs = billDevsOf(c.id);
   if (!plan) return {c, code: 'noplan', rank: 1};
-  const inGroup = new Set((plan.groups || []).flatMap(g => g.devices || [])), ex = new Set(plan.excluded || []);
-  const unassigned = devs.filter(d => !inGroup.has(d.id) && !ex.has(d.id));
+  const inGroup = new Set((plan.groups || []).flatMap(g => g.devices || []));
+  const unassigned = devs.filter(d => !inGroup.has(d.id));
+  const stale = [...inGroup].filter(id => { const d = devById(id); return d && !isBillDev(d); });
   const billed = devs.filter(d => inGroup.has(d.id));
   const last = lastIssuedInvoice(c.id);
   const next = last ? addMonths(String(last.period_to), plan.cycle || 1) : null;
@@ -363,8 +386,9 @@ function custStatus(c) {
     return prev ? !rs.some(r => r.date > prev.end_date) : rs.length < 2;
   });
   const due = !last || next <= iso(today());
-  return {c, plan, unassigned, billed, last, next, missing, draft: draftOf(c.id), due,
-    code: unassigned.length ? 'unassigned' : due ? 'due' : 'later', rank: unassigned.length ? 2 : due ? 0 : 3};
+  const code = unassigned.length ? 'unassigned' : stale.length ? 'stale' : due ? 'due' : 'later';
+  return {c, plan, unassigned, stale, billed, last, next, missing, draft: draftOf(c.id), due,
+    code, rank: {due: 0, noplan: 1, unassigned: 2, stale: 2, later: 3}[code]};
 }
 function viewDue() {
   const list = billableCustomers().map(custStatus).sort((a, b) => a.rank - b.rank || String(a.c.name).localeCompare(String(b.c.name), 'zh-TW'));
@@ -373,7 +397,8 @@ function viewDue() {
   const rows = shown.map(x => {
     const c = x.c;
     const st = x.code === 'noplan' ? '<span class="tag t-warn">尚未設定計價</span>'
-      : x.code === 'unassigned' ? `<span class="tag t-warn">${x.unassigned.length} 台設備未設定群組</span>`
+      : x.code === 'unassigned' ? `<span class="tag t-warn">${x.unassigned.length} 台計張設備未分組</span>`
+      : x.code === 'stale' ? `<span class="tag t-warn">${x.stale.length} 台已取消計張，請更新計價設定</span>`
       : x.code === 'due' ? (x.last ? '<span class="tag t-danger">已到期</span>' : '<span class="tag t-info">尚未開過單</span>')
       : `<span class="tag t-ok">尚未到期</span>`;
     const miss = x.missing && x.missing.length ? ` <span class="tag t-warn">缺抄表 ${x.missing.length} 台</span>` : '';
@@ -390,11 +415,11 @@ function viewDue() {
       <span class="tag t-danger">已到期 ${list.filter(x => x.code === 'due' && x.last).length}</span>
       <span class="tag t-info">尚未開過單 ${list.filter(x => x.code === 'due' && !x.last).length}</span>
       <span class="tag t-warn">尚未設定計價 ${cnt('noplan')}</span>
-      <span class="tag t-warn">設備未設定群組 ${cnt('unassigned')}</span>
+      <span class="tag t-warn">需更新計價設定 ${cnt('unassigned') + cnt('stale')}</span>
       <span class="tag t-ok">尚未到期 ${cnt('later')}</span></div>
     ${rows ? `<table style="min-width:760px"><thead><tr><th>客戶</th><th>狀態</th><th>上一張收費單</th><th>下次應開單</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
       : '<div class="empty">目前沒有需要處理的客戶。</div>'}
-    <p class="note">列出合約為「計張」或已設定計價的客戶。下次應開單 ＝ 上一張收費單的迄抄日 ＋ 計費週期。缺抄表 ＝ 該設備在上一張收費單之後還沒有新的讀數。</p></div>`;
+    <p class="note">列出有「計張」設備或已設定計價的客戶（設備的合約型態在設備保養系統設定）。下次應開單 ＝ 上一張收費單的迄抄日 ＋ 計費週期。缺抄表 ＝ 該設備在上一張收費單之後還沒有新的讀數。</p></div>`;
 }
 
 /* ===================== 開單 ===================== */
@@ -445,14 +470,15 @@ function buildModel() {
   const c = custById(B.cid), pe = PLANS.get(B.cid), plan = pe && pe.data;
   const m = {c, plan, groups: [], errors: [], warnings: [], lines: []};
   if (!plan) { m.errors.push('這位客戶尚未設定計價'); return m; }
-  const inGroup = new Set((plan.groups || []).flatMap(g => g.devices || [])), ex = new Set(plan.excluded || []);
-  const un = printDevsOf(B.cid).filter(d => !inGroup.has(d.id) && !ex.has(d.id));
-  if (un.length) m.errors.push(`${un.length} 台列印設備尚未加入計費群組或標示不計費：${un.map(d => devLabel(d) + (d.location ? '（' + d.location + '）' : '')).join('、')}`);
+  const inGroup = new Set((plan.groups || []).flatMap(g => g.devices || []));
+  const un = billDevsOf(B.cid).filter(d => !inGroup.has(d.id));
+  if (un.length) m.errors.push(`${un.length} 台計張設備尚未分組，請到「客戶計價設定」設定：${un.map(d => devName(d)).join('、')}`);
   (plan.groups || []).forEach(g => {
     const gm = {g, devs: []};
     (g.devices || []).forEach(id => {
       const d = devById(id);
       if (!d) { m.warnings.push(`群組「${g.name || ''}」有一台設備已從保養系統刪除，本次略過（編號 ${id}）`); return; }
+      if (!isBillDev(d)) { m.errors.push(`${devName(d)} 的合約型態已不是「計張」，請到「客戶計價設定」儲存一次以更新群組`); return; }
       const x = {d, start: null, end: null, errors: [], warnings: [], startOpts: [], endOpts: [], prev: null};
       const rs = readingsOf(d.id);
       const prev = lastIssuedLine(d.id);
@@ -820,18 +846,31 @@ function exportCsv() {
   toast(`已匯出 ${rows.length} 張收費單`);
 }
 
-/* ===================== 客戶計價設定 ===================== */
-let PE = null;   // 編輯中的計價設定 {cid, data, ts, dirty}
+/* ===================== 客戶計價設定（v2） ===================== */
+// 只列出「有計張設備」的客戶（設備的合約型態在設備保養系統設定）；可搜尋；點客戶進入設定
+let PE = null;      // 編輯中的計價設定 {cid, data, ts, dirty}
+let planQ = '';     // 客戶清單搜尋
 function defaultPlan(c) { return {title: c.name || '', taxId: '', contact: c.contact || '', phone: c.phone || '', email: '', address: c.address || '', note: '', cycle: 1, groups: [], excluded: []}; }
-const newGroup = (name, base) => ({id: 'g' + uid(), name, devices: [], bwPrice: base ? base.bwPrice : 0, colorPrice: base ? base.colorPrice : 0,
-  largeMode: base ? base.largeMode : 'own', largePrice: base ? base.largePrice : 0, largeFactor: base ? base.largeFactor : 2, rent: 0, baseBw: 0, baseColor: 0, minMonthly: 0, minScope: 'pages'});
+const PRICE_KEYS = ['bwPrice', 'colorPrice', 'largeMode', 'largePrice', 'largeFactor', 'rent', 'baseBw', 'baseColor', 'minMonthly', 'minScope'];
+const pricesOf = g => { const o = {}; PRICE_KEYS.forEach(k => { if (g && g[k] !== undefined) o[k] = g[k]; }); return o; };
+const newGroup = (name, base) => ({id: 'g' + uid(), name, devices: [], bwPrice: 0, colorPrice: 0, largeMode: 'own', largePrice: 0, largeFactor: 2,
+  rent: 0, baseBw: 0, baseColor: 0, minMonthly: 0, minScope: 'pages', ...pricesOf(base)});
+const devName = d => `${devLabel(d)}${d.location ? '（' + d.location + '）' : ''}`.slice(0, 40);
 function openPlan(cid) {
   if (PE && PE.dirty && PE.cid !== cid && !confirmTwice('目前的計價設定尚未儲存，確定要切換嗎？')) return;
   const c = custById(cid); if (!c) return toast('找不到此客戶');
   const pe = PLANS.get(cid);
-  PE = {cid, data: pe ? clone(pe.data) : defaultPlan(c), ts: pe ? pe.ts : null, dirty: false};
-  PE.data.groups = PE.data.groups || []; PE.data.excluded = PE.data.excluded || [];
-  view = 'plans'; render();
+  PE = {cid, data: pe ? clone(pe.data) : defaultPlan(c), ts: pe ? pe.ts : null, dirty: false, custom: false};
+  PE.data.groups = Array.isArray(PE.data.groups) ? PE.data.groups : [];
+  PE.data.excluded = [];
+  // 只有一台計張設備、尚未分組：直接建立一組，不必再選分組方式
+  const devs = billDevsOf(cid);
+  if (!PE.data.groups.length && devs.length === 1) { PE.data.groups = [{...newGroup(devName(devs[0])), devices: [devs[0].id]}]; PE.dirty = true; }
+  view = 'plans'; render(); window.scrollTo(0, 0);
+}
+function closePlan() {
+  if (PE && PE.dirty && !confirmTwice('目前的計價設定尚未儲存，確定要回到客戶清單嗎？')) return;
+  PE = null; render(); window.scrollTo(0, 0);
 }
 function pf(k, v) { PE.data[k] = k === 'cycle' ? Number(v) : String(v); PE.dirty = true; render(); }
 function numIn(v, label, max) {
@@ -845,70 +884,155 @@ const G_FIELDS = {bwPrice: ['黑白單價', 100000], colorPrice: ['彩色單價'
 function gf(gi, k, v) {
   const g = PE.data.groups[gi]; if (!g) return;
   if (k === 'name') g.name = String(v).slice(0, 40);
-  else if (k === 'largeMode' || k === 'minScope') g[k] = v;
-  else { const n = numIn(v, G_FIELDS[k][0], G_FIELDS[k][1]); if (n === null) return render(); if ((k === 'baseBw' || k === 'baseColor') && !Number.isInteger(n)) { toast('基本張數請填整數'); return render(); } g[k] = n; }
+  else if (k === 'largeMode') g[k] = ['own', 'as_color', 'none'].includes(v) ? v : 'own';
+  else if (k === 'minScope') g[k] = v === 'pages_rent' ? 'pages_rent' : 'pages';
+  else if (G_FIELDS[k]) { const n = numIn(v, G_FIELDS[k][0], G_FIELDS[k][1]); if (n === null) return render(); if ((k === 'baseBw' || k === 'baseColor') && !Number.isInteger(n)) { toast('基本張數請填整數'); return render(); } g[k] = n; }
+  else return;
   PE.dirty = true; render();
+}
+// 目前的分組方式：all＝全部合併、each＝每台一組、custom＝自訂
+function groupMode(p, devs) {
+  const gs = p.groups.filter(g => g.devices.some(id => devs.some(d => d.id === id)));
+  if (!devs.length || !gs.length) return '';
+  if (gs.length === 1 && devs.every(d => gs[0].devices.includes(d.id))) return devs.length === 1 ? 'each' : 'all';
+  if (gs.length === devs.length && gs.every(g => g.devices.length === 1) && devs.every(d => gs.some(g => g.devices[0] === d.id))) return 'each';
+  return 'custom';
+}
+// 選擇分組方式：立即重新分組（單價保留），畫面上會看到結果；儲存前都可以再改或「放棄修改」
+function setGroupMode(mode) {
+  if (!PE) return;
+  const devs = billDevsOf(PE.cid);
+  if (!devs.length) return toast('這位客戶沒有計張設備');
+  const old = PE.data.groups, base = old[0] || null;
+  PE.custom = mode === 'custom';
+  if (mode === 'all') {
+    const g = base ? {...clone(base), devices: []} : newGroup('全部設備合併');
+    if (!base || old.length > 1) g.name = '全部設備合併';
+    g.devices = devs.map(d => d.id);
+    PE.data.groups = [g];
+    toast(devs.length === 1 ? '只有 1 台計張設備，已設為一組' : `已將 ${devs.length} 台設備合併為一組，張數加總後計價`);
+  } else if (mode === 'each') {
+    PE.data.groups = devs.map((d, i) => {
+      const was = old.find(g => g.devices.length === 1 && g.devices[0] === d.id);   // 原本就單獨一組：保留它的單價與名稱
+      if (was) return {...clone(was), devices: [d.id]};
+      return {...newGroup(devName(d), base), devices: [d.id]};
+    });
+    toast(`已分為 ${devs.length} 組，每台設備各自計價`);
+  } else {
+    if (!PE.data.groups.length) PE.data.groups = [newGroup('群組 1', base)];
+    PE.data.groups.push(newGroup(`群組 ${PE.data.groups.length + 1}`, base));
+    toast('已新增一個群組，請勾選要合併計算的設備');
+  }
+  PE.dirty = true; render();
+  setTimeout(() => { const el = document.getElementById('grpList'); if (el) el.scrollIntoView({block: 'start'}); }, 0);
 }
 function toggleDev(gi, devId, on) {
   PE.data.groups.forEach((g, i) => { g.devices = g.devices.filter(x => x !== devId); if (on && i === gi) g.devices.push(devId); });
-  if (on) PE.data.excluded = PE.data.excluded.filter(x => x !== devId);
   PE.dirty = true; render();
 }
-function toggleEx(devId, on) {
-  PE.data.excluded = PE.data.excluded.filter(x => x !== devId);
-  if (on) { PE.data.excluded.push(devId); PE.data.groups.forEach(g => { g.devices = g.devices.filter(x => x !== devId); }); }
-  PE.dirty = true; render();
-}
-function addGroup() { const gs = PE.data.groups; gs.push(newGroup(`群組 ${gs.length + 1}`, gs[0])); PE.dirty = true; render(); }
+function addGroup() { setGroupMode('custom'); }
 function delGroup(gi) {
   const g = PE.data.groups[gi]; if (!g) return;
-  if (!confirmTwice(`刪除「${g.name || '群組'}」？群組內的設備會變成未設定。`)) return;
-  PE.data.groups.splice(gi, 1); PE.dirty = true; render();
-}
-function quickGroups(kind) {
-  const devs = printDevsOf(PE.cid).filter(d => !PE.data.excluded.includes(d.id));
-  if (!devs.length) return toast('沒有可加入的列印設備');
-  if (PE.data.groups.some(g => g.devices.length) && !confirmTwice('會重新安排所有設備的群組（單價保留在第一組），確定嗎？')) return;
-  const base = PE.data.groups[0] || null;
-  if (kind === 'all') { const g = base ? {...base, devices: []} : newGroup('全部合併'); g.devices = devs.map(d => d.id); PE.data.groups = [g]; }
-  else PE.data.groups = devs.map((d, i) => ({...newGroup(`${devLabel(d)}${d.location ? '（' + d.location + '）' : ''}`.slice(0, 40), base), devices: [d.id], ...(i === 0 && base ? {id: base.id} : {})}));
-  PE.dirty = true; render();
+  if (g.devices.length && !confirmTwice(`刪除「${g.name || '群組'}」？群組內的 ${g.devices.length} 台設備會變成未分組。`)) return;
+  PE.data.groups.splice(gi, 1); PE.dirty = true; render(); toast('已刪除群組');
 }
 function savePlan() {
   if (!PE) return;
-  const names = PE.data.groups.map(g => String(g.name || '').trim());
-  if (names.some(n => !n)) return toast('每個群組都要有名稱');
-  if (PE.data.groups.some(g => g.largeMode === 'as_color' && !(g.largeFactor > 0))) return toast('選擇「折算一般彩色」時，折算張數必須大於 0');
+  const devs = billDevsOf(PE.cid), ok = new Set(devs.map(d => d.id));
+  // 只保留目前仍為「計張」的設備；刪除沒有設備的空群組
+  const data = clone(PE.data);
+  data.groups = data.groups.map(g => ({...g, devices: g.devices.filter(id => ok.has(id))})).filter(g => g.devices.length);
+  data.excluded = [];
+  if (data.groups.some(g => !String(g.name || '').trim())) return toast('每個群組都要有名稱');
+  if (data.groups.some(g => g.largeMode === 'as_color' && !(g.largeFactor > 0))) return toast('選擇「折算一般彩色」時，折算張數必須大於 0');
+  const un = devs.filter(d => !data.groups.some(g => g.devices.includes(d.id)));
   run(async () => {
-    const r = await call('billing_plan_save', {p_customer_id: PE.cid, p_data: PE.data, p_expected: PE.ts});
+    const r = await call('billing_plan_save', {p_customer_id: PE.cid, p_data: data, p_expected: PE.ts});
     await reloadBilling();
     const pe = PLANS.get(PE.cid);
-    PE = {cid: PE.cid, data: clone(pe.data), ts: r.updated_at, dirty: false};
-    toast('已儲存計價設定');
+    PE = {cid: PE.cid, data: clone(pe.data), ts: r.updated_at, dirty: false, custom: PE.custom};
+    toast(un.length ? `已儲存。還有 ${un.length} 台計張設備沒有分組，這位客戶暫時不能開單` : '已儲存計價設定');
   }).then(render);
 }
 function reloadPlan() { if (!PE) return; const cid = PE.cid; PE = null; run(async () => { await reloadBilling(); }).then(() => openPlan(cid)); }
+
+// ---- 客戶清單 ----
+function planListRows() {
+  const q = planQ.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return billableCustomers().filter(c => {
+    if (!q.length) return true;
+    const pe = PLANS.get(c.id), p = pe ? pe.data : {};
+    const hay = [c.name, c.contact, c.phone, c.address, p.title, p.taxId, p.contact, ...billDevsOf(c.id).map(d => devName(d))].join(' ').toLowerCase();
+    return q.every(w => hay.includes(w));
+  }).map(c => ({c, st: custStatus(c)}));
+}
+function planListBody() {
+  const rows = planListRows();
+  if (!rows.length) return `<tr><td colspan="5" class="empty">${planQ.trim() ? '找不到符合的客戶。' : '目前沒有任何設定為「計張」的設備。'}</td></tr>`;
+  return rows.map(({c, st}) => {
+    const n = billDevsOf(c.id).length;
+    const tag = st.code === 'noplan' ? '<span class="tag t-warn">尚未設定</span>'
+      : st.code === 'unassigned' ? `<span class="tag t-warn">${st.unassigned.length} 台未分組</span>`
+      : st.code === 'stale' ? `<span class="tag t-warn">${st.stale.length} 台已取消計張</span>`
+      : '<span class="tag t-ok">已設定</span>';
+    const mode = st.plan ? ({all: '全部合併', each: '每台各自計價', custom: `自訂 ${st.plan.groups.length} 組`})[groupMode(st.plan, billDevsOf(c.id))] || '—' : '—';
+    return `<tr class="clickrow" data-cid="${esc(c.id)}" onclick="openPlan(this.dataset.cid)"><td><b>${esc(c.name)}</b>${c.contact || c.phone ? `<div class="muted">${esc([c.contact, c.phone].filter(Boolean).join('・'))}</div>` : ''}</td>
+      <td class="num">${n}</td><td>${tag}</td><td>${st.plan ? esc(CYCLES[st.plan.cycle] || '') : '—'}</td><td>${esc(mode)}</td></tr>`;
+  }).join('');
+}
+function filterPlanList(v) { planQ = String(v || '').slice(0, 100); const tb = document.getElementById('planListBody'); if (tb) tb.innerHTML = planListBody(); }
+function planListHtml() {
+  return `<div class="card"><h2>客戶計價設定</h2>
+    <label for="planSearch">搜尋客戶</label>
+    <input type="search" id="planSearch" value="${esc(planQ)}" placeholder="客戶名稱、聯絡人、電話、統編、設備型號" oninput="filterPlanList(this.value)">
+    <table style="min-width:620px;margin-top:10px"><thead><tr><th>客戶</th><th class="num">計張設備</th><th>計價設定</th><th>計費週期</th><th>分組方式</th></tr></thead>
+      <tbody id="planListBody">${planListBody()}</tbody></table>
+    <p class="note">只列出有「計張」設備的客戶。設備的合約型態在設備保養系統設定：設備資料總覽 → 編輯設備 → 合約型態選「計張」。點任一位客戶進入設定。</p></div>`;
+}
+// 共用：重新讀取指定設備的最新資料 → 套用修改 → 寫回雲端 → 記錄操作
+async function patchDevices(ids, fn, action) {
+  const rows = [];
+  for (let i = 0; i < ids.length; i += 200) {
+    const {data, error} = await sb.from('app_records').select('id,data').eq('coll', 'devices').in('id', ids.slice(i, i + 200));
+    if (error) throw new Error('讀取設備失敗：' + error.message);
+    data.forEach(r => { if (r.data && String(r.data.id) === String(r.id)) { const x = fn(r.data); if (x) rows.push({coll: 'devices', id: r.id, data: x}); } });
+  }
+  for (let i = 0; i < rows.length; i += 200) {
+    const {error} = await sb.from('app_records').upsert(rows.slice(i, i + 200), {onConflict: 'coll,id'});
+    if (error) throw new Error('寫入失敗：' + error.message);
+  }
+  if (rows.length) {
+    const op = {id: uid(), t: new Date().toISOString(), staffId: MYSTAFF.id, staff: MYSTAFF.name || '', action, summary: `${rows.length} 台設備（計價系統）`};
+    await sb.from('app_records').upsert([{coll: 'oplog', id: op.id, data: op}], {onConflict: 'coll,id'});
+  }
+  await loadApp();
+  return rows.length;
+}
 function viewPlans() {
-  const custs = billableCustomers();
-  const others = D.customers.filter(c => !custs.includes(c)).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'zh-TW'));
-  const opt = c => `<option value="${esc(c.id)}" ${PE && PE.cid === c.id ? 'selected' : ''}>${esc(c.name)}${PLANS.has(c.id) ? '' : '（尚未設定）'}</option>`;
-  const head = `<div class="card"><h2>客戶計價設定</h2><div class="form-row" style="margin:0">
-      <div><label>選擇客戶</label><select onchange="if(this.value)openPlan(this.value)"><option value="">請選擇客戶</option>
-        <optgroup label="計張客戶">${custs.map(opt).join('')}</optgroup>${others.length ? `<optgroup label="其他合約">${others.map(opt).join('')}</optgroup>` : ''}</select></div></div>
-      <p class="note">單價、月租、基本張數與保底設在「計費群組」上。同一群組的設備張數加總後計價；單獨計價的設備就是只有一台的群組。</p></div>`;
-  if (!PE) return head;
+  if (!PE) return planListHtml();
   const c = custById(PE.cid), p = PE.data;
-  if (!c) return head + '<div class="card"><div class="alert err">找不到此客戶。</div></div>';
-  const devs = printDevsOf(c.id);
+  if (!c) { PE = null; return planListHtml(); }
+  const devs = billDevsOf(c.id), ids = new Set(devs.map(d => d.id));
   const whereIs = id => p.groups.findIndex(g => g.devices.includes(id));
+  const stale = [...new Set(p.groups.flatMap(g => g.devices))].filter(id => !ids.has(id));
+  const un = devs.filter(d => whereIs(d.id) < 0);
+  // 使用者選了「自訂分組」就維持自訂畫面；否則依目前的群組判斷
+  const mode = PE.custom ? 'custom' : groupMode(p, devs) || (p.groups.length ? 'custom' : '');
   const fld = (k, label, ph = '', max = 80) => `<div><label>${label}</label><input maxlength="${max}" value="${esc(p[k] || '')}" placeholder="${esc(ph)}" onchange="pf('${k}',this.value)"></div>`;
+  const modeBtn = (m, title, sub) => `<button class="${mode === m ? 'primary' : 'ghost'} mode-btn" data-mode="${m}" onclick="setGroupMode('${m}')" style="text-align:left;padding:10px 14px">
+      <b>${mode === m ? '● ' : '○ '}${title}</b><div style="font-size:12px;opacity:.85">${sub}</div></button>`;
+  const modes = devs.length > 1 ? `<h3>分組方式</h3><div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${modeBtn('all', '全部合併計算', `${devs.length} 台張數加總，套用同一組單價`)}
+      ${modeBtn('each', '每台各自計算', `分成 ${devs.length} 組，每台各自單價`)}
+      ${modeBtn('custom', '自訂分組', mode === 'custom' ? `目前 ${p.groups.length} 組；按此再新增一組` : '部分合併：新增群組後勾選設備')}</div>`
+    : devs.length === 1 ? '<p class="note">這位客戶只有 1 台計張設備，不需要分組。</p>' : '';
   const gHtml = p.groups.map((g, gi) => {
     const num = (k, label, step = 'any') => `<div><label>${label}</label><input type="number" min="0" step="${step}" value="${esc(g[k] ?? 0)}" onchange="gf(${gi},'${k}',this.value)"></div>`;
-    const cks = devs.map(d => { const w = whereIs(d.id); const other = w >= 0 && w !== gi; const ex = p.excluded.includes(d.id);
-      return `<label class="devck" style="color:var(--ink)"><input type="checkbox" ${w === gi ? 'checked' : ''} onchange="toggleDev(${gi},'${d.id}',this.checked)"> ${esc(devLabel(d))}<span class="muted">${esc(d.location ? '（' + d.location + '）' : '')}${other ? `・在「${esc(p.groups[w].name)}」` : ''}${ex ? '・不計費' : ''}</span></label>`; }).join('');
-    const missing = g.devices.filter(id => !devById(id));
+    const cks = mode === 'custom' ? `<label>包含的設備（勾選；同一台只能在一個群組）</label><div class="devcks">${devs.map(d => { const w = whereIs(d.id); const other = w >= 0 && w !== gi;
+      return `<label class="devck" style="color:var(--ink)"><input type="checkbox" ${w === gi ? 'checked' : ''} onchange="toggleDev(${gi},'${d.id}',this.checked)"> ${esc(devLabel(d))}<span class="muted">${esc(d.location ? '（' + d.location + '）' : '')}${other ? `・在「${esc(p.groups[w].name)}」` : ''}</span></label>`; }).join('')}</div>`
+      : `<div class="muted">設備：${g.devices.filter(id => ids.has(id)).map(id => esc(devName(devById(id)))).join('、') || '（無）'}</div>`;
     return `<div class="grp" data-gi="${gi}"><div class="grp-head"><div style="flex:1;min-width:200px"><label>群組名稱</label><input maxlength="40" value="${esc(g.name)}" onchange="gf(${gi},'name',this.value)"></div>
-        <button class="ghost danger" onclick="delGroup(${gi})">刪除群組</button></div>
+        ${mode === 'custom' ? `<button class="ghost danger" onclick="delGroup(${gi})">刪除群組</button>` : ''}</div>
       <div class="form-row">
         ${num('bwPrice', '黑白單價（元／張）')}${num('colorPrice', '彩色單價（元／張）')}
         <div><label>大尺寸彩色計價方式</label><select onchange="gf(${gi},'largeMode',this.value)">${Object.keys(LARGE_MODES).map(k => `<option value="${k}" ${g.largeMode === k ? 'selected' : ''}>${LARGE_MODES[k]}</option>`).join('')}</select></div>
@@ -918,26 +1042,22 @@ function viewPlans() {
         ${num('rent', '月租（元／月，0＝不收）')}${num('baseBw', '每月黑白基本張數', 1)}${num('baseColor', '每月彩色基本張數', 1)}
         ${num('minMonthly', '每月保底金額（0＝無）')}
         <div><label>保底比較對象</label><select onchange="gf(${gi},'minScope',this.value)"><option value="pages" ${g.minScope !== 'pages_rent' ? 'selected' : ''}>張數費用</option><option value="pages_rent" ${g.minScope === 'pages_rent' ? 'selected' : ''}>張數費用＋月租</option></select></div>
-      </div>
-      <label>包含的設備（勾選；同一台只能在一個群組）</label><div class="devcks">${cks || '<span class="muted">此客戶沒有列印設備</span>'}</div>
-      ${missing.length ? `<div class="alert" style="margin-top:8px">有 ${missing.length} 台設備已從保養系統刪除，儲存時會一併移除。<button class="ghost" onclick="PE.data.groups[${gi}].devices=PE.data.groups[${gi}].devices.filter(id=>devById(id));PE.dirty=true;render()">立即移除</button></div>` : ''}
-    </div>`;
+      </div>${cks}</div>`;
   }).join('');
-  const un = devs.filter(d => whereIs(d.id) < 0);
-  const exHtml = un.length ? `<div class="grp"><b>未加入群組的設備</b><div class="muted" style="margin:4px 0 6px">每台列印設備都要加入群組，或勾選「不計費」（例如賣斷的機器）。</div>
-      ${un.map(d => `<label class="devck" style="color:var(--ink)"><input type="checkbox" ${p.excluded.includes(d.id) ? 'checked' : ''} onchange="toggleEx('${d.id}',this.checked)"> 不計費：${esc(devLabel(d))}<span class="muted">${esc(d.location ? '（' + d.location + '）' : '')}</span></label>`).join('')}</div>` : '';
-  const unNotEx = un.filter(d => !p.excluded.includes(d.id));
-  return head + `<div class="card"><div class="split"><h2 style="margin:0">${esc(c.name)}${PE.dirty ? ' <span class="tag t-warn">尚未儲存</span>' : ''}</h2>
+  const alerts = [
+    !devs.length ? '這位客戶目前沒有「計張」設備。請到設備保養系統把設備的合約型態設為「計張」。' : '',
+    stale.length ? `${stale.length} 台設備已取消「計張」或已刪除，儲存時會從群組移除。` : '',
+    un.length ? `還有 ${un.length} 台計張設備沒有分組：${un.map(d => esc(devName(d))).join('、')}。請選擇上方的分組方式。` : ''].filter(Boolean);
+  return `<div class="card"><div class="split"><button class="ghost" onclick="closePlan()">← 回客戶清單</button>
       <span class="muted">${PE.ts ? '上次儲存：' + esc(String(PE.ts).slice(0, 16).replace('T', ' ')) : '尚未設定過'}</span></div>
+    <h2 style="margin:12px 0 0">${esc(c.name)}${PE.dirty ? ' <span class="tag t-warn">尚未儲存</span>' : ''}</h2>
     <h3>請款資訊（印在收費單上）</h3>
     <div class="form-row">${fld('title', '請款抬頭', c.name)}${fld('taxId', '統一編號', '', 20)}${fld('contact', '請款聯絡人', '', 40)}${fld('phone', '電話', '', 40)}${fld('email', 'Email', '', 120)}
       <div><label>計費週期</label><select onchange="pf('cycle',this.value)">${[1, 2, 3].map(n => `<option value="${n}" ${p.cycle === n ? 'selected' : ''}>${CYCLES[n]}</option>`).join('')}</select></div>
       <div class="wide"><label>請款地址</label><input maxlength="120" value="${esc(p.address || '')}" onchange="pf('address',this.value)"></div>
       <div class="wide"><label>備註（內部用，不印在收費單）</label><input maxlength="300" value="${esc(p.note || '')}" onchange="pf('note',this.value)"></div></div>
-    <div class="split"><h3>計費群組（${p.groups.length}）</h3><div class="row-actions" style="margin:0">
-      <button class="ghost" onclick="quickGroups('all')">全部設備合併為一組</button><button class="ghost" onclick="quickGroups('each')">每台設備各一組</button><button class="ghost" onclick="addGroup()">＋ 新增群組</button></div></div>
-    ${gHtml || '<div class="muted">尚未建立群組。</div>'}${exHtml}
-    ${unNotEx.length ? `<div class="alert">還有 ${unNotEx.length} 台列印設備沒有加入群組也沒有標示不計費，這位客戶暫時不能開單。</div>` : ''}
+    ${modes}
+    <div id="grpList">${alerts.map(a => `<div class="alert" style="margin-top:12px">${a}</div>`).join('')}${gHtml}</div>
     <div class="row-actions"><button class="primary big" onclick="savePlan()">儲存計價設定</button>${PE.dirty ? '<button class="ghost" onclick="reloadPlan()">放棄修改</button>' : ''}
       ${PLANS.has(c.id) && !PE.dirty ? `<button class="ghost" onclick="startBuild('${c.id}')">前往開單</button>` : ''}</div>
     <p class="note">基本張數：每月免費張數，收費時乘以計費月數；當期未用完不累計到下一期。大尺寸彩色不能用基本張數抵扣。保底：低於「每月保底 × 計費月數」時補足差額。</p></div>`;
@@ -1014,7 +1134,7 @@ function migrateHtml() {
       <button class="primary" ${pending ? '' : 'disabled'} onclick="migrateRates()">1. 搬移到計價設定（${pending} 位客戶）</button>
       <button class="ghost danger" onclick="stripRates()">2. 清除設備上的舊費率（${withKeys.length} 台）</button></div>` : ''}
     ${migrateLog ? `<div class="alert ok" style="margin-top:10px;white-space:pre-wrap">${esc(migrateLog)}</div>` : ''}
-    <p class="note">搬移只建立「尚未設定計價」的客戶；已設定的客戶不會被覆蓋。搬移後的計費週期預設為每月、大尺寸預設獨立單價 0，請到「客戶計價設定」逐一確認。</p></div>`;
+    <p class="note">搬移只建立「尚未設定計價」的客戶；已設定的客戶不會被覆蓋。搬移的設備，合約型態會同時設為「計張」。搬移後的計費週期預設為每月、大尺寸預設獨立單價 0，請到「客戶計價設定」逐一確認。</p></div>`;
 }
 function migrateRates() {
   const withVal = D.devices.filter(d => hasRateKeys(d) && hasRateValue(d));
@@ -1031,6 +1151,9 @@ function migrateRates() {
       await call('billing_plan_save', {p_customer_id: cid, p_data: p, p_expected: null});
       done.push(`${c.name}：${p.groups.length} 台`);
     }
+    // 有費率的設備即為計張設備
+    const ids = withVal.filter(d => cids.includes(d.customerId) && !(d.contract === '計張' && d.billing === true)).map(d => d.id);
+    if (ids.length) await patchDevices(ids, d => d.contract === '計張' && d.billing === true ? null : {...d, contract: '計張', billing: true}, '設定合約型態為計張（舊費率搬移）');
     await reloadBilling();
     migrateLog = `已建立 ${done.length} 位客戶的計價設定：\n${done.join('\n')}`;
     toast('搬移完成，請核對後再清除舊費率');
@@ -1043,15 +1166,8 @@ function stripRates() {
   if (notMoved.length && !confirmTwice(`還有 ${notMoved.length} 台有填費率的設備尚未搬移，清除後這些數值會消失。仍要清除？`)) return;
   if (!confirmTwice(`從 ${withKeys.length} 台設備刪除舊費率欄位？刪除後保養系統不再存任何價格。`)) return;
   run(async () => {
-    const rows = withKeys.map(d => { const x = {...d}; RATE_KEYS.forEach(k => delete x[k]); return {coll: 'devices', id: d.id, data: x}; });
-    const op = {id: uid(), t: new Date().toISOString(), staffId: MYSTAFF.id, staff: MYSTAFF.name || '', action: '清除舊費率欄位', summary: `${withKeys.length} 台設備（計價系統）`};
-    for (let i = 0; i < rows.length; i += 200) {
-      const {error} = await sb.from('app_records').upsert(rows.slice(i, i + 200), {onConflict: 'coll,id'});
-      if (error) throw new Error('清除失敗：' + error.message);
-    }
-    await sb.from('app_records').upsert([{coll: 'oplog', id: op.id, data: op}], {onConflict: 'coll,id'});
-    await loadApp();
-    migrateLog = `已從 ${withKeys.length} 台設備刪除舊費率欄位。`;
+    const n = await patchDevices(withKeys.map(d => d.id), d => { if (!hasRateKeys(d)) return null; const x = {...d}; RATE_KEYS.forEach(k => delete x[k]); return x; }, '清除舊費率欄位');
+    migrateLog = `已從 ${n} 台設備刪除舊費率欄位。`;
     toast('已清除設備上的舊費率');
   }).then(render);
 }

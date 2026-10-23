@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 計張計價系統 v6</title>
+<title>普印通 計張計價系統 v8</title>
 <style>
 :root{--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#7c2d12;--brand2:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -97,10 +97,11 @@ body.busy button{pointer-events:none;opacity:.6}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="config.js"></script>
+<script src="menu.js"></script>
 </head>
 <body>
 <header>
-  <h1>普印通 計張計價系統 <span style="font-weight:400;font-size:13px;opacity:.85">v6</span></h1>
+  <h1>普印通 計張計價系統 <span style="font-weight:400;font-size:13px;opacity:.85">v8</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="due" onclick="go('due')">本期待開單</button>
     <button data-v="build" onclick="go('build')">開單</button>
@@ -108,7 +109,7 @@ body.busy button{pointer-events:none;opacity:.6}
     <button data-v="list" onclick="go('list')">收費單紀錄</button>
     <button data-v="admin" onclick="go('admin')">人員與設定</button>
   </nav>
-  <div class="who"><span id="who"></span><a href="./">回設備保養系統</a></div>
+  <div class="who"><span id="who"></span><span id="ptSys"></span></div>
 </header>
 <main id="main"><div class="card"><div class="empty">正在載入…</div></div></main>
 <div id="printArea"></div>
@@ -386,6 +387,9 @@ function render() {
   try { renderNow(); } finally { rendering = false; }
 }
 function renderNow() {
+  // v7 起：上方的系統按鈕由三個頁面共用的 menu.js 產生；v8：把登入者的身份傳給選單（「庫存」只給管理者）
+  const meStaff = phase === 'ready' ? MYSTAFF : null;
+  if (window.PT_MENU) window.PT_MENU.render('#ptSys', 'billing', {billing: true, staff: !!meStaff, admin: !!(meStaff && meStaff.admin), role: meStaff ? (meStaff.admin ? '管理者' : (['工程部', '會計部', '行政人員'].includes(meStaff.role) ? meStaff.role : '工程部')) : ''});
   const nav = $('#nav');
   if (phase !== 'ready') {
     nav.style.display = 'none';

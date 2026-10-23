@@ -1,0 +1,1855 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<link rel="icon" href="data:,">
+<title>普印通 庫存系統 v2</title>
+<script src="config.js"></script>
+<script src="menu.js"></script>
+<script>if (window.PT_CLOUD && window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
+<style>
+:root{
+  --bg:#f4f5f7;--card:#ffffff;--ink:#1d2530;--muted:#626b78;--line:#dfe3e8;
+  --pri:#0f5f73;--pri-ink:#ffffff;--pri-soft:#e5f1f4;
+  --warn-bg:#fff5d6;--warn-ink:#7a5200;--warn-line:#eac565;
+  --bad-bg:#fdeceb;--bad-ink:#b42318;--bad-line:#f1a59e;
+  --ok-bg:#e8f6ee;--ok-ink:#067647;
+  --radius:10px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-size:15px;line-height:1.5}
+h2{font-size:20px;margin:4px 0 12px}
+h3{font-size:16px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+h4{font-size:14px;margin:14px 0 8px;color:var(--muted)}
+p{margin:0 0 10px}
+.top{position:sticky;top:0;z-index:20;background:var(--pri);color:var(--pri-ink);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:8px}
+.brand strong{font-size:17px}
+.ver{font-size:12px;opacity:.8}
+.who{font-size:13px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.who select{min-height:34px;padding:4px 8px;border-radius:8px;border:0;font:inherit;color:var(--ink)}
+.hdr-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#cloudSt{font-size:12px;opacity:.85}
+.tag.demo{background:#fff3c4;color:#7a5200}
+a.btn{text-decoration:none}
+body.busy #app button,body.busy #nav button,body.busy #modal button{opacity:.6;pointer-events:none}
+.cklist{display:flex;flex-direction:column;gap:2px;margin:6px 0}
+.store-warn{background:var(--bad-bg);color:var(--bad-ink);padding:8px 16px;font-size:14px}
+nav{position:sticky;top:54px;z-index:15;background:var(--card);border-bottom:1px solid var(--line);display:flex;gap:4px;overflow-x:auto;padding:6px 12px;white-space:nowrap;-webkit-overflow-scrolling:touch}
+.nav{border:0;background:none;font:inherit;padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;flex:0 0 auto}
+.nav.on{background:var(--pri-soft);color:var(--pri);font-weight:600}
+main{max-width:1180px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.muted{color:var(--muted)}
+.sm{font-size:12.5px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tab{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;cursor:pointer;color:var(--ink)}
+.tab.on{background:var(--pri);border-color:var(--pri);color:var(--pri-ink)}
+.subnav{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:14px}
+.sub{flex:1 1 0;border:0;background:none;font:inherit;font-size:15px;padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;min-height:42px}
+.sub.on{background:var(--pri-soft);color:var(--pri);font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:14px;border-radius:8px;padding:8px 14px;min-height:40px;cursor:pointer}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:var(--pri-ink);font-weight:600}
+.btn.danger{border-color:var(--bad-line);color:var(--bad-ink)}
+.btn.armed{background:var(--bad-ink);border-color:var(--bad-ink);color:#fff}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:32px;padding:4px 10px;font-size:13px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:6px}
+.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.f.wide{grid-column:1/-1}
+input,select,textarea{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-height:40px;width:100%}
+input[type=checkbox],input[type=radio]{width:auto;min-height:0}
+input:focus,select:focus,textarea:focus,.btn:focus-visible,.pk:focus-visible,.icard:focus-visible{outline:2px solid var(--pri);outline-offset:1px}
+input.wide{margin-bottom:10px}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:14px;margin-bottom:10px;cursor:pointer}
+.seg{display:flex;gap:6px}
+.segbtn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--ink);cursor:pointer;font-size:14px;background:#fff}
+.segbtn.on{border-color:var(--pri);background:var(--pri-soft);color:var(--pri);font-weight:600}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:#eef0f3;color:var(--muted);vertical-align:middle;white-space:nowrap}
+.tag.t-sale{background:var(--pri-soft);color:var(--pri)}
+.tag.t-void{background:var(--bad-bg);color:var(--bad-ink)}
+.tag.t-ok{background:var(--ok-bg);color:var(--ok-ink)}
+.tag.t-warn{background:var(--warn-bg);color:var(--warn-ink)}
+.t-bad{color:var(--bad-ink);font-weight:600}
+.t-warn{color:var(--warn-ink);font-weight:600}
+.stepno{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--pri);color:#fff;font-size:13px}
+.alert{border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;border:1px solid}
+.alert.bad{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad-ink)}
+.alert.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn-ink)}
+.alert.info{background:var(--pri-soft);border-color:#b9dbe3;color:var(--pri)}
+.alert.ok{background:var(--ok-bg);border-color:#b7e3c9;color:var(--ok-ink)}
+.alert b{display:block;margin-bottom:2px}
+.summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px;min-width:120px}
+.stat span{display:block;font-size:12.5px;color:var(--muted)}
+.stat b{font-size:20px;font-variant-numeric:tabular-nums}
+.cat-h{font-size:13px;color:var(--muted);margin:14px 0 6px;font-weight:600}
+.grid-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.icard{text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px;cursor:pointer;font:inherit;color:var(--ink);display:flex;flex-direction:column;gap:2px}
+.icard.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.icard.bad{background:var(--bad-bg);border-color:var(--bad-line)}
+.icard .nm{font-weight:600;line-height:1.35}
+.icard .q{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2;margin-top:4px}
+.icard .q small{font-size:13px;font-weight:400;color:var(--muted);margin-left:4px}
+.icard .meta{font-size:12.5px;color:var(--muted)}
+.pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.pk{text-align:left;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;font:inherit;color:var(--ink);display:flex;flex-direction:column;gap:1px;min-height:64px}
+.pk b{font-size:14px;line-height:1.3}
+.pk small{font-size:12px;color:var(--muted)}
+.pk.sel{border-color:var(--pri);box-shadow:0 0 0 1px var(--pri) inset;background:var(--pri-soft)}
+.mention{position:relative}
+.mlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;margin-top:6px;overflow:hidden;background:#fff}
+.mopt{text-align:left;background:#fff;border:0;border-bottom:1px solid var(--line);padding:10px 12px;font:inherit;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:44px}
+.mopt:last-child{border-bottom:0}
+.mopt:hover,.mopt:focus-visible{background:var(--pri-soft)}
+.mopt small{color:var(--muted);font-size:12.5px}
+#custHint{margin:8px 0 0}
+#custHint:empty{display:none}
+.picked{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;background:var(--pri-soft);border-radius:8px;padding:10px 12px}
+.tbl{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap;background:#fafbfc}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.nw td,table.nw th{white-space:nowrap}
+tr.click{cursor:pointer}
+tr.click:hover td{background:#f7f9fa}
+tr.voided td{color:var(--muted);text-decoration:line-through}
+tr.voided td.nostrike{text-decoration:none}
+.step{display:inline-flex;align-items:center;gap:4px}
+.step input.qty{width:64px;text-align:right}
+input.money{width:110px;text-align:right}
+input.cnt{width:90px;text-align:right}
+.total{text-align:right;font-weight:600;margin-top:8px;font-variant-numeric:tabular-nums}
+.warnline:empty{display:none}
+.warnline{margin-top:10px;background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--warn-line);border-radius:8px;padding:8px 12px;font-size:14px}
+.hide{display:none!important}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0 0 14px;font-size:14px}
+dl.kv dt{color:var(--muted)}
+dl.kv dd{margin:0}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--pri);text-decoration:underline;cursor:pointer}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 10px;font:inherit;font-size:12.5px;cursor:pointer;color:var(--ink)}
+.foot{color:var(--muted);font-size:12.5px;margin:24px 0 8px;line-height:1.6}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;transition:all .2s;background:#1d2530;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100vw - 32px);z-index:60;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.err{background:var(--bad-ink)}
+#toast.ok{background:var(--ok-ink)}
+.modal{position:fixed;inset:0;background:rgba(20,26,33,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:40px 12px;overflow-y:auto}
+.modal[hidden]{display:none}
+.modal-box{background:var(--card);border-radius:12px;max-width:760px;width:100%;padding:18px;position:relative}
+.modal-x{position:absolute;top:8px;right:8px;border:0;background:none;font-size:18px;cursor:pointer;width:40px;height:40px;color:var(--muted)}
+.empty{color:var(--muted);padding:12px 0}
+@media (max-width:640px){
+  main{padding:12px}
+  .card{padding:12px}
+  .form-grid{grid-template-columns:1fr 1fr}
+  .grid-items{grid-template-columns:1fr 1fr}
+  .pick{grid-template-columns:1fr 1fr}
+  .icard .q{font-size:22px}
+  th,td{padding:6px}
+  .step input.qty{width:48px}
+  input.money{width:92px}
+  td.iname{min-width:120px}
+  input.cnt{width:64px}
+  td select{min-width:96px}
+  nav{top:0;position:relative}
+  .top{position:relative}
+  .hide-sm{display:none}
+  dl.kv{grid-template-columns:1fr}
+  dl.kv dt{margin-top:4px}
+}
+@media (max-width:640px){
+  table.lines thead{display:none}
+  table.lines tr{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 0;border-bottom:1px solid var(--line)}
+  table.lines td{border:0;padding:0;min-width:0}
+  table.lines td.iname{flex:1 1 100%}
+  table.lines td.num{text-align:left}
+  table.lines td:last-child{margin-left:auto}
+  table.lines td[data-label]::before{content:attr(data-label);display:block;font-size:12px;color:var(--muted)}
+}
+@media (max-width:380px){ .form-grid{grid-template-columns:1fr} }
+@media print{ .top,nav,.actions,#toast{display:none} body{background:#fff} .card{border:0} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><strong>普印通 庫存系統</strong><span class="ver">v2</span></div>
+  <div class="hdr-r"><span id="whoBox" class="who"></span><span id="ptSys"></span></div>
+</header>
+<div id="storeWarn" class="store-warn" hidden>這個瀏覽器不允許儲存資料，關閉頁面後這次輸入的資料會消失。</div>
+<div id="demoBar" class="store-warn" hidden>示範模式：這裡是示範資料，只存在這台電腦的瀏覽器。正式使用請從公司網址開啟（和設備保養系統同一個網址，最後加 inventory.html）。</div>
+<nav id="nav" aria-label="主選單"></nav>
+<main id="app"></main>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="modal" class="modal" hidden><div class="modal-box" role="dialog" aria-modal="true"><button class="modal-x" data-act="closeModal" aria-label="關閉">✕</button><div id="modalBody"></div></div></div>
+<script>
+'use strict';
+/* =====================================================================
+   普印通 耗材進銷存 — 第一版原型
+   1. 常數  2. 工具  3. 核心邏輯（單據、流水帳、成本、盤點、報表）
+   4. 示範資料  5. 畫面
+   正式版時，第 3 節的每個開單函式改成 Supabase RPC（同一交易內寫單據、流水帳、庫存）。
+   ===================================================================== */
+
+/* ===== 1. 常數 ===== */
+const STORE_KEY = 'printtown_inventory_v1';
+const DATA_VERSION = 2;
+// 身份沿用設備保養系統的人員資料：管理者／會計部／行政人員／工程部
+const ROLES = { admin: '管理者', acct: '會計部', asst: '行政人員', eng: '工程部' };
+const PERMS = {
+  viewCost: ['admin', 'acct', 'asst'],
+  issue: ['admin', 'acct', 'asst', 'eng'],
+  editPrice: ['admin', 'acct', 'asst'],
+  stockOps: ['admin', 'acct', 'asst'],   // 進貨、其他入庫、退回、其他出庫
+  init: ['admin'],
+  count: ['admin', 'acct', 'asst'],
+  approve: ['admin'],
+  void: ['admin'],
+  settings: ['admin'],
+  export: ['admin'],
+};
+const LOCS = { MAIN: { name: '總倉', available: true }, NG: { name: '不良品區', available: false } };
+// 分類名稱與設備保養系統的耗材目錄相同（另加定影組、轉印帶）
+const CATEGORIES = ['黑色碳粉', '藍色碳粉', '紅色碳粉', '黃色碳粉', '感光滾筒', '回收盒', '定影組', '轉印帶', '其他'];
+const BASIS = ['黑色張數', '彩色張數', '總計張數', '天數'];
+const UNITS = ['支', '個', '盒', '組'];
+const DT = {
+  INIT:       { name: '期初建帳', prefix: 'INIT' },
+  PURCHASE:   { name: '進貨入庫', prefix: 'IN' },
+  IN_OTHER:   { name: '其他入庫', prefix: 'IN' },
+  RETURN:     { name: '退回入庫', prefix: 'RT' },
+  ISSUE_SVC:  { name: '服務出庫', prefix: 'OUT' },
+  ISSUE_SALE: { name: '銷貨出庫', prefix: 'OUT' },
+  OUT_OTHER:  { name: '其他出庫', prefix: 'OUT' },
+  MOVE:       { name: '移倉', prefix: 'MV' },   // 已取消，只保留給舊資料顯示與作廢
+  ADJ:        { name: '盤點調整', prefix: 'ADJ' },
+  VOID:       { name: '作廢', prefix: null },
+};
+const IN_TYPES = ['INIT', 'PURCHASE', 'IN_OTHER', 'RETURN'];
+const OUT_TYPES = ['ISSUE_SVC', 'ISSUE_SALE', 'OUT_OTHER'];
+const REASON_CATS = { in: '入庫', out: '出庫', count: '盤差', free: '免收費' };
+const DEFAULT_REASONS = {
+  in: ['期初建帳', '供應商贈送', '拆機回收', '客戶退回未使用', '其他'],
+  out: ['報廢（過期／損壞）', '退回供應商', '內部使用', '其他'],
+  count: ['點錯', '漏開單', '損壞未登記', '原因不明'],
+  free: ['計張合約', '保固', '品質補償', '業務招待', '其他'],
+};
+
+/* ===== 2. 工具 ===== */
+const pad = (n, l = 2) => String(n).padStart(l, '0');
+function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function parseYmd(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function addDays(s, n) { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); }
+function isYmd(s) { if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false; return ymd(parseYmd(s)) === s; }
+function monthEnd(ym) { const [y, m] = ym.split('-').map(Number); return ymd(new Date(y, m, 0)); }
+const r4 = x => Math.round(x * 10000) / 10000;
+const r2 = x => Math.round(x * 100) / 100;
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function fmtN(n) { return (Number(n) || 0).toLocaleString('zh-TW', { maximumFractionDigits: 2 }); }
+function fmtM(n) { const v = Math.round(Number(n) || 0); return (v < 0 ? '−' : '') + 'NT$ ' + Math.abs(v).toLocaleString('zh-TW'); }
+function fmtQ(n) { return n > 0 ? '+' + n : n < 0 ? '−' + Math.abs(n) : '0'; }
+
+/* ===== 3. 核心邏輯 ===== */
+let S = null;
+let storageOK = true;
+let todayOverride = null;
+function today() { return todayOverride || ymd(new Date()); }
+
+function emptyState() {
+  return {
+    version: DATA_VERSION, users: [], customers: [], items: [], suppliers: [], reasons: [],
+    docs: [], ledger: [], bal: {}, counts: [], seqs: {},
+    settings: { safetyDays: 14 }, meta: { seq: 0, idc: 0, demo: false, userId: null },
+  };
+}
+function save() {
+  if (S.meta.cloud) return;   // 雲端版不存在瀏覽器
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); storageOK = true; }
+  catch (e) { storageOK = false; }
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) { const d = JSON.parse(raw); if (d && (d.version === 1 || d.version === 2) && Array.isArray(d.items) && Array.isArray(d.ledger)) return d; }
+  } catch (e) { storageOK = false; }
+  return null;
+}
+// 第一版（v1）資料升級：出庫改存客戶名稱、不綁設備；免收費原因加「計張合約」並排第一
+function migrate(d) {
+  if (d.version === DATA_VERSION) return d;
+  d.meta = d.meta || {};
+  (d.docs || []).forEach(doc => {
+    if (doc.customerName == null) { const c = (d.customers || []).find(x => x.id === doc.customerId); doc.customerName = c ? c.name : ''; }
+    if (doc.type === 'ADJ') { const c = (d.counts || []).find(x => x.id === doc.countId); if (c) doc.note = '盤點 ' + c.date; }   // 舊備註含盤點單號
+  });
+  d.reasons = d.reasons || [];
+  if (!d.reasons.some(r => r.cat === 'free' && r.name === '計張合約')) {
+    d.meta.idc = (d.meta.idc || 0) + 1;
+    d.reasons.unshift({ id: 'R' + d.meta.idc, cat: 'free', name: '計張合約', active: true });
+  }
+  delete d.devices;
+  d.version = DATA_VERSION;
+  return d;
+}
+function uid(p) {
+  if (S.meta.cloud) { const a = crypto.getRandomValues(new Uint8Array(6)); return p + Date.now().toString(36) + Array.from(a, b => (b % 36).toString(36)).join(''); }
+  S.meta.idc = (S.meta.idc || 0) + 1; return p + S.meta.idc;
+}
+function fail(m) { throw new Error(m); }
+function me() { return S.users.find(u => u.id === S.meta.userId) || S.users[0]; }
+function role() { const u = me(); return u ? u.role : null; }
+function can(p) { return (PERMS[p] || []).includes(role()); }
+function need(p, msg) { if (!can(p)) fail(msg || `「${ROLES[role()] || '目前身分'}」沒有這個權限`); }
+const item = id => S.items.find(x => x.id === id);
+const cust = id => S.customers.find(x => x.id === id);
+const sup = id => S.suppliers.find(x => x.id === id);
+const reason = id => S.reasons.find(x => x.id === id);
+const user = id => S.users.find(x => x.id === id);
+const docById = id => S.docs.find(x => x.id === id);
+function docRef(d) { return d ? `${d.date} ${DT[d.type].name}` : ''; }
+function getBal(itemId, loc) { const b = S.bal[itemId] && S.bal[itemId][loc]; return b ? { qty: b.qty, avg: b.avg } : { qty: 0, avg: 0 }; }
+function setBal(itemId, loc, b) { if (!S.bal[itemId]) S.bal[itemId] = {}; S.bal[itemId][loc] = { qty: b.qty, avg: b.avg }; }
+
+// 同一交易：失敗就整筆還原，對應正式版的資料庫交易
+function transact(fn) {
+  const snap = JSON.stringify(S);
+  try { const r = fn(); save(); return r; }
+  catch (e) { S = JSON.parse(snap); throw e; }
+}
+
+// 寫一筆流水帳並更新庫存與移動加權平均成本
+// mode: 'in' 入庫（加權）、'out' 依當下平均成本出、'outAtCost' 依指定成本移除（作廢入庫用）
+function ledgerMove(doc, itemId, loc, qty, unitCost, mode, bucket, srcType) {
+  const b = getBal(itemId, loc);
+  let cost = r4(Number(unitCost) || 0), avg = b.avg;
+  if (qty > 0) {
+    mode = 'in';
+    avg = b.qty <= 0 ? cost : (b.qty * b.avg + qty * cost) / (b.qty + qty);
+  } else if (mode === 'outAtCost') {
+    const q = -qty;
+    if (b.qty > 0 && b.qty - q > 0) avg = (b.qty * b.avg - q * cost) / (b.qty - q);
+    if (avg < 0) avg = 0;
+  } else {
+    mode = 'out';
+    cost = b.avg;
+  }
+  const nb = { qty: b.qty + qty, avg: r4(avg) };
+  setBal(itemId, loc, nb);
+  S.meta.seq = (S.meta.seq || 0) + 1;
+  S.ledger.push({
+    id: 'L' + S.meta.seq, seq: S.meta.seq, date: doc.date, itemId, loc, qty, unitCost: cost, mode,
+    balQty: nb.qty, balAvg: nb.avg, docId: doc.id, docNo: doc.no, docType: doc.type,
+    srcType: srcType || doc.type, bucket,
+  });
+  return cost;
+}
+
+/* --- 驗證 --- */
+function checkDate(d) { if (!isYmd(d)) fail('請選擇正確的日期'); if (d > today()) fail('日期不能晚於今天'); }
+function checkItem(id, allowInactive) { const it = item(id); if (!it) fail('找不到品項'); if (!it.active && !allowInactive) fail(`「${it.name}」已停用`); return it; }
+function checkQty(q, it) { if (!Number.isInteger(q) || q <= 0) fail(`「${it.name}」的數量必須是大於 0 的整數`); }
+function checkMoney(c, label) { if (typeof c !== 'number' || !isFinite(c) || c < 0) fail(`${label}必須是 0 以上的數字`); }
+function checkDup(lines, key) { const seen = new Set(); for (const l of lines) { const k = key ? key(l) : l.itemId; if (seen.has(k)) fail('同一品項請合併成一行'); seen.add(k); } }
+function checkReason(id, cat) { const r = reason(id); if (!r || r.cat !== cat) fail(`請選擇${REASON_CATS[cat]}原因`); if (!r.active) fail('這個原因已停用'); return r; }
+function checkHandler(id) { if (!user(id)) fail('請選擇經手人'); return id; }
+function checkLines(lines) { if (!Array.isArray(lines) || !lines.length) fail('請至少加入一個品項'); }
+
+function nextNo(type, date) {
+  const p = DT[type].prefix, ym = date.slice(0, 7).replace('-', ''), k = p + ym;
+  S.seqs[k] = (S.seqs[k] || 0) + 1;
+  return `${p}-${ym}-${pad(S.seqs[k], 3)}`;
+}
+function newDoc(type, h) {
+  const doc = {
+    id: uid('D'), no: '', type, status: 'valid', createdBy: me().id, createdAt: new Date().toISOString(),
+    date: h.date, handlerId: h.handlerId || me().id, customerId: null, customerName: '',
+    supplierId: null, origDocId: null, charge: null, invoiceNo: '', reasonId: null, reasonText: '',
+    discountReason: '', note: '', lines: [],
+  };
+  Object.assign(doc, h);
+  doc.lines = [];
+  doc.no = S.meta.cloud ? doc.id : (h.no || nextNo(type, h.date));
+  return doc;
+}
+
+/* --- 依單據記帳 ---
+   每張單據都可以用 applyDoc 重新算出流水帳；庫存、平均成本都由「單據依序重播」得到。
+   雲端版以伺服器收到的先後（seq）為準，多人同時開單也不會算錯。 */
+function applyDoc(doc) {
+  const t = doc.type;
+  if (t === 'INIT' || t === 'PURCHASE' || t === 'IN_OTHER') {
+    doc.lines.forEach(l => { l.unitCost = ledgerMove(doc, l.itemId, l.loc, l.qty, l.unitCost, 'in', 'in'); });
+  } else if (t === 'RETURN') {   // 以原出庫的成本沖回
+    const o = docById(doc.origDocId);
+    doc.lines.forEach(l => {
+      const ol = o ? o.lines.find(x => x.itemId === l.itemId) : null;
+      l.price = ol && ol.price != null ? ol.price : null;
+      l.unitCost = ledgerMove(doc, l.itemId, l.loc, l.qty, ol ? ol.unitCost : 0, 'in', 'in');
+    });
+  } else if (OUT_TYPES.includes(t)) {
+    doc.lines.forEach(l => { l.unitCost = ledgerMove(doc, l.itemId, l.loc, -l.qty, 0, 'out', 'out'); });
+  } else if (t === 'MOVE') {   // 已取消的移倉，只為舊資料保留
+    doc.lines.forEach(l => {
+      l.unitCost = ledgerMove(doc, l.itemId, l.fromLoc, -l.qty, 0, 'out', 'out');
+      l.inCost = ledgerMove(doc, l.itemId, l.toLoc, l.qty, l.toLoc === 'MAIN' ? (l.inCost || 0) : l.unitCost, 'in', 'in');
+    });
+  } else if (t === 'ADJ') {
+    doc.lines.forEach(l => { const avg = getBal(l.itemId, 'MAIN').avg; l.unitCost = ledgerMove(doc, l.itemId, 'MAIN', l.dir * l.qty, avg, l.dir > 0 ? 'in' : 'out', 'adj'); });
+  } else if (t === 'VOID') {
+    const o = docById(doc.origDocId);
+    doc.lines = [];
+    if (!o) return;
+    if (IN_TYPES.includes(o.type)) {
+      o.lines.forEach(l => { const c = ledgerMove(doc, l.itemId, l.loc, -l.qty, l.unitCost, 'outAtCost', 'in', o.type); doc.lines.push({ itemId: l.itemId, loc: l.loc, qty: l.qty, dir: -1, unitCost: c }); });
+    } else if (OUT_TYPES.includes(o.type)) {
+      o.lines.forEach(l => { const c = ledgerMove(doc, l.itemId, l.loc, l.qty, l.unitCost, 'in', 'out', o.type); doc.lines.push({ itemId: l.itemId, loc: l.loc, qty: l.qty, dir: 1, unitCost: c, price: l.price ?? null }); });
+    } else if (o.type === 'MOVE') {
+      o.lines.forEach(l => {
+        ledgerMove(doc, l.itemId, l.toLoc, -l.qty, l.inCost, 'outAtCost', 'in', 'MOVE');
+        ledgerMove(doc, l.itemId, l.fromLoc, l.qty, l.unitCost, 'in', 'out', 'MOVE');
+        doc.lines.push({ itemId: l.itemId, fromLoc: l.toLoc, toLoc: l.fromLoc, qty: l.qty, unitCost: l.inCost, inCost: l.unitCost });
+      });
+    }
+    o.status = 'voided'; o.voidDocId = doc.id;
+  }
+}
+// 從第一張單據重算全部（雲端版依 seq 排序；示範版維持原本順序）
+function rebuild() {
+  S.bal = {}; S.ledger = []; S.meta.seq = 0;
+  const big = Number.MAX_SAFE_INTEGER;
+  S.docs.sort((a, b) => (a.seq ?? big) - (b.seq ?? big));
+  S.docs.forEach(d => { d.status = 'valid'; delete d.voidDocId; });
+  S.docs.forEach(d => applyDoc(d));
+}
+function post(build) {
+  return transact(() => { const doc = build(); applyDoc(doc); S.docs.push(doc); return doc; });
+}
+
+/* --- 開單 --- */
+function initStock(inp) {
+  return post(() => {
+    need('init', '只有管理者可以做期初建帳');
+    checkDate(inp.date); checkLines(inp.lines);
+    checkDup(inp.lines, l => l.itemId + '|' + l.loc);
+    inp.lines.forEach(l => { const it = checkItem(l.itemId); if (!LOCS[l.loc]) fail('倉位不正確'); checkQty(l.qty, it); checkMoney(l.unitCost, `「${it.name}」的單位成本`); });
+    const doc = newDoc('INIT', { date: inp.date, note: String(inp.note || '').trim(), handlerId: me().id });
+    doc.lines = inp.lines.map(l => ({ itemId: l.itemId, loc: l.loc, qty: l.qty, unitCost: l.unitCost }));
+    return doc;
+  });
+}
+function purchase(inp) {
+  return post(() => {
+    need('stockOps');
+    checkDate(inp.date); if (!sup(inp.supplierId)) fail('請選擇供應商');
+    checkLines(inp.lines); checkDup(inp.lines);
+    inp.lines.forEach(l => { const it = checkItem(l.itemId); checkQty(l.qty, it); checkMoney(l.unitCost, `「${it.name}」的進貨單價`); });
+    const doc = newDoc('PURCHASE', { date: inp.date, supplierId: inp.supplierId, invoiceNo: String(inp.invoiceNo || '').trim(), note: String(inp.note || '').trim(), handlerId: checkHandler(inp.handlerId || me().id) });
+    doc.lines = inp.lines.map(l => ({ itemId: l.itemId, loc: 'MAIN', qty: l.qty, unitCost: l.unitCost }));
+    return doc;
+  });
+}
+function inOther(inp) {
+  return post(() => {
+    need('stockOps');
+    checkDate(inp.date); checkReason(inp.reasonId, 'in');
+    checkLines(inp.lines); checkDup(inp.lines, l => l.itemId + '|' + l.loc);
+    inp.lines.forEach(l => { const it = checkItem(l.itemId); if (!LOCS[l.loc]) fail('倉位不正確'); checkQty(l.qty, it); checkMoney(l.unitCost, `「${it.name}」的單位成本`); });
+    const doc = newDoc('IN_OTHER', { date: inp.date, reasonId: inp.reasonId, note: String(inp.note || '').trim(), handlerId: checkHandler(inp.handlerId || me().id) });
+    doc.lines = inp.lines.map(l => ({ itemId: l.itemId, loc: l.loc, qty: l.qty, unitCost: l.unitCost }));
+    return doc;
+  });
+}
+function cleanName(v) { return String(v || '').replace(/^[@＠]+/, '').trim(); }
+function issue(inp) {
+  return post(() => {
+    need('issue');
+    checkDate(inp.date);
+    const handlerId = checkHandler(inp.handlerId || me().id);
+    const customerName = cleanName(inp.customerName);
+    if (!customerName) fail('請填寫客戶');
+    if (customerName.length > 80) fail('客戶名稱太長（最多 80 字）');
+    // 用 @ 提及選的會帶客戶 id；手打的名稱若剛好跟名單一樣，也自動對上
+    const picked = inp.customerId && cust(inp.customerId) && cust(inp.customerId).name === customerName ? cust(inp.customerId) : null;
+    const linked = picked || S.customers.find(c => c.name === customerName) || null;
+    const charge = inp.charge === true;
+    const priv = can('editPrice');
+    checkLines(inp.lines); checkDup(inp.lines);
+    let freeReasonId = null, discountReason = '';
+    if (!charge) { freeReasonId = inp.freeReasonId; checkReason(freeReasonId, 'free'); }
+    const ls = inp.lines.map(l => {
+      const it = checkItem(l.itemId); checkQty(l.qty, it);
+      let price = null;
+      if (charge) { price = priv ? l.price : it.price; checkMoney(price, `「${it.name}」的單價`); price = r2(price); }
+      return { it, qty: l.qty, price };
+    });
+    if (charge && priv && ls.some(x => x.price < x.it.price)) {
+      discountReason = String(inp.discountReason || '').trim();
+      if (!discountReason) fail('有品項的單價低於售價，請填寫原因');
+    }
+    const type = charge ? 'ISSUE_SALE' : 'ISSUE_SVC';
+    const doc = newDoc(type, {
+      date: inp.date, handlerId, customerId: linked ? linked.id : null, customerName, charge,
+      reasonId: freeReasonId, discountReason, invoiceNo: charge ? String(inp.invoiceNo || '').trim() : '',
+      note: String(inp.note || '').trim(),
+    });
+    doc.lines = ls.map(x => ({ itemId: x.it.id, loc: 'MAIN', qty: x.qty, price: x.price }));
+    return doc;
+  });
+}
+function outOther(inp) {
+  return post(() => {
+    need('stockOps');
+    checkDate(inp.date); checkReason(inp.reasonId, 'out');
+    if (!LOCS[inp.loc]) fail('請選擇倉位');
+    if (inp.supplierId && !sup(inp.supplierId)) fail('找不到供應商');
+    checkLines(inp.lines); checkDup(inp.lines);
+    inp.lines.forEach(l => { const it = checkItem(l.itemId, true); checkQty(l.qty, it); });
+    const doc = newDoc('OUT_OTHER', { date: inp.date, reasonId: inp.reasonId, supplierId: inp.supplierId || null, note: String(inp.note || '').trim(), handlerId: checkHandler(inp.handlerId || me().id) });
+    doc.lines = inp.lines.map(l => ({ itemId: l.itemId, loc: inp.loc, qty: l.qty }));
+    return doc;
+  });
+}
+function validReturnsOf(id) { return S.docs.filter(d => d.type === 'RETURN' && d.origDocId === id && d.status === 'valid'); }
+function returnable(docId) {
+  const o = docById(docId); if (!o || !OUT_TYPES.includes(o.type)) return [];
+  const rets = validReturnsOf(docId);
+  return o.lines.map(l => {
+    const returned = rets.reduce((s, r) => s + r.lines.filter(x => x.itemId === l.itemId).reduce((a, x) => a + x.qty, 0), 0);
+    return { itemId: l.itemId, qty: l.qty, returned, left: l.qty - returned, unitCost: l.unitCost, price: l.price ?? null };
+  });
+}
+function returnIn(inp) {
+  return post(() => {
+    need('stockOps');
+    checkDate(inp.date);
+    const o = docById(inp.origDocId);
+    if (!o || !OUT_TYPES.includes(o.type)) fail('請選擇原出庫單');
+    if (o.status !== 'valid') fail('原出庫單已作廢，不能退回');
+    if (inp.date < o.date) fail('退回日期不能早於原出庫日期');
+    if (!LOCS[inp.loc]) fail('請選擇退回的倉位');
+    const lines = (inp.lines || []).filter(l => l.qty !== 0 && l.qty !== '' && l.qty != null);
+    checkLines(lines); checkDup(lines);
+    const ra = returnable(o.id);
+    lines.forEach(l => {
+      const it = checkItem(l.itemId, true); checkQty(l.qty, it);
+      const r = ra.find(x => x.itemId === l.itemId); if (!r) fail(`原出庫單沒有「${it.name}」`);
+      if (l.qty > r.left) fail(`「${it.name}」最多只能退 ${r.left}`);
+    });
+    const doc = newDoc('RETURN', { date: inp.date, origDocId: o.id, customerId: o.customerId, customerName: o.customerName || '', note: String(inp.note || '').trim(), handlerId: checkHandler(inp.handlerId || me().id) });
+    doc.lines = lines.map(l => ({ itemId: l.itemId, loc: inp.loc, qty: l.qty }));
+    return doc;
+  });
+}
+function voidCheck(o) {
+  if (!o) return '找不到單據';
+  if (o.type === 'VOID') return '作廢單不能再作廢';
+  if (o.status === 'voided') return '這張單已經作廢';
+  if (o.type === 'ADJ') return '盤點調整單不能作廢，請重新盤點';
+  if (OUT_TYPES.includes(o.type) && validReturnsOf(o.id).length) return '這張出庫單已有退回入庫，請先作廢退回單';
+  return '';
+}
+function voidDoc(id, reasonText) {
+  return post(() => {
+    need('void', '只有管理者可以作廢單據');
+    const o = docById(id); const why = voidCheck(o); if (why) fail(why);
+    const rt = String(reasonText || '').trim(); if (!rt) fail('請填寫作廢原因');
+    return newDoc('VOID', { no: o.no + '-V', date: today(), origDocId: o.id, reasonText: rt, customerId: o.customerId, customerName: o.customerName || '', supplierId: o.supplierId, handlerId: me().id });
+  });
+}
+
+/* --- 盤點 --- */
+function openCount() { return S.counts.find(c => c.status === 'draft' || c.status === 'submitted') || null; }
+function countStart(date) {
+  return transact(() => {
+    need('count'); checkDate(date);
+    if (openCount()) fail('已經有進行中的盤點');
+    const its = sortItems(S.items.filter(i => i.active || getBal(i.id, 'MAIN').qty !== 0));
+    if (!its.length) fail('沒有可以盤點的品項');
+    const ym = date.slice(0, 7).replace('-', ''), k = 'CNT' + ym;
+    S.seqs[k] = (S.seqs[k] || 0) + 1;
+    const c = { id: uid('C'), no: `CNT-${ym}-${pad(S.seqs[k], 3)}`, date, loc: 'MAIN', status: 'draft', createdBy: me().id, createdAt: new Date().toISOString(), lines: its.map(i => ({ itemId: i.id, actual: null, reasonId: null, book: null, diff: null })), rejectNote: '' };
+    S.counts.push(c); return c;
+  });
+}
+function countSave(id, lines) {
+  return transact(() => {
+    need('count');
+    const c = S.counts.find(x => x.id === id); if (!c) fail('找不到盤點單'); if (c.status !== 'draft') fail('這張盤點單已送出');
+    (lines || []).forEach(l => {
+      const cl = c.lines.find(x => x.itemId === l.itemId); if (!cl) return;
+      const a = l.actual;
+      if (a === '' || a == null) cl.actual = null;
+      else { if (!Number.isInteger(a) || a < 0) fail(`「${item(l.itemId).name}」的實盤數必須是 0 以上的整數`); cl.actual = a; }
+      cl.reasonId = l.reasonId || null;
+    });
+    return c;
+  });
+}
+function countSubmit(id) {
+  return transact(() => {
+    need('count');
+    const c = S.counts.find(x => x.id === id); if (!c) fail('找不到盤點單'); if (c.status !== 'draft') fail('這張盤點單已送出');
+    c.lines.forEach(l => {
+      const it = item(l.itemId);
+      if (l.actual == null) fail(`「${it.name}」還沒輸入實盤數`);
+      l.book = getBal(l.itemId, 'MAIN').qty;
+      l.diff = l.actual - l.book;
+      if (l.diff !== 0) { const r = reason(l.reasonId); if (!r || r.cat !== 'count') fail(`「${it.name}」有差異（${fmtQ(l.diff)}），請選擇原因`); }
+      else l.reasonId = null;
+    });
+    c.status = 'submitted'; c.submittedBy = me().id; c.submittedAt = new Date().toISOString(); c.rejectNote = '';
+    return c;
+  });
+}
+function countApprove(id) {
+  return transact(() => {
+    need('approve', '只有管理者可以簽核盤點');
+    const c = S.counts.find(x => x.id === id); if (!c) fail('找不到盤點單'); if (c.status !== 'submitted') fail('這張盤點單不是待簽核狀態');
+    const diffs = c.lines.filter(l => l.diff !== 0);
+    if (diffs.length) {
+      const doc = newDoc('ADJ', { date: c.date, countId: c.id, note: '盤點 ' + c.date, handlerId: me().id });
+      doc.lines = diffs.map(l => ({ itemId: l.itemId, loc: 'MAIN', qty: Math.abs(l.diff), dir: Math.sign(l.diff), reasonId: l.reasonId }));
+      applyDoc(doc); S.docs.push(doc); c.adjDocId = doc.id;
+    }
+    c.status = 'approved'; c.approvedBy = me().id; c.approvedAt = new Date().toISOString();
+    return c;
+  });
+}
+function countReject(id, note) {
+  return transact(() => {
+    need('approve', '只有管理者可以退回盤點');
+    const c = S.counts.find(x => x.id === id); if (!c) fail('找不到盤點單'); if (c.status !== 'submitted') fail('這張盤點單不是待簽核狀態');
+    const n = String(note || '').trim(); if (!n) fail('請填寫退回原因');
+    c.status = 'draft'; c.rejectNote = n; c.lines.forEach(l => { l.book = null; l.diff = null; });
+    return c;
+  });
+}
+
+/* --- 主檔維護 --- */
+function sortItems(list) { return [...list].sort((a, b) => (CATEGORIES.indexOf(a.category) - CATEGORIES.indexOf(b.category)) || a.code.localeCompare(b.code)); }
+function intIn(v, label, min, max) { const n = typeof v === 'string' ? (v.trim() === '' ? NaN : Number(v)) : v; if (!Number.isInteger(n) || n < min || (max != null && n > max)) fail(`${label}必須是 ${min}${max != null ? '～' + max : ' 以上'}的整數`); return n; }
+function saveItem(inp) {
+  return transact(() => {
+    need('settings', '只有管理者可以修改品項');
+    const code = String(inp.code || '').trim(), name = String(inp.name || '').trim();
+    if (!code) fail('請填寫料號'); if (!name) fail('請填寫品名');
+    if (S.items.some(i => i.code.toLowerCase() === code.toLowerCase() && i.id !== inp.id)) fail(`料號「${code}」已經有了`);
+    if (!CATEGORIES.includes(inp.category)) fail('請選擇分類');
+    if (!['原廠', '副廠'].includes(inp.brand)) fail('請選擇原廠或副廠');
+    const unit = String(inp.unit || '').trim(); if (!unit) fail('請填寫單位');
+    const models = [...new Set((Array.isArray(inp.models) ? inp.models : String(inp.models || '').split(/[,，、\s]+/)).map(s => String(s).trim()).filter(Boolean))];
+    const price = inp.price === '' || inp.price == null ? NaN : Number(inp.price); checkMoney(price, '售價');
+    if (inp.supplierId && !sup(inp.supplierId)) fail('找不到預設供應商');
+    if (!BASIS.includes(inp.basis)) fail('請選擇更換依據');
+    const rec = {
+      code, name, category: inp.category, brand: inp.brand, unit, models,
+      safety: intIn(inp.safety, '安全存量', 0), minOrder: intIn(inp.minOrder, '最小採購量', 1), leadDays: intIn(inp.leadDays, '採購交期', 0),
+      supplierId: inp.supplierId || '', price: r2(price), life: intIn(inp.life, '壽命', 0), basis: inp.basis, ratio: intIn(inp.ratio, '實際使用比率', 1, 200),
+      active: inp.active !== false,
+    };
+    if (inp.id) { const it = item(inp.id); if (!it) fail('找不到品項'); Object.assign(it, rec); return it; }
+    const it = { id: uid('I'), ...rec }; S.items.push(it); return it;
+  });
+}
+function itemUsed(id) { return S.ledger.some(l => l.itemId === id) || S.counts.some(c => c.lines.some(l => l.itemId === id)); }
+function deleteItem(id) {
+  return transact(() => {
+    need('settings'); const it = item(id); if (!it) fail('找不到品項');
+    if (itemUsed(id)) fail('這個品項已有異動或盤點紀錄，不能刪除，請改為停用');
+    S.items = S.items.filter(i => i.id !== id); delete S.bal[id]; return true;
+  });
+}
+function saveSupplier(inp) {
+  return transact(() => {
+    need('settings', '只有管理者可以修改供應商');
+    const name = String(inp.name || '').trim(); if (!name) fail('請填寫供應商名稱');
+    if (S.suppliers.some(s => s.name === name && s.id !== inp.id)) fail('供應商名稱重複');
+    const taxId = String(inp.taxId || '').trim(); if (taxId && !/^\d{8}$/.test(taxId)) fail('統編應為 8 位數字');
+    const rec = { name, contact: String(inp.contact || '').trim(), phone: String(inp.phone || '').trim(), taxId, note: String(inp.note || '').trim() };
+    if (inp.id) { const s = sup(inp.id); if (!s) fail('找不到供應商'); Object.assign(s, rec); return s; }
+    const s = { id: uid('S'), ...rec }; S.suppliers.push(s); return s;
+  });
+}
+function deleteSupplier(id) {
+  return transact(() => {
+    need('settings');
+    if (S.docs.some(d => d.supplierId === id) || S.items.some(i => i.supplierId === id)) fail('這個供應商已被單據或品項使用，不能刪除');
+    S.suppliers = S.suppliers.filter(s => s.id !== id); return true;
+  });
+}
+function saveReason(inp) {
+  return transact(() => {
+    need('settings', '只有管理者可以修改原因代碼');
+    if (inp.id) { const r = reason(inp.id); if (!r) fail('找不到原因'); if (typeof inp.active === 'boolean') r.active = inp.active; return r; }
+    if (!REASON_CATS[inp.cat]) fail('請選擇類別');
+    const name = String(inp.name || '').trim(); if (!name) fail('請填寫原因名稱');
+    if (S.reasons.some(r => r.cat === inp.cat && r.name === name)) fail('這個類別已有同名原因');
+    const r = { id: uid('R'), cat: inp.cat, name, active: true, ord: Math.max(0, ...S.reasons.filter(x => x.cat === inp.cat).map(x => x.ord || 0)) + 1 }; S.reasons.push(r); return r;
+  });
+}
+function saveSettings(inp) {
+  return transact(() => { need('settings'); S.settings.safetyDays = intIn(inp.safetyDays, '安全天數', 0, 180); return S.settings; });
+}
+// 從設備保養系統的耗材目錄帶入品項（濾網與「天數」計算的不列入；已帶入的不重複）
+const BASIS_FROM = { bw: '黑色張數', color: '彩色張數', total: '總計張數', days: '天數' };
+function catalogCandidates() {
+  const have = new Set(S.items.map(i => i.catalogId).filter(Boolean));
+  return (S.catalogSrc || []).filter(k => k && k.id && k.basis !== 'days' && k.category !== '濾網' && !have.has(k.id));
+}
+function importCatalog(ids) {
+  return transact(() => {
+    need('settings', '只有管理者可以修改品項');
+    const pick = catalogCandidates().filter(k => (ids || []).includes(k.id));
+    if (!pick.length) fail('請勾選要帶入的耗材');
+    let n = 0;
+    const nextCode = () => { let c; do { n++; c = 'K-' + pad(n, 3); } while (S.items.some(i => i.code.toLowerCase() === c.toLowerCase())); return c; };
+    return pick.map(k => {
+      const it = {
+        id: uid('I'), code: nextCode(), name: String(k.name || '').trim().slice(0, 60) || '未命名耗材',
+        category: CATEGORIES.includes(k.category) ? k.category : '其他', brand: '原廠', unit: '支', models: [],
+        safety: 1, minOrder: 1, leadDays: Number.isInteger(k.leadDays) && k.leadDays >= 0 ? k.leadDays : 7, supplierId: '',
+        price: Math.max(0, r2(Number(k.sellPrice) || 0)), life: Math.max(0, Math.round(Number(k.ratedLife) || 0)),
+        basis: BASIS_FROM[k.basis] || '黑色張數', ratio: Math.min(200, Math.max(1, Math.round(Number(k.coverage) || 83))), active: true, catalogId: k.id,
+      };
+      S.items.push(it); return it;
+    });
+  });
+}
+function setUser(id) { if (!user(id)) fail('找不到使用者'); S.meta.userId = id; save(); }
+function clearTransactions() {
+  return transact(() => {
+    need('settings');
+    Object.assign(S, { docs: [], ledger: [], bal: {}, counts: [], seqs: {} });
+    S.meta.seq = 0; S.meta.demo = false; return true;
+  });
+}
+function restoreBackup(obj) {
+  need('export');
+  if (!obj || (obj.version !== 1 && obj.version !== 2) || !Array.isArray(obj.items) || !Array.isArray(obj.docs) || !Array.isArray(obj.ledger) || !Array.isArray(obj.users)) fail('備份檔格式不正確');
+  const keepUser = S.meta.userId; const snap = JSON.stringify(S);
+  S = migrate(obj); if (!user(S.meta.userId)) S.meta.userId = user(keepUser) ? keepUser : S.users[0].id;
+  const probs = verify(); if (probs.length) { S = JSON.parse(snap); fail('備份檔帳務檢查不通過：' + probs[0]); }
+  save(); return true;
+}
+
+/* --- 報表 --- */
+function lastPurchaseCost(itemId) {
+  for (let i = S.docs.length - 1; i >= 0; i--) { const d = S.docs[i]; if (d.type === 'PURCHASE' && d.status === 'valid') { const l = d.lines.find(x => x.itemId === itemId); if (l) return l.unitCost; } }
+  return null;
+}
+function out30(itemId) {
+  const from = addDays(today(), -29); let n = 0;
+  S.ledger.forEach(e => { if (e.itemId !== itemId || e.date < from || e.date > today()) return; if (OUT_TYPES.includes(e.srcType)) n -= e.qty; else if (e.srcType === 'RETURN') n -= e.qty; });
+  return n;
+}
+function ledgerRows(f = {}) {
+  return S.ledger.filter(e => (!f.itemId || e.itemId === f.itemId) && (!f.loc || e.loc === f.loc) && (!f.from || e.date >= f.from) && (!f.to || e.date <= f.to)).sort((a, b) => b.seq - a.seq);
+}
+function monthSummary(ym, loc = 'MAIN') {
+  const start = ym + '-01', end = monthEnd(ym);
+  const ids = new Set(S.items.filter(i => i.active).map(i => i.id));
+  S.ledger.forEach(e => { if (e.loc === loc && e.date <= end) ids.add(e.itemId); });
+  return sortItems(S.items.filter(i => ids.has(i.id))).map(it => {
+    let open = 0, inq = 0, outq = 0, adj = 0, last = null;
+    S.ledger.forEach(e => {
+      if (e.itemId !== it.id || e.loc !== loc) return;
+      if (e.date < start) open += e.qty;
+      else if (e.date <= end) { if (e.bucket === 'in') inq += e.qty; else if (e.bucket === 'out') outq -= e.qty; else adj += e.qty; }
+      if (e.date <= end && (!last || e.seq > last.seq)) last = e;
+    });
+    const close = open + inq - outq + adj, avg = last ? last.balAvg : 0;
+    return { item: it, open, in: inq, out: outq, adj, close, avg, value: r2(close * avg) };
+  });
+}
+function outRows(f = {}) {
+  const rows = [];
+  S.docs.forEach(d => {
+    if (d.status !== 'valid' || !(OUT_TYPES.includes(d.type) || d.type === 'RETURN')) return;
+    if (f.from && d.date < f.from) return; if (f.to && d.date > f.to) return;
+    const isRet = d.type === 'RETURN';
+    const kind = isRet ? '退回' : d.type === 'ISSUE_SVC' ? '服務' : d.type === 'ISSUE_SALE' ? '銷貨' : '其他';
+    if (f.kind && f.kind !== kind) return;
+    if (f.cust) { const name = (d.customerName || '').toLowerCase(); if (!String(f.cust).toLowerCase().split(/\s+/).filter(Boolean).every(k => name.includes(k))) return; }
+    if (f.handlerId && d.handlerId !== f.handlerId) return;
+    const sale = d.type === 'ISSUE_SALE' || (isRet && docById(d.origDocId)?.type === 'ISSUE_SALE');
+    d.lines.forEach(l => {
+      const q = isRet ? -l.qty : l.qty;
+      const cost = r2(q * l.unitCost), rev = sale ? r2(q * (l.price || 0)) : 0;
+      rows.push({ doc: d, kind, line: l, qty: q, cost, rev, margin: sale ? r2(rev - cost) : null });
+    });
+  });
+  return rows.sort((a, b) => (b.doc.date.localeCompare(a.doc.date)) || (b.doc.no.localeCompare(a.doc.no)));
+}
+function countDiffRows() {
+  const rows = [];
+  S.counts.filter(c => c.status === 'approved').forEach(c => {
+    const adj = c.adjDocId ? docById(c.adjDocId) : null;
+    c.lines.filter(l => l.diff !== 0).forEach(l => {
+      const al = adj ? adj.lines.find(x => x.itemId === l.itemId) : null;
+      rows.push({ count: c, line: l, unitCost: al ? al.unitCost : 0, value: r2(l.diff * (al ? al.unitCost : 0)), adj });
+    });
+  });
+  return rows.sort((a, b) => b.count.date.localeCompare(a.count.date));
+}
+
+/* --- 帳務自我檢查：重播流水帳，核對庫存、平均成本與單據 --- */
+function verify() {
+  const probs = [], b = {};
+  const lab = e => `${e.date} ${DT[e.docType] ? DT[e.docType].name : ''}`;
+  [...S.ledger].sort((x, y) => x.seq - y.seq).forEach(e => {
+    const k = e.itemId + '|' + e.loc, cur = b[k] || { qty: 0, avg: 0 };
+    let avg = cur.avg;
+    if (e.qty > 0) avg = cur.qty <= 0 ? e.unitCost : (cur.qty * cur.avg + e.qty * e.unitCost) / (cur.qty + e.qty);
+    else if (e.mode === 'outAtCost') { const q = -e.qty; if (cur.qty > 0 && cur.qty - q > 0) avg = (cur.qty * cur.avg - q * e.unitCost) / (cur.qty - q); if (avg < 0) avg = 0; }
+    else if (Math.abs(e.unitCost - cur.avg) > 0.001) probs.push(`${lab(e)}：出庫成本與當時平均成本不符`);
+    const nq = cur.qty + e.qty, na = r4(avg);
+    if (nq !== e.balQty || Math.abs(na - e.balAvg) > 0.001) probs.push(`${lab(e)}：流水帳結存不符`);
+    b[k] = { qty: nq, avg: na };
+  });
+  Object.entries(S.bal).forEach(([itemId, locs]) => Object.entries(locs).forEach(([loc, v]) => {
+    const r = b[itemId + '|' + loc] || { qty: 0, avg: 0 };
+    if (r.qty !== v.qty || Math.abs(r.avg - v.avg) > 0.001) probs.push(`${item(itemId) ? item(itemId).name : itemId}／${LOCS[loc] ? LOCS[loc].name : loc}：庫存與流水帳不符`);
+  }));
+  Object.keys(b).forEach(k => { const [i, l] = k.split('|'); if (!(S.bal[i] && S.bal[i][l])) probs.push(`${item(i) ? item(i).name : i}：缺少庫存紀錄`); });
+  const cnt = {}; S.ledger.forEach(e => { cnt[e.docId] = (cnt[e.docId] || 0) + 1; });
+  S.docs.forEach(d => {
+    const base = d.type === 'VOID' ? docById(d.origDocId) : d;
+    const exp = base && base.type === 'MOVE' ? d.lines.length * 2 : d.lines.length;
+    if ((cnt[d.id] || 0) !== exp) probs.push(`${docRef(d)}：流水帳筆數不符`);
+    if (d.status === 'voided' && !S.docs.some(v => v.type === 'VOID' && v.origDocId === d.id)) probs.push(`${docRef(d)}：已作廢但找不到作廢單`);
+    if (OUT_TYPES.includes(d.type) && returnable(d.id).some(r => r.left < 0)) probs.push(`${docRef(d)}：退回數量超過出庫數量`);
+  });
+  const nos = new Set(); S.docs.forEach(d => { if (nos.has(d.no)) probs.push(`${docRef(d)}：內部編號重複`); nos.add(d.no); });
+  return probs;
+}
+
+/* ===== 4. 示範資料 ===== */
+function seedDemo() {
+  S = emptyState();
+  S.users = [
+    { id: 'u1', name: '阿賓', role: 'admin' }, { id: 'u2', name: '林會計', role: 'acct' }, { id: 'u3', name: '陳助理', role: 'asst' },
+    { id: 'u4', name: '王工程師', role: 'eng' }, { id: 'u5', name: '李工程師', role: 'eng' },
+  ];
+  S.meta.userId = 'u1';
+  S.suppliers = [
+    { id: 's1', name: '原廠耗材代理商（示範）', contact: '張先生', phone: '02-2700-1000', taxId: '', note: '' },
+    { id: 's2', name: '副廠耗材行（示範）', contact: '吳小姐', phone: '02-2700-2000', taxId: '', note: '' },
+  ];
+  Object.entries(DEFAULT_REASONS).forEach(([cat, names]) => names.forEach(name => S.reasons.push({ id: uid('R'), cat, name, active: true })));
+  S.customers = [
+    { id: 'c1', name: '大安國小（示範）', contact: '王老師', phone: '02-2700-0001', address: '台北市大安區和平東路三段 1 號' },
+    { id: 'c2', name: '信義會計師事務所（示範）', contact: '林小姐', phone: '02-2700-0002', address: '台北市信義區松仁路 2 號' },
+    { id: 'c3', name: '東區牙醫診所（示範）', contact: '陳護理長', phone: '02-2700-0003', address: '台北市大安區忠孝東路四段 3 號' },
+    { id: 'c4', name: '和平設計公司（示範）', contact: '黃經理', phone: '02-2700-0004', address: '台北市大安區和平東路二段 4 號' },
+    { id: 'c5', name: '通化補習班（示範）', contact: '李主任', phone: '02-2700-0005', address: '台北市大安區通化街 5 號' },
+  ];
+  const I = (id, code, name, category, brand, models, safety, price, supplierId, life, basis) =>
+    S.items.push({ id, code, name, category, brand, unit: '支', models, safety, minOrder: 1, leadDays: brand === '原廠' ? 7 : 3, supplierId, price, life, basis, ratio: 83, active: true });
+  I('i1', 'TN-K-001', 'C3070 黑色碳粉', '黑色碳粉', '原廠', ['C3070'], 3, 2800, 's1', 25000, '黑色張數');
+  I('i2', 'TN-K-002', 'C3070 黑色碳粉（副廠）', '黑色碳粉', '副廠', ['C3070'], 2, 1500, 's2', 20000, '黑色張數');
+  I('i3', 'TN-C-001', 'C3070 青色碳粉', '藍色碳粉', '原廠', ['C3070'], 2, 3200, 's1', 15000, '彩色張數');
+  I('i4', 'TN-M-001', 'C3070 洋紅碳粉', '紅色碳粉', '原廠', ['C3070'], 2, 3200, 's1', 15000, '彩色張數');
+  I('i5', 'TN-Y-001', 'C3070 黃色碳粉', '黃色碳粉', '原廠', ['C3070'], 2, 3200, 's1', 15000, '彩色張數');
+  I('i6', 'DR-001', 'C3070／C5575 感光鼓', '感光滾筒', '原廠', ['C3070', 'C5575'], 1, 6500, 's1', 80000, '總計張數');
+  I('i7', 'WB-001', 'C3070／C5575 回收盒', '回收盒', '原廠', ['C3070', 'C5575'], 2, 900, 's1', 50000, '總計張數');
+  I('i8', 'TN-K-003', 'C5575 黑色碳粉', '黑色碳粉', '原廠', ['C5575'], 2, 3000, 's1', 30000, '黑色張數');
+  I('i9', 'TN-K-004', 'B7030 黑色碳粉', '黑色碳粉', '原廠', ['B7030'], 3, 2400, 's1', 30000, '黑色張數');
+  I('i10', 'DR-002', 'B7030 感光鼓', '感光滾筒', '原廠', ['B7030'], 1, 5200, 's1', 90000, '黑色張數');
+  I('i11', 'TN-K-005', 'P3410 碳粉匣', '黑色碳粉', '原廠', ['P3410'], 2, 2600, 's1', 10000, '黑色張數');
+  I('i12', 'TN-K-006', 'P3410 碳粉匣（副廠）', '黑色碳粉', '副廠', ['P3410'], 1, 1300, 's2', 8000, '黑色張數');
+  I('i13', 'FU-001', 'C3070 定影組', '定影組', '原廠', ['C3070'], 0, 8800, 's1', 150000, '總計張數');
+  S.catalogSrc = [   // 示範用的「設備保養系統耗材目錄」
+    { id: 'k1', name: 'C3070 轉印帶（保養系統目錄）', category: '其他', basis: 'total', ratedLife: 150000, coverage: 83, unitCost: 2600, sellPrice: 4200, leadDays: 10 },
+    { id: 'k2', name: 'C5575 黃色碳粉（保養系統目錄）', category: '黃色碳粉', basis: 'color', ratedLife: 26000, coverage: 83, unitCost: 2100, sellPrice: 3300, leadDays: 7 },
+    { id: 'k3', name: '清淨機前置濾網（保養系統目錄）', category: '濾網', basis: 'days', ratedLife: 90, coverage: 100, unitCost: 300, sellPrice: 600, leadDays: 5 },
+  ];
+  S.items.find(i => i.code === 'WB-001').unit = '個';
+  S.items.find(i => i.code === 'FU-001').unit = '組';
+  S.meta.idc = 100;
+
+  const d = n => addDays(today(), -n);
+  const R = (cat, name) => S.reasons.find(r => r.cat === cat && r.name === name).id;
+  const free = (date, cid, handlerId, lines, extra = {}) => issue({ date, customerName: cust(cid).name, customerId: cid, handlerId, charge: false, freeReasonId: R('free', '計張合約'), lines, ...extra });
+  const sale = (date, name, handlerId, lines, extra = {}) => issue({ date, customerName: name, handlerId, charge: true, lines, ...extra });
+  initStock({ date: d(52), note: '上線期初盤點（示範）', lines: [
+    { itemId: 'i1', loc: 'MAIN', qty: 4, unitCost: 1700 }, { itemId: 'i1', loc: 'NG', qty: 1, unitCost: 1700 },
+    { itemId: 'i2', loc: 'MAIN', qty: 2, unitCost: 800 }, { itemId: 'i3', loc: 'MAIN', qty: 2, unitCost: 2000 },
+    { itemId: 'i4', loc: 'MAIN', qty: 3, unitCost: 2000 }, { itemId: 'i5', loc: 'MAIN', qty: 2, unitCost: 2000 },
+    { itemId: 'i6', loc: 'MAIN', qty: 2, unitCost: 4200 }, { itemId: 'i7', loc: 'MAIN', qty: 4, unitCost: 450 },
+    { itemId: 'i8', loc: 'MAIN', qty: 3, unitCost: 1850 }, { itemId: 'i9', loc: 'MAIN', qty: 5, unitCost: 1500 },
+    { itemId: 'i10', loc: 'MAIN', qty: 1, unitCost: 3300 }, { itemId: 'i11', loc: 'MAIN', qty: 3, unitCost: 1600 },
+    { itemId: 'i12', loc: 'MAIN', qty: 2, unitCost: 700 },
+  ] });
+  purchase({ date: d(40), supplierId: 's1', invoiceNo: 'PA-0001', handlerId: 'u3', lines: [{ itemId: 'i1', qty: 6, unitCost: 1750 }, { itemId: 'i3', qty: 3, unitCost: 2050 }] });
+  free(d(35), 'c1', 'u4', [{ itemId: 'i1', qty: 1 }]);
+  sale(d(30), cust('c2').name, 'u3', [{ itemId: 'i1', qty: 1, price: 2800 }], { invoiceNo: 'AB12345678' });
+  inOther({ date: d(28), reasonId: R('in', '供應商贈送'), handlerId: 'u3', note: '活動贈品', lines: [{ itemId: 'i2', loc: 'MAIN', qty: 2, unitCost: 0 }] });
+  free(d(25), 'c1', 'u5', [{ itemId: 'i9', qty: 1 }]);
+  inOther({ date: d(22), reasonId: R('in', '拆機回收'), handlerId: 'u4', note: '舊機拆下，待檢驗', lines: [{ itemId: 'i10', loc: 'NG', qty: 1, unitCost: 0 }] });
+  sale(d(20), cust('c4').name, 'u3', [{ itemId: 'i8', qty: 1, price: 2800 }], { discountReason: '長期客戶優惠' });
+  free(d(18), 'c1', 'u4', [{ itemId: 'i3', qty: 1 }]);
+  const o15 = free(d(15), 'c5', 'u4', [{ itemId: 'i9', qty: 2 }]);
+  returnIn({ date: d(14), origDocId: o15.id, loc: 'MAIN', handlerId: 'u4', note: '多領一支，退回', lines: [{ itemId: 'i9', qty: 1 }] });
+  const o12 = free(d(12), 'c1', 'u4', [{ itemId: 'i6', qty: 1 }]);
+  voidDoc(o12.id, '客戶填錯，作廢重開');
+  const c = countStart(d(10));
+  countSave(c.id, c.lines.map(l => ({ itemId: l.itemId, actual: l.itemId === 'i11' ? getBal(l.itemId, 'MAIN').qty - 1 : getBal(l.itemId, 'MAIN').qty, reasonId: l.itemId === 'i11' ? R('count', '漏開單') : null })));
+  countSubmit(c.id); countApprove(c.id);
+  free(d(8), 'c2', 'u3', [{ itemId: 'i4', qty: 1 }], { freeReasonId: R('free', '品質補償'), note: '上次碳粉漏粉，補一支' });
+  free(d(6), 'c5', 'u5', [{ itemId: 'i11', qty: 1 }]);
+  sale(d(5), cust('c3').name, 'u3', [{ itemId: 'i12', qty: 1, price: 1300 }]);
+  outOther({ date: d(3), reasonId: R('out', '報廢（過期／損壞）'), loc: 'NG', handlerId: 'u3', note: '外殼破裂', lines: [{ itemId: 'i1', qty: 1 }] });
+  sale(d(2), '敦化南路 陳先生（散客）', 'u3', [{ itemId: 'i7', qty: 1, price: 900 }], { note: '電話叫貨，自取' });
+  free(d(1), 'c1', 'u4', [{ itemId: 'i5', qty: 2 }]);
+  free(d(1), 'c1', 'u4', [{ itemId: 'i13', qty: 1 }], { note: '定影組先出，進貨單尚未補登' });
+  S.meta.demo = true;
+  save();
+}
+
+const Inv = {
+  today, can, role, me, getBal, initStock, purchase, inOther, issue, outOther, returnIn, voidDoc, voidCheck,
+  returnable, countStart, countSave, countSubmit, countApprove, countReject, openCount, saveItem, deleteItem,
+  saveSupplier, deleteSupplier, saveReason, saveSettings, setUser, clearTransactions, restoreBackup, monthSummary,
+  ledgerRows, outRows, countDiffRows, verify, seedDemo, out30, lastPurchaseCost, rebuild, applyDoc, catalogCandidates, importCatalog,
+  _t: { emptyState, migrate, getState: () => S, setState: s => { S = s; }, setToday: d => { todayOverride = d; }, DT },
+};
+window.Inv = Inv;
+
+/* ===== 5. 畫面 ===== */
+const $ = s => document.querySelector(s);
+const ui = {
+  page: 'dash', books: 'count', issueTab: 'cust', recv: 'purchase', rep: 'ledger', set: 'items',
+  docs: { type: '', from: '', to: '', kw: '' },
+  led: { itemId: '', loc: '', from: '', to: '' },
+  sum: { ym: '', loc: 'MAIN' },
+  outr: { from: '', to: '', cust: '', handlerId: '', kind: '' },
+  itemForm: null, supForm: null, reasonForm: { cat: 'in', name: '' }, sys: { safetyDays: 14 }, verifyMsg: '',
+};
+function freshForms() {
+  const u = me() ? me().id : '', t = today();
+  freshIssue();
+  ui.other = { reasonId: '', loc: 'MAIN', supplierId: '', lines: [], date: t, handlerId: u, note: '' };
+  ui.pur = { supplierId: '', invoiceNo: '', lines: [], date: t, handlerId: u, note: '' };
+  ui.inx = { reasonId: '', lines: [], date: t, handlerId: u, note: '' };
+  ui.ret = { q: '', origDocId: '', loc: 'MAIN', qty: {}, date: t, handlerId: u, note: '' };
+  ui.init = { rows: {}, date: t, note: '' };
+  ui.cnt = { date: t, actual: {}, reason: {}, rejectNote: '', loadedId: '' };
+  if (!ui.sum.ym) ui.sum.ym = t.slice(0, 7);
+  ui.sys.safetyDays = S.settings.safetyDays;
+}
+
+/* --- 小元件 --- */
+function opt(v, label, sel) { return `<option value="${esc(v)}"${String(v) === String(sel) ? ' selected' : ''}>${esc(label)}</option>`; }
+function field(label, inner, cls = '') { return `<label class="f ${cls}"><span>${label}</span>${inner}</label>`; }
+function group(label, inner, cls = '') { return `<div class="f ${cls}" role="group" aria-label="${esc(label)}"><span>${label}</span>${inner}</div>`; }
+function tabs(cur, list, act) { return `<div class="tabs" role="tablist">${list.map(([id, name]) => `<button class="tab${id === cur ? ' on' : ''}" role="tab" aria-selected="${id === cur}" data-act="${act}" data-v="${id}">${esc(name)}</button>`).join('')}</div>`; }
+function itemLabel(it) { return `${esc(it.name)}${it.brand === '副廠' ? ' <span class="tag">副廠</span>' : ''}${it.active ? '' : ' <span class="tag t-void">已停用</span>'}`; }
+function userName(id) { const u = user(id); return u ? u.name : '—'; }
+function selUsers(path, sel) { return `<select data-bind="${path}">${S.users.filter(u => u.active !== false || u.id === sel).map(u => opt(u.id, `${u.name}（${ROLES[u.role]}）`, sel)).join('')}</select>`; }
+function selReasons(path, cat, sel, attrs = '') { return `<select data-bind="${path}" ${attrs}>${opt('', '請選擇', sel)}${S.reasons.filter(r => r.cat === cat && (r.active || r.id === sel)).map(r => opt(r.id, r.name, sel)).join('')}</select>`; }
+function selSup(path, sel, attrs = '') { return `<select data-bind="${path}" ${attrs}>${opt('', '請選擇', sel)}${S.suppliers.map(s => opt(s.id, s.name, sel)).join('')}</select>`; }
+function locOpts(sel) { return Object.entries(LOCS).map(([k, v]) => opt(k, v.name, sel)).join(''); }
+function dateF(form, label = '日期') { return field(label, `<input type="date" max="${today()}" data-bind="${form}.date" value="${esc(ui[form].date)}">`); }
+function handlerF(form) { return field('經手人', selUsers(form + '.handlerId', ui[form].handlerId)); }
+function noteF(form) { return field('備註', `<input type="text" data-bind="${form}.note" value="${esc(ui[form].note)}" placeholder="選填">`, 'wide'); }
+function segOpt(path, v, label, on) { return `<label class="segbtn${on ? ' on' : ''}"><input type="radio" name="${path}" value="${v}" data-bind="${path}" data-rerender ${on ? 'checked' : ''}>${label}</label>`; }
+function qtyCls(it) { const q = getBal(it.id, 'MAIN').qty; return q < 0 ? 'bad' : (q === 0 || q < it.safety) ? 'warn' : ''; }
+function docTarget(d) {
+  if (d.type === 'VOID') { const o = docById(d.origDocId); return '作廢：' + docRef(o); }
+  if (d.customerName) return d.customerName;
+  if (d.customerId && cust(d.customerId)) return cust(d.customerId).name;
+  if (d.supplierId) return sup(d.supplierId) ? sup(d.supplierId).name : '';
+  if (d.reasonId) return reason(d.reasonId) ? reason(d.reasonId).name : '';
+  if (d.type === 'MOVE') return d.lines[0] ? `${LOCS[d.lines[0].fromLoc].name} → ${LOCS[d.lines[0].toLoc].name}` : '';
+  if (d.type === 'ADJ') { const c = S.counts.find(x => x.id === d.countId); return c ? '盤點 ' + c.date : '盤點調整'; }
+  if (d.type === 'INIT') return '期初';
+  return '';
+}
+function docItems(d) { const its = d.lines.map(l => item(l.itemId)).filter(Boolean); if (!its.length) return ''; return esc(its[0].name) + (its.length > 1 ? ` 等 ${its.length} 項` : ''); }
+function docQty(d) { return d.lines.reduce((s, l) => s + l.qty, 0); }
+function docCost(d) { return d.lines.reduce((s, l) => s + l.qty * (l.unitCost || 0), 0); }
+function typeTag(d) { const cls = d.type === 'VOID' ? 't-void' : d.type === 'ISSUE_SALE' ? 't-sale' : ''; return `<span class="tag ${cls}">${DT[d.type].name}</span>`; }
+function statusTag(d) { return d.type === 'VOID' ? '<span class="tag t-void">作廢單</span>' : d.status === 'voided' ? '<span class="tag t-void">已作廢</span>' : '<span class="tag t-ok">有效</span>'; }
+
+/* --- 品項挑選與明細 --- */
+function picker(form, items) {
+  if (!items.length) return '<p class="empty">沒有可選的品項。</p>';
+  return `<div class="pick">${items.map(it => {
+    const q = getBal(it.id, 'MAIN').qty, inL = ui[form].lines.find(l => l.itemId === it.id);
+    return `<button class="pk${inL ? ' sel' : ''}" data-act="addLine" data-form="${form}" data-id="${it.id}"><b>${esc(it.name)}</b><small>${esc(it.code)}${it.brand === '副廠' ? '・副廠' : ''}</small><small class="${q < 0 ? 't-bad' : (q === 0 || q < it.safety) ? 't-warn' : ''}">總倉 ${q} ${esc(it.unit)}${inL ? `・已選 ${esc(inL.qty)}` : ''}</small></button>`;
+  }).join('')}</div>`;
+}
+function lineSub(form, l, priceMode) { return (Number(priceMode ? l.price : l.unitCost) || 0) * (Number(l.qty) || 0); }
+function linesTable(form, o = {}) {
+  const L = ui[form].lines;
+  if (!L.length) return `<p class="empty">尚未加入品項，請點上方品項。</p><div id="warn-${form}" class="warnline"></div>`;
+  const showCost = o.cost && can('viewCost'), showMoney = showCost || o.price;
+  let h = `<div class="tbl"><table class="lines"><thead><tr><th>品項</th>${o.loc ? '<th>倉位</th>' : ''}<th class="num">數量</th>${showCost ? `<th class="num">${o.costLabel || '單位成本'}</th>` : ''}${o.price ? '<th class="num">單價</th>' : ''}${showMoney ? '<th class="num">小計</th>' : ''}<th></th></tr></thead><tbody>`;
+  L.forEach((l, i) => {
+    const it = item(l.itemId), m = getBal(it.id, 'MAIN').qty, n = getBal(it.id, 'NG').qty;
+    h += `<tr><td class="iname">${itemLabel(it)}<div class="muted sm">總倉 ${m}${n ? `・不良品區 ${n}` : ''}</div></td>`;
+    if (o.loc) h += `<td data-label="倉位"><select data-bind="${form}.lines.${i}.loc" aria-label="倉位">${locOpts(l.loc)}</select></td>`;
+    h += `<td class="num" data-label="數量"><div class="step"><button class="btn sm ghost" data-act="stepLine" data-form="${form}" data-i="${i}" data-d="-1" aria-label="減少">−</button><input type="number" class="qty" min="1" step="1" inputmode="numeric" aria-label="數量" data-bind="${form}.lines.${i}.qty" data-type="int" data-live="lines" data-form="${form}" value="${esc(l.qty)}"><button class="btn sm ghost" data-act="stepLine" data-form="${form}" data-i="${i}" data-d="1" aria-label="增加">＋</button></div></td>`;
+    if (showCost) h += `<td class="num" data-label="${o.costLabel || '單位成本'}"><input type="number" class="money" min="0" step="0.01" inputmode="decimal" aria-label="${o.costLabel || '單位成本'}" data-bind="${form}.lines.${i}.unitCost" data-type="num" data-live="lines" data-form="${form}" value="${esc(l.unitCost)}"></td>`;
+    if (o.price) h += `<td class="num" data-label="單價"><input type="number" class="money" min="0" step="1" inputmode="decimal" aria-label="單價" data-bind="${form}.lines.${i}.price" data-type="num" data-live="lines" data-form="${form}" value="${esc(l.price)}"><div class="muted sm">售價 ${fmtN(it.price)}</div></td>`;
+    if (showMoney) h += `<td class="num" data-label="小計" id="sub-${form}-${i}">${fmtM(lineSub(form, l, o.price))}</td>`;
+    h += `<td><button class="btn sm ghost" data-act="rmLine" data-form="${form}" data-i="${i}" aria-label="移除">✕</button></td></tr>`;
+  });
+  h += '</tbody></table></div>';
+  if (showMoney) h += `<div class="total" id="total-${form}">合計 ${fmtM(L.reduce((s, l) => s + lineSub(form, l, o.price), 0))}</div>`;
+  h += `<div id="warn-${form}" class="warnline">${o.warn ? negWarn(form) : ''}</div>`;
+  return h;
+}
+function negWarn(form) {
+  const loc = form === 'other' ? ui.other.loc : 'MAIN';
+  const msgs = ui[form].lines.map(l => { const it = item(l.itemId), after = getBal(it.id, loc).qty - (Number(l.qty) || 0); return after < 0 ? `「${esc(it.name)}」出庫後${LOCS[loc].name}會變成 ${after}` : ''; }).filter(Boolean);
+  return msgs.length ? msgs.join('；') + '。可以存檔，但會列入「負庫存待處理」。' : '';
+}
+function newLine(form, it) {
+  if (form === 'issue') return { itemId: it.id, qty: 1, price: it.price };
+  if (form === 'pur') { const c = lastPurchaseCost(it.id); return { itemId: it.id, qty: 1, unitCost: c == null ? '' : c }; }
+  if (form === 'inx') { const r = reason(ui.inx.reasonId), d = inxDefaults(r, it); return { itemId: it.id, qty: 1, loc: d.loc, unitCost: d.cost }; }
+  return { itemId: it.id, qty: 1 };
+}
+function inxDefaults(r, it) {
+  const n = r ? r.name : '';
+  if (n === '拆機回收') return { loc: 'NG', cost: 0 };
+  if (n === '供應商贈送') return { loc: 'MAIN', cost: 0 };
+  return { loc: 'MAIN', cost: getBal(it.id, 'MAIN').avg };
+}
+function recentDocs(types) {
+  const list = S.docs.filter(d => types.includes(d.type)).slice(-5).reverse();
+  if (!list.length) return '';
+  return `<section class="card"><h3>最近的單據</h3><div class="tbl"><table class="nw"><thead><tr><th>日期</th><th>類型</th><th>對象</th><th>品項</th><th class="num">數量</th><th>狀態</th></tr></thead><tbody>${list.map(d => `<tr class="click${d.status === 'voided' ? ' voided' : ''}" data-act="openDoc" data-id="${d.id}"><td>${d.date}</td><td class="nostrike">${typeTag(d)}</td><td>${esc(docTarget(d))}</td><td>${docItems(d)}</td><td class="num">${docQty(d)}</td><td class="nostrike">${statusTag(d)}</td></tr>`).join('')}</tbody></table></div></section>`;
+}
+
+/* --- 頁面：庫存總覽 --- */
+function pageDash() {
+  const items = sortItems(S.items.filter(i => i.active || getBal(i.id, 'MAIN').qty !== 0 || getBal(i.id, 'NG').qty !== 0));
+  const neg = items.filter(i => getBal(i.id, 'MAIN').qty < 0 || getBal(i.id, 'NG').qty < 0);
+  const low = items.filter(i => { const q = getBal(i.id, 'MAIN').qty; return q >= 0 && (q === 0 || q < i.safety); });
+  const pend = S.counts.filter(c => c.status === 'submitted'), draft = S.counts.find(c => c.status === 'draft');
+  const priv = can('viewCost');
+  const value = items.reduce((s, i) => { const b = getBal(i.id, 'MAIN'); return s + (b.qty > 0 ? b.qty * b.avg : 0); }, 0);
+  let h = '<h2>庫存總覽</h2>';
+  h += `<div class="summary"><div class="stat"><span>品項</span><b>${items.length}</b></div><div class="stat"><span>負庫存</span><b class="${neg.length ? 't-bad' : ''}">${neg.length}</b></div><div class="stat"><span>低於安全存量</span><b class="${low.length ? 't-warn' : ''}">${low.length}</b></div><div class="stat"><span>待簽核盤點</span><b>${pend.length}</b></div>${priv ? `<div class="stat"><span>總倉庫存金額</span><b>${fmtM(value)}</b></div>` : ''}</div>`;
+  if (neg.length) h += `<div class="alert bad"><b>負庫存待處理 ${neg.length} 項</b>${neg.map(i => `${esc(i.name)}（總倉 ${getBal(i.id, 'MAIN').qty}${getBal(i.id, 'NG').qty < 0 ? `，不良品區 ${getBal(i.id, 'NG').qty}` : ''}）`).join('、')}。請補開漏掉的入庫單，或在月盤點時調正。</div>`;
+  if (low.length) h += `<div class="alert warn"><b>低於安全存量 ${low.length} 項</b>${low.map(i => `${esc(i.name)}（剩 ${getBal(i.id, 'MAIN').qty}，安全存量 ${i.safety}）`).join('、')}</div>`;
+  if (pend.length) h += `<div class="alert info"><b>盤點待簽核</b>${pend.map(c => '盤點日 ' + c.date).join('、')}　${can('approve') || can('count') ? '<button class="linkbtn" data-act="goBooks" data-v="count">前往盤點</button>' : ''}</div>`;
+  if (draft) h += `<div class="alert info"><b>盤點進行中</b>盤點日 ${draft.date}，尚未送出　${can('count') ? '<button class="linkbtn" data-act="goBooks" data-v="count">前往盤點</button>' : ''}</div>`;
+  if (!neg.length && !low.length && !pend.length && !draft) h += '<div class="alert ok">目前沒有需要處理的警示。</div>';
+  h += '<div class="cat-h">品項（依分類排列，點卡片看流水帳）</div><div class="grid-items">';
+  items.forEach(it => {
+    const b = getBal(it.id, 'MAIN'), ng = getBal(it.id, 'NG').qty;
+    h += `<button class="icard ${qtyCls(it)}" data-act="itemLedger" data-id="${it.id}"><span class="nm">${itemLabel(it)}</span><span class="meta">${esc(it.category)}・${esc(it.code)}</span><span class="q">${b.qty}<small>${esc(it.unit)}</small></span><span class="meta">安全存量 ${it.safety}・近 30 日出庫 ${out30(it.id)}</span>${ng ? `<span class="meta">不良品區 ${ng}</span>` : ''}${priv ? `<span class="meta">平均成本 ${fmtN(b.avg)}</span>` : ''}</button>`;
+  });
+  h += '</div>';
+  if (!items.length) h += '<p class="empty">還沒有品項，請到「設定 → 品項」新增。</p>';
+  return h;
+}
+
+/* --- 頁面：出庫 --- */
+// 客戶提示來源：最近出庫填過的客戶名稱排前面，再來是客戶名單
+function custPool() {
+  const pool = [], seen = new Set();
+  for (let i = S.docs.length - 1; i >= 0; i--) {
+    const d = S.docs[i], n = d.customerName;
+    if (!n || seen.has(n) || d.type === 'VOID') continue;
+    seen.add(n);
+    const c = S.customers.find(x => x.name === n);
+    pool.push({ id: c ? c.id : '', name: n, sub: c ? [c.contact, c.phone].filter(Boolean).join('　') : '曾填過的客戶' });
+  }
+  S.customers.forEach(c => { if (!seen.has(c.name)) { seen.add(c.name); pool.push({ id: c.id, name: c.name, sub: [c.contact, c.phone].filter(Boolean).join('　') }); } });
+  return pool;
+}
+function custMatches(q) {
+  const kws = cleanName(q).toLowerCase().split(/\s+/).filter(Boolean), pool = custPool();
+  if (!kws.length) return pool.slice(0, 8);
+  // 名稱命中的排前面，聯絡人、電話、地址命中的排後面
+  const byName = p => kws.every(k => p.name.toLowerCase().includes(k));
+  const byAny = p => { const c = p.id ? cust(p.id) : null; const hay = [p.name, p.sub, c ? c.address : ''].join(' ').toLowerCase(); return kws.every(k => hay.includes(k)); };
+  return pool.filter(byName).concat(pool.filter(p => !byName(p) && byAny(p))).slice(0, 8);
+}
+function mentionHtml() {
+  const f = ui.issue; if (!f.mentionOpen) return '';
+  const list = custMatches(f.customerName); f._m = list;
+  if (!list.length) return '';
+  return `<div class="mlist" role="listbox" aria-label="客戶提示">${list.map((p, i) => `<button class="mopt" role="option" data-act="mentionPick" data-i="${i}"><b>${esc(p.name)}</b>${p.sub ? `<small>${esc(p.sub)}</small>` : ''}</button>`).join('')}</div>`;
+}
+function custHint() {
+  const f = ui.issue, n = cleanName(f.customerName);
+  if (!n) return '';
+  const c = (f.customerId && cust(f.customerId)) || S.customers.find(x => x.name === n);
+  if (c) return esc([c.contact, c.phone, c.address].filter(Boolean).join('　'));
+  if (custPool().some(p => p.name === n)) return '曾填過的客戶';
+  if (f.mentionOpen && custMatches(n).length) return '';
+  return '新的客戶名稱，存檔後下次打字就會出現在提示裡';
+}
+function issueCharge() { return ui.issue.chargeSel === 'yes'; }
+function issueNeedDiscount() { return issueCharge() && can('editPrice') && ui.issue.lines.some(l => (Number(l.price) || 0) < item(l.itemId).price); }
+function pageIssue() {
+  const t = [['cust', '客戶出庫']]; if (can('stockOps')) t.push(['other', '其他出庫']);
+  if (!t.find(x => x[0] === ui.issueTab)) ui.issueTab = 'cust';
+  return `<h2>出庫</h2>${tabs(ui.issueTab, t, 'issueTab')}${ui.issueTab === 'cust' ? issueCust() : issueOther()}${recentDocs(['ISSUE_SVC', 'ISSUE_SALE', 'OUT_OTHER'])}`;
+}
+function issueCust() {
+  const f = ui.issue, charge = issueCharge(), priv = can('editPrice');
+  let h = `<section class="card"><h3><span class="stepno">1</span>客戶</h3><div class="mention"><input type="text" id="custInput" autocomplete="off" aria-label="客戶" placeholder="直接輸入客戶名稱，或打 @ 從名單挑選" data-bind="issue.customerName" data-live="mention" value="${esc(f.customerName)}"><div id="mentionList">${mentionHtml()}</div></div><p class="muted sm" id="custHint">${custHint()}</p></section>`;
+  h += `<section class="card"><h3><span class="stepno">2</span>點選品項</h3>${picker('issue', activeItems())}${linesTable('issue', { price: priv && charge, warn: true })}</section>`;
+  h += `<section class="card"><h3><span class="stepno">3</span>確認存檔</h3><div class="form-grid">${group('收費', `<div class="seg">${segOpt('issue.chargeSel', 'no', '不收費', !charge)}${segOpt('issue.chargeSel', 'yes', '收費', charge)}</div>`, 'wide')}`;
+  if (!charge) h += field('不收費原因', selReasons('issue.freeReasonId', 'free', f.freeReasonId));
+  else if (priv) h += field('發票號碼（選填）', `<input type="text" data-bind="issue.invoiceNo" value="${esc(f.invoiceNo)}">`) + `<div id="disc-issue" class="${issueNeedDiscount() ? '' : 'hide'}">${field('單價低於售價的原因（必填）', `<input type="text" data-bind="issue.discountReason" value="${esc(f.discountReason)}" placeholder="例：長期客戶優惠">`)}</div>`;
+  h += '</div>';
+  if (charge && !priv) h += '<p class="muted" style="margin-top:10px">單價依品項售價自動帶入。</p>';
+  h += `<div class="form-grid">${dateF('issue')}${handlerF('issue')}${noteF('issue')}</div><div class="actions"><button class="btn pri" data-act="issueSave">存檔</button><button class="btn ghost" data-act="issueReset">清空重來</button></div></section>`;
+  return h;
+}
+function issueOther() {
+  const f = ui.other, r = reason(f.reasonId), isSupRet = r && r.name === '退回供應商';
+  return `<section class="card"><h3>其他出庫</h3><p class="muted">報廢、退回供應商、內部使用等，不需選客戶。</p><div class="form-grid">${field('原因', selReasons('other.reasonId', 'out', f.reasonId, 'data-rerender'))}${field('從哪個倉位出', `<select data-bind="other.loc" data-rerender>${locOpts(f.loc)}</select>`)}${isSupRet ? field('退回哪個供應商', selSup('other.supplierId', f.supplierId)) : ''}</div><h4>品項</h4>${picker('other', sortItems(S.items.filter(i => i.active || getBal(i.id, f.loc).qty > 0)))}${linesTable('other', { warn: true })}<div class="form-grid">${dateF('other')}${handlerF('other')}${noteF('other')}</div><div class="actions"><button class="btn pri" data-act="otherSave">存檔</button></div></section>`;
+}
+
+/* --- 頁面：入庫・移倉 --- */
+function pageRecv() {
+  const t = []; if (can('stockOps')) t.push(['purchase', '進貨入庫'], ['inx', '其他入庫'], ['ret', '退回入庫']); if (can('init')) t.push(['init', '期初建帳']);
+  if (!t.find(x => x[0] === ui.recv)) ui.recv = t[0][0];
+  const fn = { purchase: recvPurchase, inx: recvOther, ret: recvReturn, init: recvInit }[ui.recv];
+  return `<h2>入庫</h2>${tabs(ui.recv, t, 'recvTab')}${fn()}${recentDocs(['INIT', 'PURCHASE', 'IN_OTHER', 'RETURN'])}`;
+}
+const activeItems = () => sortItems(S.items.filter(i => i.active));
+function recvPurchase() {
+  const f = ui.pur;
+  return `<section class="card"><h3>進貨入庫</h3><div class="form-grid">${field('供應商（必填）', selSup('pur.supplierId', f.supplierId))}${field('供應商發票或出貨單（選填）', `<input type="text" data-bind="pur.invoiceNo" value="${esc(f.invoiceNo)}">`)}</div><h4>品項（進貨單價預設帶上次進價）</h4>${picker('pur', activeItems())}${linesTable('pur', { cost: true, costLabel: '進貨單價' })}<div class="form-grid">${dateF('pur', '到貨日期')}${handlerF('pur')}${noteF('pur')}</div><div class="actions"><button class="btn pri" data-act="purSave">存檔</button></div></section>`;
+}
+function recvOther() {
+  const f = ui.inx;
+  return `<section class="card"><h3>其他入庫</h3><p class="muted">供應商贈送、拆機回收、客戶退回未使用等。拆機回收預設進不良品區、成本 0；贈品成本 0。</p><div class="form-grid">${field('原因（必填）', selReasons('inx.reasonId', 'in', f.reasonId, 'data-change="inxReason"'))}</div><h4>品項</h4>${picker('inx', activeItems())}${linesTable('inx', { loc: true, cost: true })}<div class="form-grid">${dateF('inx')}${handlerF('inx')}${noteF('inx')}</div><div class="actions"><button class="btn pri" data-act="inxSave">存檔</button></div></section>`;
+}
+function retCandidates() {
+  const kws = String(ui.ret.q || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return S.docs.filter(d => OUT_TYPES.includes(d.type) && d.status === 'valid' && returnable(d.id).some(r => r.left > 0)).filter(d => {
+    const hay = [docTarget(d), d.lines.map(l => item(l.itemId) ? item(l.itemId).name : '').join(' '), d.note].join(' ').toLowerCase();
+    return kws.every(k => hay.includes(k));
+  }).reverse();
+}
+function retList() {
+  const list = retCandidates();
+  if (!list.length) return '<p class="empty">沒有可以退回的出庫單。</p>';
+  return `<div class="tbl"><table class="nw"><thead><tr><th>日期</th><th>類型</th><th>對象</th><th>品項</th><th class="num">數量</th><th></th></tr></thead><tbody>${list.slice(0, 20).map(d => `<tr><td>${d.date}</td><td>${typeTag(d)}</td><td>${esc(docTarget(d))}</td><td>${docItems(d)}</td><td class="num">${docQty(d)}</td><td><button class="btn sm" data-act="retPick" data-id="${d.id}">選這張</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+function recvReturn() {
+  const f = ui.ret, o = docById(f.origDocId);
+  let h = '<section class="card"><h3>退回入庫</h3>';
+  if (!o) return h + `<p class="muted">選一張原出庫單，退回的數量會以原出庫成本沖回。</p><input type="search" class="wide" aria-label="搜尋出庫單" placeholder="輸入客戶、品項…" data-bind="ret.q" data-live="retList" value="${esc(f.q)}"><div id="retList">${retList()}</div></section>`;
+  const ra = returnable(o.id);
+  h += `<div class="picked"><div><b>${esc(docTarget(o))}</b>　${typeTag(o)}　${o.date}<div class="muted sm">${docItems(o)}</div></div><button class="btn ghost sm" data-act="retClear">重選</button></div>`;
+  h += `<div class="tbl" style="margin-top:12px"><table><thead><tr><th>品項</th><th class="num">原出庫</th><th class="num">已退回</th><th class="num">可退</th><th class="num">這次退回</th></tr></thead><tbody>${ra.map(r => { const it = item(r.itemId); return `<tr><td>${itemLabel(it)}</td><td class="num">${r.qty}</td><td class="num">${r.returned}</td><td class="num">${r.left}</td><td class="num"><input type="number" class="cnt" min="0" max="${r.left}" step="1" inputmode="numeric" aria-label="退回數量" data-bind="ret.qty.${r.itemId}" data-type="int" value="${esc(f.qty[r.itemId] ?? '')}" ${r.left <= 0 ? 'disabled' : ''}></td></tr>`; }).join('')}</tbody></table></div>`;
+  h += `<div class="form-grid">${field('退回到', `<select data-bind="ret.loc">${locOpts(f.loc)}</select>`)}${dateF('ret')}${handlerF('ret')}${noteF('ret')}</div><div class="actions"><button class="btn pri" data-act="retSave">存檔</button></div></section>`;
+  return h;
+}
+function recvInit() {
+  const f = ui.init, prev = S.docs.filter(d => d.type === 'INIT' && d.status === 'valid');
+  let h = '<section class="card"><h3>期初建帳</h3><p class="muted">上線前全面盤點後輸入。沒有數量的品項留空；單位成本用最近一次進價，查不到就填估計值。</p>';
+  if (prev.length) h += `<div class="alert warn"><b>已經做過期初建帳</b>${prev.map(d => d.date).join('、')}。再存一次會再加一次數量，通常只有補漏的品項才需要。</div>`;
+  h += `<div class="tbl"><table><thead><tr><th>品項</th><th class="num">總倉數量</th><th class="num">不良品區數量</th><th class="num">單位成本</th></tr></thead><tbody>${activeItems().map(it => { const r = f.rows[it.id] || (f.rows[it.id] = { main: '', ng: '', cost: '' }); return `<tr><td class="iname">${itemLabel(it)}<div class="muted sm">${esc(it.code)}</div></td><td class="num"><input type="number" class="cnt" min="0" step="1" inputmode="numeric" aria-label="總倉數量" data-bind="init.rows.${it.id}.main" data-type="int" value="${esc(r.main)}"></td><td class="num"><input type="number" class="cnt" min="0" step="1" inputmode="numeric" aria-label="不良品區數量" data-bind="init.rows.${it.id}.ng" data-type="int" value="${esc(r.ng)}"></td><td class="num"><input type="number" class="money" min="0" step="0.01" inputmode="decimal" aria-label="單位成本" data-bind="init.rows.${it.id}.cost" data-type="num" value="${esc(r.cost)}"></td></tr>`; }).join('')}</tbody></table></div>`;
+  return h + `<div class="form-grid">${dateF('init', '盤點日期')}${noteF('init')}</div><div class="actions"><button class="btn pri" data-act="initSave">存檔</button></div></section>`;
+}
+
+/* --- 頁面：盤點 --- */
+function pageCount() {
+  const c = openCount();
+  let h = '';
+  if (!c) {
+    h += can('count') ? `<section class="card"><p>目前沒有進行中的盤點。品項一頁列完，輸入實際點到的數量即可。</p><div class="form-grid">${field('盤點日期', `<input type="date" max="${today()}" data-bind="cnt.date" value="${esc(ui.cnt.date)}">`)}</div><div class="actions"><button class="btn pri" data-act="countStart">開始盤點</button></div></section>` : '<section class="card"><p class="muted">目前沒有待簽核的盤點。</p></section>';
+  } else if (c.status === 'draft') {
+    if (ui.cnt.loadedId !== c.id) { ui.cnt.loadedId = c.id; ui.cnt.actual = {}; ui.cnt.reason = {}; c.lines.forEach(l => { ui.cnt.actual[l.itemId] = l.actual == null ? '' : l.actual; ui.cnt.reason[l.itemId] = l.reasonId || ''; }); }
+    const edit = can('count');
+    h += `<section class="card"><h3>盤點日 ${c.date}　<span class="tag t-warn">盤點中</span></h3>`;
+    if (c.rejectNote) h += `<div class="alert warn"><b>管理者退回</b>${esc(c.rejectNote)}</div>`;
+    h += `<p class="muted">帳面數是目前的即時數字；盤點中仍可開單，差異以「送出」當下的帳面數計算。</p><div class="tbl"><table><thead><tr><th>品項</th><th class="num">帳面數</th><th class="num">實盤數</th><th class="num">差異</th><th>差異原因</th></tr></thead><tbody>`;
+    c.lines.forEach(l => {
+      const it = item(l.itemId), book = getBal(l.itemId, 'MAIN').qty, a = ui.cnt.actual[l.itemId], diff = a === '' || a == null ? null : a - book;
+      h += `<tr><td class="iname">${itemLabel(it)}<div class="muted sm">${esc(it.code)}</div></td><td class="num">${book}</td><td class="num"><input type="number" class="cnt" min="0" step="1" inputmode="numeric" aria-label="實盤數" data-bind="cnt.actual.${l.itemId}" data-type="int" data-live="countRow" data-id="${l.itemId}" value="${esc(a)}" ${edit ? '' : 'disabled'}></td><td class="num" id="cd-${l.itemId}">${cdHtml(diff)}</td><td><select data-bind="cnt.reason.${l.itemId}" id="cr-${l.itemId}" aria-label="差異原因" ${!edit || !diff ? 'disabled' : ''}>${opt('', diff ? '請選擇' : '—', ui.cnt.reason[l.itemId])}${S.reasons.filter(r => r.cat === 'count' && r.active).map(r => opt(r.id, r.name, ui.cnt.reason[l.itemId])).join('')}</select></td></tr>`;
+    });
+    h += '</tbody></table></div>';
+    if (edit) h += '<div class="actions"><button class="btn" data-act="countDraft">暫存</button><button class="btn pri" data-act="countSubmit">送出簽核</button></div>';
+    h += '</section>';
+  } else {
+    h += `<section class="card"><h3>盤點日 ${c.date}　<span class="tag t-sale">待簽核</span></h3><p class="muted">送出人：${esc(userName(c.submittedBy))}</p>${countTable(c)}`;
+    if (can('approve')) h += `<div class="form-grid">${field('退回原因（退回時必填）', `<input type="text" data-bind="cnt.rejectNote" value="${esc(ui.cnt.rejectNote)}">`, 'wide')}</div><div class="actions"><button class="btn pri" data-act="countApprove" data-id="${c.id}">核准並調整庫存</button><button class="btn danger" data-act="countReject" data-id="${c.id}">退回重盤</button></div>`;
+    else h += '<p class="muted">等待管理者簽核。</p>';
+    h += '</section>';
+  }
+  const hist = S.counts.filter(x => x.status === 'approved').reverse();
+  h += `<section class="card"><h3>歷次盤點</h3>${hist.length ? `<div class="tbl"><table class="nw"><thead><tr><th>盤點日</th><th>送出人</th><th>簽核人</th><th class="num">差異品項</th></tr></thead><tbody>${hist.map(x => `<tr class="click" data-act="openCount" data-id="${x.id}"><td>${x.date}</td><td>${esc(userName(x.submittedBy))}</td><td>${esc(userName(x.approvedBy))}</td><td class="num">${x.lines.filter(l => l.diff !== 0).length}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">還沒有盤點紀錄。</p>'}</section>`;
+  return h;
+}
+function cdHtml(diff) { return diff == null ? '<span class="muted">—</span>' : diff === 0 ? '0' : `<span class="t-bad">${fmtQ(diff)}</span>`; }
+function countTable(c) {
+  const priv = can('viewCost');
+  return `<div class="tbl"><table><thead><tr><th>品項</th><th class="num">帳面數</th><th class="num">實盤數</th><th class="num">差異</th><th>原因</th>${priv && c.adjDocId ? '<th class="num">差異金額</th>' : ''}</tr></thead><tbody>${c.lines.map(l => { const it = item(l.itemId), adj = c.adjDocId ? docById(c.adjDocId).lines.find(x => x.itemId === l.itemId) : null; return `<tr><td>${itemLabel(it)}</td><td class="num">${l.book}</td><td class="num">${l.actual}</td><td class="num">${cdHtml(l.diff)}</td><td>${l.reasonId ? esc(reason(l.reasonId).name) : ''}</td>${priv && c.adjDocId ? `<td class="num">${adj ? fmtM(l.diff * adj.unitCost) : ''}</td>` : ''}</tr>`; }).join('')}</tbody></table></div>`;
+}
+
+/* --- 頁面：單據 --- */
+function docMatches(d) {
+  const f = ui.docs;
+  if (f.type && d.type !== f.type) return false;
+  if (f.from && d.date < f.from) return false; if (f.to && d.date > f.to) return false;
+  const kws = String(f.kw || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!kws.length) return true;
+  const hay = [DT[d.type].name, docTarget(d), d.lines.map(l => item(l.itemId) ? item(l.itemId).name + ' ' + item(l.itemId).code : '').join(' '), d.note, d.invoiceNo, d.reasonText, userName(d.handlerId)].join(' ').toLowerCase();
+  return kws.every(k => hay.includes(k));
+}
+function docListHtml() {
+  const order = new Map(S.docs.map((d, i) => [d.id, i]));
+  const list = S.docs.filter(docMatches).sort((x, y) => y.date.localeCompare(x.date) || order.get(y.id) - order.get(x.id)), priv = can('viewCost');
+  if (!list.length) return '<p class="empty">沒有符合的單據。</p>';
+  return `<p class="muted sm">共 ${list.length} 張${list.length > 200 ? '，顯示最新 200 張' : ''}。點一列看明細。</p><div class="tbl"><table class="nw"><thead><tr><th>日期</th><th>類型</th><th>對象</th><th>品項</th><th class="num">數量</th>${priv ? '<th class="num">成本金額</th>' : ''}<th>經手人</th><th>狀態</th></tr></thead><tbody>${list.slice(0, 200).map(d => `<tr class="click${d.status === 'voided' ? ' voided' : ''}" data-act="openDoc" data-id="${d.id}"><td>${d.date}</td><td class="nostrike">${typeTag(d)}</td><td>${esc(docTarget(d))}</td><td>${docItems(d)}</td><td class="num">${docQty(d)}</td>${priv ? `<td class="num">${fmtM(docCost(d))}</td>` : ''}<td>${esc(userName(d.handlerId))}</td><td class="nostrike">${statusTag(d)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function pageDocs() {
+  const f = ui.docs;
+  return `<section class="card"><div class="form-grid">${field('類型', `<select data-bind="docs.type" data-live="docList">${opt('', '全部', f.type)}${Object.entries(DT).filter(([k]) => k !== 'MOVE' || S.docs.some(d => d.type === 'MOVE')).map(([k, v]) => opt(k, v.name, f.type)).join('')}</select>`)}${field('起日', `<input type="date" data-bind="docs.from" data-live="docList" value="${esc(f.from)}">`)}${field('迄日', `<input type="date" data-bind="docs.to" data-live="docList" value="${esc(f.to)}">`)}${field('關鍵字', `<input type="search" data-bind="docs.kw" data-live="docList" value="${esc(f.kw)}" placeholder="客戶、品項、備註、經手人">`)}</div></section><section class="card" id="docList">${docListHtml()}</section>`;
+}
+function docDetail(id) {
+  const d = docById(id); if (!d) return '<p>找不到單據。</p>';
+  const priv = can('viewCost'), o = d.origDocId ? docById(d.origDocId) : null;
+  const link = x => `<button class="linkbtn" data-act="openDoc" data-id="${x.id}">${esc(docRef(x))}</button>`;
+  const kv = [['日期', d.date], ['經手人', esc(userName(d.handlerId))], ['建立', `${esc(userName(d.createdBy))}・${new Date(d.createdAt).toLocaleString('zh-TW', { hour12: false })}`]];
+  const cn = d.customerName || (d.customerId && cust(d.customerId) ? cust(d.customerId).name : '');
+  if (cn) kv.push(['客戶', esc(cn)]);
+  if (d.type === 'ISSUE_SALE' || d.type === 'ISSUE_SVC') kv.push(['收費', d.charge ? '收費' : '不收費']);
+  if (d.supplierId && sup(d.supplierId)) kv.push(['供應商', esc(sup(d.supplierId).name)]);
+  if (d.reasonId && reason(d.reasonId)) kv.push([d.type === 'ISSUE_SVC' ? '不收費原因' : '原因', esc(reason(d.reasonId).name)]);
+  if (d.reasonText) kv.push([d.type === 'VOID' ? '作廢原因' : '原因', esc(d.reasonText)]);
+  if (d.discountReason) kv.push(['低於售價原因', esc(d.discountReason)]);
+  if (d.invoiceNo) kv.push([d.type === 'PURCHASE' ? '供應商發票或出貨單' : '發票號碼', esc(d.invoiceNo)]);
+  if (o) kv.push([d.type === 'VOID' ? '作廢的原單' : '原出庫單', link(o)]);
+  if (d.voidDocId && docById(d.voidDocId)) kv.push(['作廢紀錄', link(docById(d.voidDocId))]);
+  const rets = S.docs.filter(x => x.type === 'RETURN' && x.origDocId === d.id);
+  if (rets.length) kv.push(['退回入庫', rets.map(x => link(x) + (x.status === 'voided' ? '（已作廢）' : '')).join('、')]);
+  if (d.note) kv.push(['備註', esc(d.note)]);
+  const showPrice = priv && d.lines.some(l => l.price != null);
+  let h = `<h3>${DT[d.type].name}　${statusTag(d)}</h3><dl class="kv">${kv.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
+  h += `<div class="tbl"><table><thead><tr><th>品項</th><th>倉位</th><th class="num">數量</th>${priv ? '<th class="num">單位成本</th><th class="num">成本金額</th>' : ''}${showPrice ? '<th class="num">單價</th><th class="num">銷售金額</th>' : ''}</tr></thead><tbody>${d.lines.map(l => {
+    const it = item(l.itemId), loc = l.fromLoc ? `${LOCS[l.fromLoc].name} → ${LOCS[l.toLoc].name}` : LOCS[l.loc].name;
+    const sign = l.dir ? (l.dir > 0 ? '+' : '−') : '';
+    return `<tr><td>${it ? itemLabel(it) : ''}</td><td>${loc}</td><td class="num">${sign}${l.qty}</td>${priv ? `<td class="num">${fmtN(l.unitCost)}</td><td class="num">${fmtM(l.qty * l.unitCost)}</td>` : ''}${showPrice ? `<td class="num">${l.price != null ? fmtN(l.price) : ''}</td><td class="num">${l.price != null ? fmtM(l.qty * l.price) : ''}</td>` : ''}</tr>`;
+  }).join('')}</tbody></table></div>`;
+  if (can('void')) {
+    const why = voidCheck(d);
+    if (!why) h += `<section class="card" style="margin:16px 0 0"><h3>作廢這張單</h3><p class="muted sm">作廢會產生一筆反向的作廢紀錄，原單保留並標示「已作廢」。作廢後請重開正確的單。</p><div class="form-grid">${field('作廢原因（必填）', '<input type="text" id="voidReason" placeholder="例：數量登錄錯誤">', 'wide')}</div><div class="actions"><button class="btn danger" data-act="voidDoc" data-id="${d.id}">作廢</button></div></section>`;
+    else if (d.type !== 'VOID' && d.status !== 'voided') h += `<p class="muted sm" style="margin-top:12px">${esc(why)}</p>`;
+  }
+  return h;
+}
+
+/* --- 頁面：報表 --- */
+function repTabs() { const t = [['ledger', '庫存流水帳'], ['sum', '月出入庫彙總'], ['out', '出庫明細']]; if (can('viewCost')) t.push(['diff', '盤差紀錄']); return t; }
+function pageRep() {
+  const t = repTabs(); if (!t.find(x => x[0] === ui.rep)) ui.rep = 'ledger';
+  let fl = '';
+  if (ui.rep === 'ledger') { const f = ui.led; fl = `${field('品項', `<select data-bind="led.itemId" data-live="repBody">${opt('', '全部品項', f.itemId)}${sortItems(S.items).map(i => opt(i.id, `${i.name}（${i.code}）`, f.itemId)).join('')}</select>`)}${field('倉位', `<select data-bind="led.loc" data-live="repBody">${opt('', '全部倉位', f.loc)}${locOpts(f.loc)}</select>`)}${field('起日', `<input type="date" data-bind="led.from" data-live="repBody" value="${esc(f.from)}">`)}${field('迄日', `<input type="date" data-bind="led.to" data-live="repBody" value="${esc(f.to)}">`)}`; }
+  if (ui.rep === 'sum') { const f = ui.sum; fl = `${field('月份', `<input type="month" data-bind="sum.ym" data-live="repBody" value="${esc(f.ym)}">`)}${field('倉位', `<select data-bind="sum.loc" data-live="repBody">${locOpts(f.loc)}</select>`)}`; }
+  if (ui.rep === 'out') { const f = ui.outr; fl = `${field('起日', `<input type="date" data-bind="outr.from" data-live="repBody" value="${esc(f.from)}">`)}${field('迄日', `<input type="date" data-bind="outr.to" data-live="repBody" value="${esc(f.to)}">`)}${field('客戶', `<input type="search" data-bind="outr.cust" data-live="repBody" value="${esc(f.cust)}" placeholder="客戶名稱關鍵字">`)}${field('類別', `<select data-bind="outr.kind" data-live="repBody">${opt('', '全部', f.kind)}${['服務', '銷貨', '其他', '退回'].map(k => opt(k, k, f.kind)).join('')}</select>`)}${field('經手人', `<select data-bind="outr.handlerId" data-live="repBody">${opt('', '全部', f.handlerId)}${S.users.map(u => opt(u.id, u.name, f.handlerId)).join('')}</select>`)}`; }
+  return `${tabs(ui.rep, t, 'repTab')}${fl ? `<section class="card"><div class="form-grid">${fl}</div></section>` : ''}<section class="card" id="repBody">${repBody()}</section>`;
+}
+// 每個欄位標型別：'' 文字、num 數字、qty 帶正負號數量、money 金額
+function repData() {
+  const priv = can('viewCost'), C = (h, t = '') => ({ h, t });
+  if (ui.rep === 'ledger') {
+    const rows = Inv.ledgerRows(ui.led);
+    const cols = [C('日期'), C('類型'), C('品項'), C('倉位'), C('異動', 'qty'), C('結存', 'num')].concat(priv ? [C('單位成本', 'num'), C('結存平均成本', 'num')] : []).concat([C('對象'), C('經手人')]);
+    return { cols, ids: rows.map(e => e.docId), rows: rows.map(e => { const d = docById(e.docId), it = item(e.itemId); return [e.date, d.type === 'VOID' ? '作廢（' + DT[e.srcType].name + '）' : DT[e.docType].name, it ? it.name : '', LOCS[e.loc].name, e.qty, e.balQty].concat(priv ? [e.unitCost, e.balAvg] : []).concat([docTarget(d), userName(d.handlerId)]); }) };
+  }
+  if (ui.rep === 'sum') {
+    const ym = /^\d{4}-\d{2}$/.test(ui.sum.ym) ? ui.sum.ym : today().slice(0, 7);
+    const rows = Inv.monthSummary(ym, ui.sum.loc);
+    const cols = [C('料號'), C('品名'), C('期初', 'num'), C('入庫', 'num'), C('出庫', 'num'), C('盤差', 'qty'), C('期末', 'num')].concat(priv ? [C('期末平均成本', 'num'), C('期末金額', 'money')] : []);
+    return { cols, ym, total: priv ? rows.reduce((s, r) => s + r.value, 0) : null, rows: rows.map(r => [r.item.code, r.item.name, r.open, r.in, r.out, r.adj, r.close].concat(priv ? [r.avg, r.value] : [])) };
+  }
+  if (ui.rep === 'out') {
+    const rows = Inv.outRows(ui.outr);
+    const why = d => d.reasonId && reason(d.reasonId) ? reason(d.reasonId).name : d.discountReason ? '低於售價：' + d.discountReason : '';
+    const cols = [C('日期'), C('類別'), C('客戶'), C('品項'), C('數量', 'num'), C('原因'), C('經手人')].concat(priv ? [C('成本', 'money'), C('銷售金額', 'money'), C('毛利', 'money')] : []).concat([C('發票')]);
+    return {
+      cols, ids: rows.map(r => r.doc.id),
+      rows: rows.map(r => { const d = r.doc, it = item(r.line.itemId); return [d.date, r.kind, d.customerName || '', it ? it.name : '', r.qty, why(d), userName(d.handlerId)].concat(priv ? [r.cost, r.margin == null ? '' : r.rev, r.margin == null ? '' : r.margin] : []).concat([d.invoiceNo || '']); }),
+      sums: { qty: rows.reduce((s, r) => s + r.qty, 0), cost: rows.reduce((s, r) => s + r.cost, 0), rev: rows.reduce((s, r) => s + r.rev, 0), margin: rows.reduce((s, r) => s + (r.margin || 0), 0) },
+    };
+  }
+  const rows = Inv.countDiffRows();
+  return { cols: [C('盤點日'), C('品項'), C('帳面', 'num'), C('實盤', 'num'), C('差異', 'qty'), C('原因'), C('差異金額', 'money'), C('簽核人')], rows: rows.map(r => [r.count.date, item(r.line.itemId).name, r.line.book, r.line.actual, r.line.diff, r.line.reasonId ? reason(r.line.reasonId).name : '', r.value, userName(r.count.approvedBy)]) };
+}
+function repBody() {
+  const D = repData(), priv = can('viewCost');
+  let h = '';
+  if (ui.rep === 'out') h += `<div class="summary"><div class="stat"><span>筆數</span><b>${D.rows.length}</b></div><div class="stat"><span>淨出庫數量</span><b>${D.sums.qty}</b></div>${priv ? `<div class="stat"><span>成本</span><b>${fmtM(D.sums.cost)}</b></div><div class="stat"><span>銷售金額</span><b>${fmtM(D.sums.rev)}</b></div><div class="stat"><span>銷貨毛利</span><b>${fmtM(D.sums.margin)}</b></div>` : ''}</div>`;
+  if (ui.rep === 'sum') h += `<p class="muted sm">${esc(D.ym)}・期末＝期初＋入庫－出庫＋盤差。作廢在作廢當天沖回，原月份不變。</p>`;
+  if (ui.rep === 'ledger') h += '<p class="muted sm">依記帳順序由新到舊；「結存」是該筆記帳後的數量。</p>';
+  if (can('export')) h += `<div class="actions" style="margin:0 0 10px"><button class="btn sm" data-act="exportRep">匯出 CSV</button></div>`;
+  if (!D.rows.length) return h + '<p class="empty">沒有資料。</p>';
+  const cls = c => (c.t ? 'num' : '');
+  const cell = (v, c) => v === '' || v == null ? '' : c.t === 'money' ? fmtM(v) : c.t === 'qty' ? fmtQ(v) : typeof v === 'number' ? fmtN(v) : esc(v);
+  h += `<div class="tbl"><table class="nw"><thead><tr>${D.cols.map(c => `<th class="${cls(c)}">${c.h}</th>`).join('')}</tr></thead><tbody>${D.rows.map((r, ri) => `<tr${D.ids ? ` class="click" data-act="openDoc" data-id="${D.ids[ri]}"` : ''}>${r.map((v, i) => `<td class="${cls(D.cols[i])}">${cell(v, D.cols[i])}</td>`).join('')}</tr>`).join('')}</tbody>${D.total != null ? `<tfoot><tr><td colspan="${D.cols.length - 1}" class="num"><b>期末金額合計</b></td><td class="num"><b>${fmtM(D.total)}</b></td></tr></tfoot>` : ''}</table></div>`;
+  return h;
+}
+
+/* --- 頁面：設定 --- */
+function pageSet() {
+  const t = [['items', '品項'], ['sups', '供應商'], ['reasons', '原因代碼'], ['sys', '系統與備份']];
+  const fn = { items: setItems, sups: setSups, reasons: setReasons, sys: setSys }[ui.set];
+  return `<h2>設定</h2>${tabs(ui.set, t, 'setTab')}${fn()}`;
+}
+function blankItem() { return { id: '', code: '', name: '', category: '黑色碳粉', brand: '原廠', unit: '支', models: '', safety: 2, minOrder: 1, leadDays: 7, supplierId: '', price: 0, life: 0, basis: '黑色張數', ratio: 83, active: true }; }
+function setItems() {
+  const F = ui.itemForm; let h = '';
+  if (F) {
+    const models = [...new Set(S.items.flatMap(i => i.models))].sort();
+    const avg = F.id ? getBal(F.id, 'MAIN').avg : null;
+    h += `<section class="card"><h3>${F.id ? '編輯品項' : '新增品項'}</h3><div class="form-grid">
+      ${field('料號（必填）', `<input type="text" data-bind="itemForm.code" value="${esc(F.code)}" placeholder="例：TN-K-001">`)}
+      ${field('品名（必填）', `<input type="text" data-bind="itemForm.name" value="${esc(F.name)}">`)}
+      ${field('分類', `<select data-bind="itemForm.category">${CATEGORIES.map(c => opt(c, c, F.category)).join('')}</select>`)}
+      ${field('原廠／副廠', `<select data-bind="itemForm.brand">${opt('原廠', '原廠', F.brand)}${opt('副廠', '副廠', F.brand)}</select>`)}
+      ${field('單位', `<input type="text" list="unitList" data-bind="itemForm.unit" value="${esc(F.unit)}"><datalist id="unitList">${UNITS.map(u => `<option value="${u}">`).join('')}</datalist>`)}
+      ${field('安全存量', `<input type="number" min="0" step="1" data-bind="itemForm.safety" data-type="int" value="${esc(F.safety)}">`)}
+      ${field('最小採購量', `<input type="number" min="1" step="1" data-bind="itemForm.minOrder" data-type="int" value="${esc(F.minOrder)}">`)}
+      ${field('採購交期（天）', `<input type="number" min="0" step="1" data-bind="itemForm.leadDays" data-type="int" value="${esc(F.leadDays)}">`)}
+      ${field('預設供應商', selSup('itemForm.supplierId', F.supplierId))}
+      ${field('售價', `<input type="number" min="0" step="1" data-bind="itemForm.price" data-type="num" value="${esc(F.price)}">`)}
+      ${field('壽命（張數或天數）', `<input type="number" min="0" step="1" data-bind="itemForm.life" data-type="int" value="${esc(F.life)}">`)}
+      ${field('更換依據', `<select data-bind="itemForm.basis">${BASIS.map(b => opt(b, b, F.basis)).join('')}</select>`)}
+      ${field('實際使用比率（%）', `<input type="number" min="1" max="200" step="1" data-bind="itemForm.ratio" data-type="int" value="${esc(F.ratio)}">`)}
+      ${F.id ? field('平均成本（系統計算）', `<input type="text" value="${fmtN(avg)}" disabled>`) : ''}
+      ${group('適用機型（逗號分隔；留空＝所有機型都可用）', `<input type="text" id="modelsInput" aria-label="適用機型" data-bind="itemForm.models" value="${esc(F.models)}"><div class="chips">${models.map(m => `<button class="chip" data-act="addModel" data-m="${esc(m)}">＋${esc(m)}</button>`).join('')}</div>`, 'wide')}
+    </div><label class="chk" style="margin-top:12px"><input type="checkbox" data-bind="itemForm.active" data-type="bool" ${F.active ? 'checked' : ''}> 啟用（停用後不會出現在出庫畫面，歷史紀錄保留）</label>
+    <div class="actions"><button class="btn pri" data-act="itemSave">儲存品項</button><button class="btn ghost" data-act="itemCancel">取消</button>${F.id ? `<button class="btn danger" data-act="itemDelete" data-id="${F.id}">刪除</button>` : ''}</div></section>`;
+  }
+  const cands = F ? [] : Inv.catalogCandidates();
+  if (cands.length) h += `<section class="card"><h3>從設備保養系統的耗材目錄帶入（${cands.length} 項尚未帶入）</h3><p class="muted sm">勾選要管庫存的耗材，帶入後再補上料號、適用機型和安全存量。濾網與用「天數」計算的耗材不列入。</p><div class="cklist">${cands.map(k => `<label class="chk"><input type="checkbox" data-cat="${esc(k.id)}" checked> ${esc(k.name)} <span class="muted sm">${esc(k.category || '')}・售價 ${fmtN(k.sellPrice || 0)}</span></label>`).join('')}</div><div class="actions"><button class="btn pri" data-act="catImport">帶入勾選的耗材</button></div></section>`;
+  const list = sortItems(S.items);
+  h += `<section class="card"><h3>品項（${list.length}）</h3><p class="muted sm">平均成本由系統依進貨自動計算，不能手改。</p>${F ? '' : '<div class="actions" style="margin:0 0 10px"><button class="btn pri" data-act="itemNew">新增品項</button></div>'}<div class="tbl"><table><thead><tr><th>料號</th><th>品名</th><th>分類</th><th>適用機型</th><th class="num">安全存量</th><th class="num">售價</th><th class="num">平均成本</th><th class="num">總倉</th><th>狀態</th><th></th></tr></thead><tbody>${list.map(i => `<tr><td>${esc(i.code)}</td><td>${esc(i.name)}${i.brand === '副廠' ? ' <span class="tag">副廠</span>' : ''}</td><td>${esc(i.category)}</td><td>${esc(i.models.join('、') || '全部')}</td><td class="num">${i.safety}</td><td class="num">${fmtN(i.price)}</td><td class="num">${fmtN(getBal(i.id, 'MAIN').avg)}</td><td class="num">${getBal(i.id, 'MAIN').qty}</td><td>${i.active ? '<span class="tag t-ok">啟用</span>' : '<span class="tag t-void">停用</span>'}</td><td><button class="btn sm" data-act="itemEdit" data-id="${i.id}">編輯</button></td></tr>`).join('')}</tbody></table></div></section>`;
+  return h;
+}
+function setSups() {
+  const F = ui.supForm; let h = '';
+  if (F) h += `<section class="card"><h3>${F.id ? '編輯供應商' : '新增供應商'}</h3><div class="form-grid">${field('名稱（必填）', `<input type="text" data-bind="supForm.name" value="${esc(F.name)}">`)}${field('聯絡人', `<input type="text" data-bind="supForm.contact" value="${esc(F.contact)}">`)}${field('電話', `<input type="tel" data-bind="supForm.phone" value="${esc(F.phone)}">`)}${field('統編', `<input type="text" inputmode="numeric" maxlength="8" data-bind="supForm.taxId" value="${esc(F.taxId)}">`)}${field('備註', `<input type="text" data-bind="supForm.note" value="${esc(F.note)}">`, 'wide')}</div><div class="actions"><button class="btn pri" data-act="supSave">儲存</button><button class="btn ghost" data-act="supCancel">取消</button>${F.id ? `<button class="btn danger" data-act="supDelete" data-id="${F.id}">刪除</button>` : ''}</div></section>`;
+  h += `<section class="card"><h3>供應商（${S.suppliers.length}）</h3>${F ? '' : '<div class="actions" style="margin:0 0 10px"><button class="btn pri" data-act="supNew">新增供應商</button></div>'}${S.suppliers.length ? `<div class="tbl"><table><thead><tr><th>名稱</th><th>聯絡人</th><th>電話</th><th>統編</th><th>備註</th><th></th></tr></thead><tbody>${S.suppliers.map(s => `<tr><td>${esc(s.name)}</td><td>${esc(s.contact)}</td><td>${esc(s.phone)}</td><td>${esc(s.taxId)}</td><td>${esc(s.note)}</td><td><button class="btn sm" data-act="supEdit" data-id="${s.id}">編輯</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">還沒有供應商。</p>'}</section>`;
+  return h;
+}
+function setReasons() {
+  const F = ui.reasonForm;
+  let h = `<section class="card"><h3>新增原因</h3><div class="form-grid">${field('類別', `<select data-bind="reasonForm.cat">${Object.entries(REASON_CATS).map(([k, v]) => opt(k, v, F.cat)).join('')}</select>`)}${field('名稱', `<input type="text" data-bind="reasonForm.name" value="${esc(F.name)}">`)}</div><div class="actions"><button class="btn pri" data-act="reasonAdd">新增</button></div></section>`;
+  Object.entries(REASON_CATS).forEach(([cat, label]) => {
+    h += `<section class="card"><h3>${label}原因</h3><div class="tbl"><table><tbody>${S.reasons.filter(r => r.cat === cat).map(r => `<tr><td>${esc(r.name)}</td><td>${r.active ? '<span class="tag t-ok">使用中</span>' : '<span class="tag t-void">停用</span>'}</td><td class="num"><button class="btn sm" data-act="reasonToggle" data-id="${r.id}">${r.active ? '停用' : '啟用'}</button></td></tr>`).join('')}</tbody></table></div></section>`;
+  });
+  return h;
+}
+function setSys() {
+  let h = `<section class="card"><h3>參數</h3><div class="form-grid">${field('採購安全天數（第二階段採購建議使用）', `<input type="number" min="0" max="180" step="1" data-bind="sys.safetyDays" data-type="int" value="${esc(ui.sys.safetyDays)}">`)}</div><div class="actions"><button class="btn pri" data-act="sysSave">儲存</button></div></section>`;
+  h += `<section class="card"><h3>帳務自我檢查</h3><p class="muted">從第一筆流水帳重算，核對每個品項的數量、平均成本與每張單據。</p><div class="actions" style="margin:0 0 10px"><button class="btn" data-act="verify">開始檢查</button></div>${ui.verifyMsg}</section>`;
+  if (DEMO) {
+    h += `<section class="card"><h3>備份與還原</h3><p class="muted">示範模式的資料存在這台電腦的瀏覽器裡。換電腦或清除瀏覽器資料前，請先下載備份。</p><div class="actions"><button class="btn" data-act="backup">下載備份（JSON）</button><label class="btn">從備份還原<input type="file" id="restoreFile" accept="application/json,.json" hidden data-change="restorePick"></label></div><p class="muted sm" id="restoreMsg"></p></section>`;
+    h += `<section class="card"><h3>示範資料</h3><p class="muted">「清除示範交易」會刪掉所有單據、流水帳、盤點，保留品項、供應商、原因代碼，準備做期初建帳。「重設示範資料」會回到第一次打開時的樣子。兩個都要在 8 秒內按兩次才會執行。</p><div class="actions"><button class="btn danger" data-act="clearTx">清除示範交易</button><button class="btn danger" data-act="resetDemo">重設示範資料</button></div></section>`;
+    h += `<section class="card"><h3>客戶名單（提及用）</h3><p class="muted sm">出庫時打客戶名稱或 @，會從這份名單和過去填過的客戶名稱提示。正式版直接讀設備保養系統的客戶。</p><div class="tbl"><table class="nw"><thead><tr><th>客戶</th><th>聯絡人</th><th>電話</th><th>地址</th></tr></thead><tbody>${S.customers.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.contact)}</td><td>${esc(c.phone)}</td><td>${esc(c.address)}</td></tr>`).join('')}</tbody></table></div></section>`;
+  } else {
+    h += `<section class="card"><h3>備份</h3><p class="muted">資料存在雲端（Supabase）。這裡可以下載一份完整備份（含單據與金額）留存。</p><div class="actions"><button class="btn" data-act="backup">下載備份（JSON）</button></div></section>`;
+    h += `<section class="card"><h3>客戶名單</h3><p class="muted sm">直接讀設備保養系統的客戶（共 ${S.customers.length} 位）。出庫時打客戶名稱或 @ 就會提示。</p></section>`;
+  }
+  return h;
+}
+
+/* --- 頁面框架 --- */
+// 「帳務」：盤點、單據、報表合在同一個按鈕，裡面再分三頁
+const BOOKS = [
+  { id: 'count', name: '盤點', ok: () => can('count') || can('approve'), fn: pageCount },
+  { id: 'docs', name: '單據', ok: () => true, fn: pageDocs },
+  { id: 'rep', name: '報表', ok: () => true, fn: pageRep },
+];
+function pageBooks() {
+  const list = BOOKS.filter(b => b.ok());
+  const cur = list.find(b => b.id === ui.books) || list[0]; ui.books = cur.id;
+  return `<h2>帳務</h2><div class="subnav" role="tablist" aria-label="帳務">${list.map(b => `<button class="sub${b.id === cur.id ? ' on' : ''}" role="tab" aria-selected="${b.id === cur.id}" data-act="booksTab" data-v="${b.id}">${b.name}</button>`).join('')}</div>${cur.fn()}`;
+}
+const PAGES = [
+  { id: 'dash', name: '庫存總覽', ok: () => true, fn: pageDash },
+  { id: 'issue', name: '出庫', ok: () => can('issue'), fn: pageIssue },
+  { id: 'recv', name: '入庫', ok: () => can('stockOps') || can('init'), fn: pageRecv },
+  { id: 'books', name: '帳務', ok: () => true, fn: pageBooks },
+  { id: 'set', name: '設定', ok: () => can('settings'), fn: pageSet },
+];
+function render() {
+  renderHeader();
+  $('#demoBar').hidden = !DEMO;
+  $('#storeWarn').hidden = !DEMO || storageOK;
+  if (phase !== 'ready') { $('#nav').innerHTML = ''; $('#app').innerHTML = phaseBox(); return; }
+  const pg = PAGES.find(p => p.id === ui.page && p.ok()) || PAGES[0]; ui.page = pg.id;
+  $('#nav').innerHTML = PAGES.filter(p => p.ok()).map(p => `<button class="nav${p.id === ui.page ? ' on' : ''}" data-act="go" data-v="${p.id}"${p.id === ui.page ? ' aria-current="page"' : ''}>${p.name}</button>`).join('');
+  let body;
+  try { body = pg.fn(); } catch (e) { console.error(e); body = `<div class="alert bad"><b>畫面發生錯誤</b>${esc(e.message)}</div>`; }
+  const foot = DEMO
+    ? `示範模式：資料存在這台電腦的瀏覽器，客戶名單是示範資料。${S.meta.demo ? '正式使用前請到「設定 → 系統與備份」清除示範交易，再做期初建帳。' : ''}`
+    : '資料存在雲端，與設備保養系統、計張計價系統用同一個 Google 登入。庫存系統只開放給管理者（依設備保養系統的人員資料）。';
+  $('#app').innerHTML = body + `<p class="foot">${foot}</p>`;
+}
+function renderHeader() {
+  const w = $('#whoBox');
+  if (DEMO) w.innerHTML = `<span class="tag demo">示範模式</span><span>使用者</span><select id="userSel" aria-label="切換使用者">${S.users.map(u => opt(u.id, `${u.name}（${ROLES[u.role]}）`, S.meta.userId)).join('')}</select>`;
+  else w.innerHTML = phase === 'ready' ? `<span id="cloudSt">${busy ? '☁ 儲存中…' : '☁ 已同步'}</span><span>${esc(me().name)}（${ROLES[role()]}）</span>` : '';
+  if (window.PT_MENU) window.PT_MENU.render('#ptSys', 'inventory', { staff: phase === 'ready', admin: phase === 'ready' && role() === 'admin', billing: BILLING_OK, role: phase === 'ready' ? ROLES[role()] : '' });
+}
+function phaseBox() {
+  const box = h => `<section class="card" style="max-width:560px;margin:24px auto">${h}</section>`;
+  if (phase === 'init') return box('<p class="empty">正在連線雲端…</p>');
+  if (phase === 'login') return box('<h3>請先登入</h3><p>庫存系統和設備保養系統用同一個 Google 登入。請先到設備保養系統登入，再回到這裡。</p><div class="actions"><a class="btn pri" href="./">前往設備保養系統登入</a></div>');
+  if (phase === 'deny') return box('<h3>沒有權限</h3><p>庫存系統只開放給管理者使用。</p><p class="muted sm">如果你是管理者，請確認設備保養系統「人員資料」裡你的身份是「管理者」，而且是在職狀態。</p><div class="actions"><a class="btn" href="./">回設備保養系統</a></div>');
+  return box(`<h3>無法使用</h3><p>${esc(phaseMsg)}</p><div class="actions"><button class="btn" data-act="reload">重新整理</button></div>`);
+}
+let toastT = null;
+function toast(m, type = 'ok') { const t = $('#toast'); t.textContent = m; t.className = 'show ' + type; clearTimeout(toastT); toastT = setTimeout(() => { t.className = ''; }, type === 'err' ? 6000 : 3500); }
+function openModal(html) { $('#modalBody').innerHTML = html; $('#modal').hidden = false; }
+function closeModal() { $('#modal').hidden = true; $('#modalBody').innerHTML = ''; }
+const armed = {};
+function confirmTwice(el, key) {
+  const now = Date.now();
+  if (armed[key] && now - armed[key] < 8000) { delete armed[key]; return true; }
+  armed[key] = now;
+  if (!el.dataset.orig) el.dataset.orig = el.textContent;
+  el.textContent = '再按一次確認'; el.classList.add('armed');
+  setTimeout(() => { if (armed[key] === now) { delete armed[key]; if (document.body.contains(el)) { el.textContent = el.dataset.orig; el.classList.remove('armed'); } } }, 8000);
+  return false;
+}
+function download(name, text, mime) {
+  try { const blob = new Blob([text], { type: mime }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+  catch (e) { toast('這個環境不允許下載檔案', 'err'); }
+}
+function toCsv(head, rows) { const q = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }; return '﻿' + [head, ...rows].map(r => r.map(q).join(',')).join('\r\n'); }
+function setPath(obj, path, v) { const ks = path.split('.'); let o = obj; for (let i = 0; i < ks.length - 1; i++) { if (o[ks[i]] == null || typeof o[ks[i]] !== 'object') o[ks[i]] = {}; o = o[ks[i]]; } o[ks[ks.length - 1]] = v; }
+function setBound(el) {
+  const t = el.dataset.type || 'str';
+  let v = el.type === 'checkbox' ? el.checked : el.value;
+  if (t === 'num') v = v === '' ? '' : Number(v);
+  else if (t === 'int') v = v === '' ? '' : Number(v);
+  else if (t === 'bool') v = !!(el.type === 'checkbox' ? el.checked : v === 'true');
+  setPath(ui, el.dataset.bind, v);
+}
+function lineInput(l) { return { ...l, qty: l.qty === '' ? NaN : l.qty }; }
+
+/* --- 即時更新（不整頁重畫，避免打字時跳走） --- */
+const LIVE = {
+  mention() { const f = ui.issue; f.customerId = ''; f.mentionOpen = true; $('#mentionList').innerHTML = mentionHtml(); $('#custHint').innerHTML = custHint(); },
+  retList() { $('#retList').innerHTML = retList(); },
+  docList() { $('#docList').innerHTML = docListHtml(); },
+  repBody() { $('#repBody').innerHTML = repBody(); },
+  lines(el) {
+    const form = el.dataset.form, L = ui[form].lines, priceMode = form === 'issue';
+    L.forEach((l, i) => { const c = document.getElementById(`sub-${form}-${i}`); if (c) c.textContent = fmtM(lineSub(form, l, priceMode)); });
+    const t = document.getElementById('total-' + form); if (t) t.textContent = '合計 ' + fmtM(L.reduce((s, l) => s + lineSub(form, l, priceMode), 0));
+    const w = document.getElementById('warn-' + form); if (w && (form === 'issue' || form === 'other')) w.innerHTML = negWarn(form);
+    const dsc = document.getElementById('disc-issue'); if (dsc && form === 'issue') dsc.classList.toggle('hide', !issueNeedDiscount());
+  },
+  countRow(el) {
+    const id = el.dataset.id, a = ui.cnt.actual[id], book = getBal(id, 'MAIN').qty, diff = a === '' || a == null || !Number.isInteger(a) ? null : a - book;
+    document.getElementById('cd-' + id).innerHTML = cdHtml(diff);
+    const s = document.getElementById('cr-' + id); s.disabled = !diff; if (s.options[0]) s.options[0].textContent = diff ? '請選擇' : '—';
+  },
+};
+
+/* --- 動作 --- */
+function countLinesFromUi(c) { return c.lines.map(l => ({ itemId: l.itemId, actual: ui.cnt.actual[l.itemId] === '' || ui.cnt.actual[l.itemId] == null ? null : ui.cnt.actual[l.itemId], reasonId: ui.cnt.reason[l.itemId] || null })); }
+const ACT = {
+  reload() { location.reload(); },
+  go(el) { ui.page = el.dataset.v; closeModal(); render(); window.scrollTo(0, 0); },
+  goBooks(el) { ui.page = 'books'; ui.books = el.dataset.v; closeModal(); render(); window.scrollTo(0, 0); },
+  booksTab(el) { ui.books = el.dataset.v; render(); },
+  issueTab(el) { ui.issueTab = el.dataset.v; render(); },
+  recvTab(el) { ui.recv = el.dataset.v; render(); },
+  repTab(el) { ui.rep = el.dataset.v; render(); },
+  setTab(el) { ui.set = el.dataset.v; render(); },
+  closeModal() { closeModal(); },
+  itemLedger(el) { ui.page = 'books'; ui.books = 'rep'; ui.rep = 'ledger'; ui.led = { itemId: el.dataset.id, loc: '', from: '', to: '' }; render(); window.scrollTo(0, 0); },
+  addLine(el) {
+    const form = el.dataset.form, it = item(el.dataset.id), L = ui[form].lines, ex = L.find(l => l.itemId === it.id);
+    if (ex) ex.qty = (Number(ex.qty) || 0) + 1; else L.push(newLine(form, it));
+    render();
+  },
+  stepLine(el) { const l = ui[el.dataset.form].lines[+el.dataset.i]; l.qty = Math.max(1, (Number(l.qty) || 0) + Number(el.dataset.d)); render(); },
+  rmLine(el) { ui[el.dataset.form].lines.splice(+el.dataset.i, 1); render(); },
+  mentionPick(el) {
+    const p = (ui.issue._m || [])[+el.dataset.i]; if (!p) return;
+    Object.assign(ui.issue, { customerName: p.name, customerId: p.id, mentionOpen: false });
+    const inp = $('#custInput'); if (inp) inp.value = p.name;
+    $('#mentionList').innerHTML = ''; $('#custHint').innerHTML = custHint();
+  },
+  issueReset() { const keep = { handlerId: ui.issue.handlerId }; freshIssue(); Object.assign(ui.issue, keep); render(); },
+  async issueSave() {
+    const f = ui.issue;
+    const doc = await W.issue({ customerName: f.customerName, customerId: f.customerId, date: f.date, handlerId: f.handlerId, charge: issueCharge(), freeReasonId: f.freeReasonId, invoiceNo: f.invoiceNo, discountReason: f.discountReason, note: f.note, lines: f.lines.map(lineInput) });
+    toast(`已存檔：${doc.customerName}・${DT[doc.type].name}`, 'ok');
+    const keep = { handlerId: f.handlerId, date: f.date }; freshIssue(); Object.assign(ui.issue, keep); render();
+  },
+  async otherSave() {
+    const f = ui.other;
+    await W.outOther({ date: f.date, reasonId: f.reasonId, loc: f.loc, supplierId: f.supplierId, handlerId: f.handlerId, note: f.note, lines: f.lines.map(lineInput) });
+    toast('已存檔（其他出庫）', 'ok');
+    ui.other = { reasonId: '', loc: 'MAIN', supplierId: '', lines: [], date: f.date, handlerId: f.handlerId, note: '' }; render();
+  },
+  async purSave() {
+    const f = ui.pur;
+    await W.purchase({ date: f.date, supplierId: f.supplierId, invoiceNo: f.invoiceNo, handlerId: f.handlerId, note: f.note, lines: f.lines.map(lineInput) });
+    toast('已存檔（進貨入庫）', 'ok');
+    ui.pur = { supplierId: '', invoiceNo: '', lines: [], date: f.date, handlerId: f.handlerId, note: '' }; render();
+  },
+  inxReason(el) { const r = reason(ui.inx.reasonId); ui.inx.lines.forEach(l => { const d = inxDefaults(r, item(l.itemId)); l.loc = d.loc; l.unitCost = d.cost; }); render(); },
+  async inxSave() {
+    const f = ui.inx;
+    await W.inOther({ date: f.date, reasonId: f.reasonId, handlerId: f.handlerId, note: f.note, lines: f.lines.map(lineInput) });
+    toast('已存檔（其他入庫）', 'ok');
+    ui.inx = { reasonId: '', lines: [], date: f.date, handlerId: f.handlerId, note: '' }; render();
+  },
+  retPick(el) { ui.ret.origDocId = el.dataset.id; ui.ret.qty = {}; render(); },
+  retClear() { ui.ret.origDocId = ''; ui.ret.qty = {}; render(); },
+  async retSave() {
+    const f = ui.ret;
+    const lines = Object.entries(f.qty).filter(([, q]) => q !== '' && q != null && q !== 0).map(([itemId, q]) => ({ itemId, qty: q === '' ? NaN : q }));
+    if (!lines.length) fail('請輸入要退回的數量');
+    await W.returnIn({ origDocId: f.origDocId, date: f.date, loc: f.loc, handlerId: f.handlerId, note: f.note, lines });
+    toast('已存檔（退回入庫）', 'ok');
+    ui.ret = { q: '', origDocId: '', loc: 'MAIN', qty: {}, date: f.date, handlerId: f.handlerId, note: '' }; render();
+  },
+  async initSave() {
+    const f = ui.init, lines = [];
+    activeItems().forEach(it => {
+      const r = f.rows[it.id]; if (!r) return;
+      const cost = r.cost === '' ? NaN : r.cost;
+      if (r.main !== '' && r.main !== 0) lines.push({ itemId: it.id, loc: 'MAIN', qty: r.main, unitCost: cost });
+      if (r.ng !== '' && r.ng !== 0) lines.push({ itemId: it.id, loc: 'NG', qty: r.ng, unitCost: cost });
+    });
+    const doc = await W.initStock({ date: f.date, note: f.note, lines });
+    toast(`已存檔（期初建帳，${doc.lines.length} 行）`, 'ok');
+    ui.init = { rows: {}, date: f.date, note: '' }; render();
+  },
+  async countStart() { await W.countStart(ui.cnt.date); ui.cnt.loadedId = ''; toast('已開始盤點', 'ok'); render(); },
+  async countDraft() { const c = openCount(); await W.countSave(c.id, countLinesFromUi(c)); toast('已暫存', 'ok'); },
+  async countSubmit() {
+    const c = openCount();
+    await W.countSubmit(c.id, countLinesFromUi(c));
+    toast('已送出盤點，等待管理者簽核', 'ok'); ui.cnt.loadedId = ''; render();
+  },
+  async countApprove(el) {
+    if (!confirmTwice(el, 'approve')) return;
+    const c = await W.countApprove(el.dataset.id);
+    toast(c.adjDocId ? `已核准，調整 ${docById(c.adjDocId).lines.length} 個品項` : '已核准，沒有差異', 'ok'); ui.cnt.rejectNote = ''; render();
+  },
+  async countReject(el) { await W.countReject(el.dataset.id, ui.cnt.rejectNote); toast('已退回重盤', 'ok'); ui.cnt.rejectNote = ''; ui.cnt.loadedId = ''; render(); },
+  openCount(el) { const c = S.counts.find(x => x.id === el.dataset.id); openModal(`<h3>盤點 ${c.date}</h3><p class="muted">送出：${esc(userName(c.submittedBy))}　簽核：${esc(userName(c.approvedBy))}${c.adjDocId ? `　<button class="linkbtn" data-act="openDoc" data-id="${c.adjDocId}">查看盤點調整</button>` : ''}</p>${countTable(c)}`); },
+  openDoc(el) { openModal(docDetail(el.dataset.id)); },
+  async voidDoc(el) {
+    const why = ($('#voidReason') || {}).value || '';
+    if (!why.trim()) fail('請填寫作廢原因');
+    if (!confirmTwice(el, 'void' + el.dataset.id)) return;
+    await W.voidDoc(el.dataset.id, why);
+    toast('已作廢', 'ok'); openModal(docDetail(el.dataset.id)); render();
+  },
+  exportRep() {
+    need('export', '只有管理者可以匯出');
+    const D = repData(), name = { ledger: '庫存流水帳', sum: '月出入庫彙總', out: '出庫明細', diff: '盤差紀錄' }[ui.rep];
+    download(`${name}_${today()}.csv`, toCsv(D.cols.map(c => c.h), D.rows), 'text/csv;charset=utf-8');
+  },
+  itemNew() { ui.itemForm = blankItem(); render(); },
+  itemEdit(el) { const it = item(el.dataset.id); ui.itemForm = { ...it, models: it.models.join(', ') }; render(); window.scrollTo(0, 0); },
+  itemCancel() { ui.itemForm = null; render(); },
+  addModel(el) { const cur = String(ui.itemForm.models || '').split(/[,，、\s]+/).filter(Boolean); if (!cur.includes(el.dataset.m)) cur.push(el.dataset.m); ui.itemForm.models = cur.join(', '); const inp = $('#modelsInput'); if (inp) inp.value = ui.itemForm.models; },
+  async itemSave() { const it = await W.saveItem(ui.itemForm); toast(`已儲存「${it.name}」`, 'ok'); ui.itemForm = null; render(); },
+  async itemDelete(el) { if (!confirmTwice(el, 'delItem')) return; await W.deleteItem(el.dataset.id); toast('已刪除品項', 'ok'); ui.itemForm = null; render(); },
+  supNew() { ui.supForm = { id: '', name: '', contact: '', phone: '', taxId: '', note: '' }; render(); },
+  supEdit(el) { ui.supForm = { ...sup(el.dataset.id) }; render(); window.scrollTo(0, 0); },
+  supCancel() { ui.supForm = null; render(); },
+  async supSave() { const s = await W.saveSupplier(ui.supForm); toast(`已儲存「${s.name}」`, 'ok'); ui.supForm = null; render(); },
+  async supDelete(el) { if (!confirmTwice(el, 'delSup')) return; await W.deleteSupplier(el.dataset.id); toast('已刪除供應商', 'ok'); ui.supForm = null; render(); },
+  async reasonAdd() { const r = await W.saveReason(ui.reasonForm); toast(`已新增「${r.name}」`, 'ok'); ui.reasonForm.name = ''; render(); },
+  async reasonToggle(el) { const r = reason(el.dataset.id); await W.saveReason({ id: r.id, active: !r.active }); render(); },
+  async sysSave() { await W.saveSettings(ui.sys); toast('已儲存', 'ok'); render(); },
+  verify() { const p = Inv.verify(); ui.verifyMsg = p.length ? `<div class="alert bad"><b>發現 ${p.length} 個問題</b>${p.slice(0, 20).map(esc).join('<br>')}</div>` : `<div class="alert ok">檢查通過：${S.ledger.length} 筆流水帳、${S.docs.length} 張單據，數量與平均成本都對得上。</div>`; render(); },
+  backup() { need('export', '只有管理者可以下載備份'); download(`普印通庫存備份_${today()}.json`, JSON.stringify(S), 'application/json'); },
+  async catImport() {
+    const ids = [...document.querySelectorAll('input[data-cat]:checked')].map(x => x.dataset.cat);
+    const list = await W.importCatalog(ids);
+    toast(`已帶入 ${list.length} 項，請到各品項補上料號、適用機型和安全存量`, 'ok'); render();
+  },
+  restorePick(el) {
+    const file = el.files && el.files[0]; if (!file) return;
+    const rd = new FileReader();
+    rd.onload = () => { try { Inv.restoreBackup(JSON.parse(rd.result)); freshForms(); toast('已從備份還原', 'ok'); render(); } catch (e) { toast(e.message || '備份檔讀取失敗', 'err'); } };
+    rd.readAsText(file);
+  },
+  clearTx(el) { if (!confirmTwice(el, 'clearTx')) return; Inv.clearTransactions(); freshForms(); toast('已清除所有交易，可以開始期初建帳', 'ok'); render(); },
+  resetDemo(el) { if (!confirmTwice(el, 'resetDemo')) return; const keep = S.meta.userId; Inv.seedDemo(); if (user(keep)) S.meta.userId = keep; save(); freshForms(); ui.page = 'dash'; toast('已重設示範資料', 'ok'); render(); },
+};
+function defaultFree() { const r = S.reasons.find(x => x.cat === 'free' && x.active); return r ? r.id : ''; }
+function freshIssue() { ui.issue = { customerName: '', customerId: '', mentionOpen: false, lines: [], chargeSel: 'no', freeReasonId: defaultFree(), invoiceNo: '', discountReason: '', date: today(), handlerId: me().id, note: '' }; }
+
+/* ===== 6. 雲端：與設備保養系統同一個 Supabase、同一個 Google 登入 =====
+   沒有 config.js（例如直接在電腦上打開檔案）時是示範模式，資料只存在這台電腦的瀏覽器。 */
+const DEMO = !window.PT_CLOUD;
+const CLOUD = window.PT_CLOUD || { url: '', key: '' };
+const CLOUD_ON = /^https:\/\/[a-z0-9]+\.supabase\.co$/.test(CLOUD.url || '') && (CLOUD.key || '').length > 20 && !/貼上|你的專案/.test(CLOUD.url + CLOUD.key);
+const SUPA_JS = { src: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js', sri: 'sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o' };
+const ID_OK = /^[A-Za-z0-9_-]{1,64}$/;
+let sb = null, phase = DEMO ? 'ready' : 'init', phaseMsg = '', BILLING_OK = false, lastSeq = 0, busy = false;
+
+function loadSupabase() {
+  if (window.supabase && window.supabase.createClient) return Promise.resolve();
+  return new Promise((ok, bad) => {
+    const el = document.createElement('script');
+    el.src = SUPA_JS.src; el.integrity = SUPA_JS.sri; el.crossOrigin = 'anonymous';
+    el.onload = () => ok(); el.onerror = () => bad(new Error('雲端元件無法載入'));
+    document.head.appendChild(el);
+  });
+}
+function cloudError(e) {
+  const m = String((e && e.message) || e || ''), code = String((e && e.code) || '');
+  if (/Failed to fetch|NetworkError|network|fetch/i.test(m) && !/[一-鿿]/.test(m)) return new Error('無法連線雲端，請確認網路後再試（這次的動作沒有存進雲端）');
+  if (code === '42501' || /row-level security|permission denied/i.test(m)) return new Error(/[一-鿿]/.test(m) ? m : '沒有權限做這件事');
+  if (code === '23505' || /duplicate key/i.test(m)) return new Error('這筆資料剛剛已經存過了，請重新整理確認');
+  return new Error(m || '雲端錯誤');
+}
+async function must(q) { const { data, error } = await q; if (error) throw Object.assign(new Error(error.message || '雲端錯誤'), { code: error.code }); return data; }
+async function rpc(fn, args) { return must(sb.rpc(fn, args || {})); }
+async function fetchPaged(build) {
+  const out = [];
+  for (let from = 0; ; from += 1000) { const data = await must(build().range(from, from + 999)); out.push(...data); if (data.length < 1000) break; }
+  return out;
+}
+const roleOfStaff = s => (s.admin ? 'admin' : s.role === '會計部' ? 'acct' : s.role === '行政人員' ? 'asst' : 'eng');
+const okRowId = r => r && ID_OK.test(String(r.id)) && r.data && typeof r.data === 'object' && !Array.isArray(r.data);
+function normItem(x) {
+  const it = { code: '', name: '', category: '其他', brand: '原廠', unit: '支', safety: 0, minOrder: 1, leadDays: 7, supplierId: '', price: 0, life: 0, basis: '黑色張數', ratio: 83, active: true, ...x };
+  it.models = Array.isArray(x.models) ? x.models.map(String) : [];
+  it.code = String(it.code || it.id); it.name = String(it.name || '');
+  return it;
+}
+function masterToState(rows) {
+  const by = c => rows.filter(r => r.coll === c && okRowId(r));
+  S.items = by('items').map(r => normItem({ ...r.data, id: String(r.id) }));
+  S.suppliers = by('suppliers').map(r => ({ name: '', contact: '', phone: '', taxId: '', note: '', ...r.data, id: String(r.id) })).sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh-TW'));
+  S.reasons = by('reasons').map(r => ({ ...r.data, id: String(r.id), active: r.data.active !== false })).filter(r => REASON_CATS[r.cat] && r.name)
+    .sort((a, b) => (a.ord || 0) - (b.ord || 0) || a.id.localeCompare(b.id));
+  const st = by('settings').find(r => r.id === 'main');
+  S.settings = { safetyDays: 14, ...(st ? st.data : {}) };
+}
+const docRowOk = r => r && ID_OK.test(String(r.id)) && DT[r.type] && /^\d{4}-\d{2}-\d{2}/.test(String(r.date)) && r.data && Array.isArray(r.data.lines)
+  && r.data.lines.every(l => l && typeof l.itemId === 'string' && Number.isInteger(l.qty) && l.qty > 0);
+function mergeDoc(r, m) {
+  const d = Object.assign({ customerId: null, customerName: '', supplierId: null, origDocId: null, charge: null, reasonId: null, reasonText: '', note: '', discountReason: '', invoiceNo: '', handlerId: null }, r.data);
+  d.id = String(r.id); d.no = d.id; d.type = r.type; d.date = String(r.date).slice(0, 10); d.seq = Number(r.seq); d.status = 'valid';
+  d.lines = r.data.lines.map((l, i) => ({ ...l, loc: l.loc || 'MAIN', ...(m && Array.isArray(m.lines) && m.lines[i] ? m.lines[i] : {}) }));
+  if (m) { d.invoiceNo = String(m.invoiceNo || ''); d.discountReason = String(m.discountReason || ''); }
+  if (!d.createdAt) d.createdAt = r.created_at;
+  return d;
+}
+const countsToState = rows => rows.filter(okRowId).map(r => ({ rejectNote: '', ...r.data, id: String(r.id) })).filter(c => Array.isArray(c.lines));
+// 單據送到雲端時，數量與金額分開（金額只有管理者、會計部、行政人員讀得到）
+function pubDoc(d) {
+  const x = { id: d.id, type: d.type, date: d.date, handlerId: d.handlerId, customerId: d.customerId || null, customerName: d.customerName || '', supplierId: d.supplierId || null,
+    origDocId: d.origDocId || null, charge: d.charge ?? null, reasonId: d.reasonId || null, reasonText: d.reasonText || '', note: d.note || '', countId: d.countId || null };
+  x.lines = d.type === 'VOID' ? [] : d.lines.map(l => { const y = { itemId: l.itemId, loc: l.loc || 'MAIN', qty: l.qty }; if (l.dir) y.dir = l.dir; if (l.reasonId) y.reasonId = l.reasonId; return y; });
+  return x;
+}
+function moneyOf(d) {
+  if (['INIT', 'PURCHASE', 'IN_OTHER'].includes(d.type)) return { lines: d.lines.map(l => ({ unitCost: Number(l.unitCost) || 0 })), invoiceNo: d.invoiceNo || '' };
+  if (d.type === 'ISSUE_SALE') return { lines: d.lines.map(l => ({ price: Number(l.price) || 0 })), invoiceNo: d.invoiceNo || '', discountReason: d.discountReason || '' };
+  return null;
+}
+async function loadAll(who) {
+  const priv = ['admin', 'acct', 'asst'].includes(who.role);
+  const [apps, master, docs, money, counts] = await Promise.all([
+    fetchPaged(() => sb.from('app_records').select('coll,id,data').in('coll', ['staff', 'customers', 'catalog']).order('coll').order('id')),
+    fetchPaged(() => sb.from('inv_master').select('coll,id,data').order('coll').order('id')),
+    fetchPaged(() => sb.from('inv_docs').select('seq,id,type,date,data,created_at').order('seq')),
+    priv ? fetchPaged(() => sb.from('inv_money').select('doc_id,data').order('doc_id')) : Promise.resolve([]),
+    fetchPaged(() => sb.from('inv_counts').select('id,data').order('id')),
+  ]);
+  S = emptyState(); S.meta.cloud = true; S.meta.demo = false;
+  const rows = c => apps.filter(r => r.coll === c && okRowId(r));
+  S.users = rows('staff').map(r => ({ id: String(r.id), name: String(r.data.name || r.data.email || r.id), role: roleOfStaff(r.data), active: r.data.active === true }));
+  let mine = S.users.find(u => u.id === who.staffId);
+  if (!mine) { mine = { id: who.staffId, name: who.name || who.email, role: who.role, active: true }; S.users.push(mine); }
+  mine.role = who.role;   // 本人的身份以資料庫為準
+  S.meta.userId = who.staffId;
+  S.customers = rows('customers').map(r => ({ id: String(r.id), name: String(r.data.name || '').trim(), contact: String(r.data.contact || ''), phone: String(r.data.phone || ''), address: String(r.data.address || '') })).filter(c => c.name);
+  S.catalogSrc = rows('catalog').map(r => ({ ...r.data, id: String(r.id) }));
+  masterToState(master);
+  const mm = new Map(money.map(x => [String(x.doc_id), x.data]));
+  S.docs = docs.filter(docRowOk).map(r => mergeDoc(r, mm.get(String(r.id))));
+  lastSeq = docs.reduce((a, r) => Math.max(a, Number(r.seq) || 0), 0);
+  S.counts = countsToState(counts);
+  rebuild();
+}
+// 取回別人剛存的單據、主檔與盤點；有變動才重算
+async function syncNow() {
+  if (DEMO || !sb || phase !== 'ready') return false;
+  let changed = false;
+  const rows = await fetchPaged(() => sb.from('inv_docs').select('seq,id,type,date,data,created_at').gt('seq', lastSeq).order('seq'));
+  if (rows.length) {
+    const mm = new Map();
+    if (can('viewCost')) for (let i = 0; i < rows.length; i += 200) {
+      (await must(sb.from('inv_money').select('doc_id,data').in('doc_id', rows.slice(i, i + 200).map(r => r.id)))).forEach(x => mm.set(String(x.doc_id), x.data));
+    }
+    rows.filter(docRowOk).forEach(r => { S.docs = S.docs.filter(d => d.id !== String(r.id)); S.docs.push(mergeDoc(r, mm.get(String(r.id)))); });
+    lastSeq = rows.reduce((a, r) => Math.max(a, Number(r.seq) || 0), lastSeq);
+    changed = true;
+  }
+  const [master, counts] = await Promise.all([
+    fetchPaged(() => sb.from('inv_master').select('coll,id,data').order('coll').order('id')),
+    fetchPaged(() => sb.from('inv_counts').select('id,data').order('id')),
+  ]);
+  const before = JSON.stringify([S.items, S.suppliers, S.reasons, S.settings, S.counts]);
+  masterToState(master); S.counts = countsToState(counts);
+  if (JSON.stringify([S.items, S.suppliers, S.reasons, S.settings, S.counts]) !== before) changed = true;
+  if (S.docs.some(d => d.seq == null)) { S.docs = S.docs.filter(d => d.seq != null); changed = true; }
+  if (changed) rebuild();
+  return changed;
+}
+let lockP = Promise.resolve();
+function exclusive(fn) { const p = lockP.then(() => fn()); lockP = p.catch(() => {}); return p; }
+// 先在本機檢查並記帳（不合規定直接擋下），再送雲端；雲端拒絕就還原，畫面和雲端一致
+async function commit(localFn, remoteFn) {
+  if (DEMO) return localFn();
+  return exclusive(async () => {
+    try { await syncNow(); } catch (e) { throw cloudError(e); }
+    const snap = JSON.stringify(S);
+    const result = localFn();
+    try { await remoteFn(result); } catch (e) { S = JSON.parse(snap); throw cloudError(e); }
+    try { await syncNow(); } catch (e) { /* 已存進雲端；下次同步會補上 */ }
+    return result;
+  });
+}
+const commitDoc = localFn => commit(localFn, async doc => { const r = await rpc('inv_post', { p_doc: pubDoc(doc), p_money: moneyOf(doc) }); doc.seq = Number(r && r.seq); });
+const countData = c => { const { id, ...rest } = c; return rest; };
+const commitCount = (localFn, mode) => commit(localFn, async c => {
+  if (mode === 'insert') await must(sb.from('inv_counts').insert({ id: c.id, data: countData(c) }));
+  else { const r = await must(sb.from('inv_counts').update({ data: countData(c) }).eq('id', c.id).select('id')); if (!r || !r.length) throw new Error('盤點單已被別人更新或沒有權限，請重新整理'); }
+});
+const commitApprove = id => commit(() => Inv.countApprove(id), async c => {
+  const adj = c.adjDocId ? docById(c.adjDocId) : null;
+  await rpc('inv_count_approve', { p_count_id: id, p_doc: adj ? pubDoc(adj) : null });
+});
+const commitMaster = (coll, localFn) => commit(localFn, async rec => {
+  const list = (Array.isArray(rec) ? rec : [rec]).map(x => { const { id, ...data } = x; return { coll, id: coll === 'settings' ? 'main' : id, data }; });
+  const r = await must(sb.from('inv_master').upsert(list, { onConflict: 'coll,id' }).select('id'));
+  if (!r || r.length !== list.length) throw new Error('沒有權限修改設定');
+});
+const commitDelete = (coll, id, localFn) => commit(localFn, async () => {
+  const r = await must(sb.from('inv_master').delete().eq('coll', coll).eq('id', id).select('id'));
+  if (!r || !r.length) throw new Error('刪除沒有成功（可能沒有權限）');
+});
+// 畫面上的存檔一律經過這裡：示範模式直接存在瀏覽器，雲端模式送到 Supabase
+const W = {
+  issue: x => commitDoc(() => Inv.issue(x)),
+  outOther: x => commitDoc(() => Inv.outOther(x)),
+  purchase: x => commitDoc(() => Inv.purchase(x)),
+  inOther: x => commitDoc(() => Inv.inOther(x)),
+  returnIn: x => commitDoc(() => Inv.returnIn(x)),
+  initStock: x => commitDoc(() => Inv.initStock(x)),
+  voidDoc: (id, why) => commitDoc(() => Inv.voidDoc(id, why)),
+  countStart: d => commitCount(() => Inv.countStart(d), 'insert'),
+  countSave: (id, lines) => commitCount(() => Inv.countSave(id, lines), 'update'),
+  countSubmit: (id, lines) => commitCount(() => { Inv.countSave(id, lines); return Inv.countSubmit(id); }, 'update'),
+  countReject: (id, note) => commitCount(() => Inv.countReject(id, note), 'update'),
+  countApprove: id => commitApprove(id),
+  saveItem: x => commitMaster('items', () => Inv.saveItem(x)),
+  importCatalog: ids => commitMaster('items', () => Inv.importCatalog(ids)),
+  saveSupplier: x => commitMaster('suppliers', () => Inv.saveSupplier(x)),
+  saveReason: x => commitMaster('reasons', () => Inv.saveReason(x)),
+  saveSettings: x => commitMaster('settings', () => Inv.saveSettings(x)),
+  deleteItem: id => commitDelete('items', id, () => Inv.deleteItem(id)),
+  deleteSupplier: id => commitDelete('suppliers', id, () => Inv.deleteSupplier(id)),
+};
+function setBusy(on) { busy = on; document.body.classList.toggle('busy', on); const c = $('#cloudSt'); if (c) c.textContent = on ? '☁ 儲存中…' : '☁ 已同步'; }
+function softRender() {
+  const a = document.activeElement;
+  if ((a && a.closest && a.closest('#app') && ['INPUT', 'TEXTAREA', 'SELECT'].includes(a.tagName)) || !$('#modal').hidden || busy) { setTimeout(softRender, 1500); return; }
+  render();
+}
+async function syncQuiet() {
+  if (DEMO || phase !== 'ready' || busy) return;
+  try { if (await exclusive(() => syncNow())) softRender(); } catch (e) { const c = $('#cloudSt'); if (c) c.textContent = '☁ 暫時無法同步'; }
+}
+async function cloudBoot() {
+  if (!CLOUD_ON) { phase = 'stop'; phaseMsg = '雲端設定（config.js）不完整。請確認 inventory.html 和 index.html、config.js 放在 GitHub 的同一個資料夾。'; return render(); }
+  try { await loadSupabase(); } catch (e) { phase = 'stop'; phaseMsg = '雲端元件無法載入，請確認網路後重新整理。'; return render(); }
+  sb = window.supabase.createClient(CLOUD.url, CLOUD.key);
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { phase = 'login'; return render(); }
+    if (((session.user.app_metadata || {}).provider || '') !== 'google') { phase = 'stop'; phaseMsg = '本系統僅接受 Google 帳號登入。'; return render(); }
+    let who;
+    try { who = await rpc('inv_me'); }
+    catch (e) { phase = 'stop'; phaseMsg = '庫存系統還沒有安裝到資料庫。請管理者先在 Supabase 的 SQL Editor 執行 inventory-setup-v2.sql。'; return render(); }
+    if (!who || !who.staffId) { phase = 'deny'; return render(); }
+    try { const b = await rpc('billing_whoami'); BILLING_OK = !!(b && b.member === true); } catch (e) { BILLING_OK = false; }
+    await loadAll(who);
+    phase = 'ready';
+    freshForms();
+  } catch (e) { console.error(e); phase = 'stop'; phaseMsg = '載入失敗：' + (cloudError(e).message); return render(); }
+  render();
+  setInterval(syncQuiet, 60000);
+  window.addEventListener('focus', syncQuiet);
+}
+
+/* --- 事件 --- */
+function closeMention() { if (ui.issue && ui.issue.mentionOpen) { ui.issue.mentionOpen = false; const ml = $('#mentionList'); if (ml) ml.innerHTML = ''; const ch = $('#custHint'); if (ch) ch.innerHTML = custHint(); } }
+document.addEventListener('click', e => {
+  if (e.target.id === 'modal') { closeModal(); return; }
+  if (!e.target.closest('.mention')) closeMention();
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const fn = ACT[el.dataset.act]; if (!fn) return;
+  e.preventDefault();
+  if (busy) return;
+  runAct(fn, el, e);
+});
+function runAct(fn, el, e) {
+  let r;
+  try { r = fn(el, e); } catch (err) { toast(err.message || String(err), 'err'); return; }
+  if (r && typeof r.then === 'function') {
+    setBusy(true);
+    r.catch(err => { toast((err && err.message) || String(err), 'err'); render(); }).finally(() => setBusy(false));
+  }
+}
+document.addEventListener('input', e => {
+  const el = e.target; if (!el.dataset || !el.dataset.bind || el.type === 'radio' || el.type === 'checkbox' || el.type === 'file') return;
+  setBound(el);
+  if (el.dataset.live && LIVE[el.dataset.live]) { try { LIVE[el.dataset.live](el); } catch (err) { console.error(err); } }
+});
+document.addEventListener('change', e => {
+  const el = e.target; if (!el.dataset) return;
+  if (el.dataset.bind) setBound(el);
+  if (el.id === 'userSel') { setUser(el.value); freshForms(); ui.itemForm = null; ui.supForm = null; ui.verifyMsg = ''; closeModal(); render(); toast(`已切換為 ${me().name}（${ROLES[role()]}）`, 'ok'); return; }
+  if (el.dataset.change && ACT[el.dataset.change]) { runAct(ACT[el.dataset.change], el, e); return; }
+  if (el.hasAttribute('data-rerender')) render();
+});
+document.addEventListener('focusin', e => { if (e.target.id === 'custInput') { ui.issue.mentionOpen = true; $('#mentionList').innerHTML = mentionHtml(); } });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('#modal').hidden) closeModal(); else closeMention();
+});
+
+/* --- 啟動 --- */
+(function boot() {
+  if (!DEMO) { S = emptyState(); S.meta.cloud = true; render(); cloudBoot(); return; }
+  S = load();
+  if (S && S.version === 1 && S.meta && S.meta.demo) S = null;   // 第一版的示範資料：直接換成新版示範
+  if (!S) seedDemo(); else { S = migrate(S); save(); }
+  if (!user(S.meta.userId)) S.meta.userId = S.users[0].id;
+  freshForms();
+  render();
+})();
+</script>
+</body>
+</html>

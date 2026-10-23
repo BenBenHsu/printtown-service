@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 設備保養系統 v65</title>
+<title>普印通 設備保養系統 v67</title>
 <style>
 :root{--yellow:#ca8a04;--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -173,10 +173,11 @@ details.tag-editor>summary{cursor:pointer;font-weight:600}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="config.js"></script>
+<script src="menu.js"></script>
 </head>
 <body>
 <header>
-  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v65</span></h1>
+  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v67</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="dash" class="active" onclick="go('dash')">儀表板</button>
     <button data-v="plan" onclick="go('plan')">保養客戶一覽</button>
@@ -184,7 +185,7 @@ details.tag-editor>summary{cursor:pointer;font-weight:600}
     <button data-v="me" onclick="go('me')">我的帳號</button>
     <button id="navOps" data-v="ops" onclick="go('ops')" style="display:none">操作分析</button>
     <button id="navSettings" data-v="settings" onclick="go('settings')" style="display:none">設定</button>
-    <button id="navBilling" onclick="location.href='billing.html'" style="display:none">計張計價</button>
+    <span id="ptSys"></span><!-- V66 起：系統按鈕（計張計價、庫存）由共用的 menu.js 產生 -->
   </nav>
   <div id="roleBox" style="display:none;gap:6px;align-items:center;margin-left:8px"><span id="cloudSt" style="font-size:12px;opacity:.85;margin-right:4px"></span><span id="roleLabel" style="font-size:13px;opacity:.95"></span><button onclick="logout()" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer">登出</button></div>
 </header>
@@ -1311,8 +1312,11 @@ async function checkBilling() {
     const {data, error} = await sb.rpc('billing_whoami');
     BILLING_OK = !error && !!(data && data.member === true);
   } catch (e) { BILLING_OK = false; }
-  const nb = document.querySelector('#navBilling'); if (nb) nb.style.display = BILLING_OK && curStaff() ? '' : 'none';
+  ptMenu();
 }
+// V66：上方的系統按鈕（計張計價、庫存）改由三個頁面共用的 menu.js 產生；要調整按鈕只改 menu.js
+// V67：把登入者的身份傳給選單；誰看得到哪個系統，只在 menu.js 決定（目前「庫存」只給管理者）
+function ptMenu() { if (window.PT_MENU) window.PT_MENU.render('#ptSys', 'service', {billing: BILLING_OK && !!curStaff(), staff: !!curStaff(), admin: isAdmin(), role: myRole()}); }
 async function cloudSignIn() {
   toast('前往 Google 登入…');
   const {error} = await sb.auth.signInWithOAuth({provider: 'google', options: {redirectTo: location.origin + location.pathname}});
@@ -1828,7 +1832,7 @@ function render() {
   if (pendingPanelScroll) { pendingPanelScroll = false; const pe = document.getElementById('devPanel'); if (pe) pe.scrollIntoView({block: 'start'}); }
   const sb = document.querySelector('#navSettings'); if (sb) sb.style.display = '';
   const ob = document.querySelector('#navOps'); if (ob) ob.style.display = isAdmin() ? '' : 'none';
-  const nb = document.querySelector('#navBilling'); if (nb) nb.style.display = BILLING_OK ? '' : 'none';
+  ptMenu();
   $('#nav').style.display = ''; $('#roleBox').style.display = 'flex';
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.v === view));
   const me = curStaff(); $('#roleLabel').textContent = me ? `${me.name}（${roleOf(me)}）` : '';

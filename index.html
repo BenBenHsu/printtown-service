@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 設備保養系統 v60</title>
+<title>普印通 設備保養系統 v65</title>
 <style>
 :root{--yellow:#ca8a04;--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -63,6 +63,8 @@ button.ghost:disabled{opacity:.45;cursor:default}
 .plan-table{min-width:0;width:100%;font-size:13px;border-collapse:collapse}
 .plan-table th,.plan-table td{padding:6px;border:1px solid #cbd5e1;vertical-align:top}
 .plan-table .ck{text-align:center;font-size:16px;width:44px}
+.ck-btn{background:none;border:1px solid #cbd5e1;border-radius:6px;font-size:18px;line-height:1.2;padding:2px 6px;cursor:pointer;color:inherit}
+.ck-btn:disabled{cursor:default;opacity:.6}
 .plan-table .blank{width:90px}
 .print-only{display:none}
 @media print{
@@ -75,6 +77,7 @@ button.ghost:disabled{opacity:.45;cursor:default}
   .plan-table th,.plan-table td{font-size:11px;padding:4px}
   .plan-table .blank{height:26px}
   .plan-table tr{page-break-inside:avoid}
+  .ck-btn{border:none;padding:0;opacity:1}
 }
 /* v26 色彩分層：客戶（白）／設備（藍）／服務（綠）／耗材（琥珀）／提醒（紅）／分析（紫）／設定（灰） */
 .card.sec-cust{background:#ffffff;border-left:6px solid #1f5fbf}
@@ -110,6 +113,17 @@ details.tag-editor>summary{cursor:pointer;font-weight:600}
 .sw input:checked + span{box-shadow:0 0 0 3px #1e293b}
 .sw input:focus-visible + span{outline:2px solid #2563eb;outline-offset:2px}
 @media (max-width:640px){.tagset-row{grid-template-columns:1fr}}
+.kind-sel{width:auto;max-width:180px;padding:4px 6px;font-size:13px;border-radius:6px}
+.kind-sel.ks-print{background:#fef9c3}.kind-sel.ks-other{background:#ffedd5}
+@media (max-width:640px){
+  .dev-tbl{min-width:0 !important}
+  .dev-tbl thead{display:none}
+  .dev-tbl,.dev-tbl tbody,.dev-tbl tr,.dev-tbl td{display:block;width:100%;box-sizing:border-box}
+  .dev-tbl tr{border:1px solid #e2e8f0;border-radius:10px;margin:8px 0;padding:6px 10px;background:#fff}
+  .dev-tbl td{border:none !important;padding:4px 0;white-space:normal !important;text-align:left}
+  .dev-tbl td.num::before{content:'提醒 ';color:#64748b}
+  .dev-tbl .kind-sel{max-width:100%}
+}
 .stock-chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px}
 .stock-chip{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 12px;cursor:pointer;font:inherit;font-size:14px;color:#334155}
 .stock-chip.on{background:var(--brand,#1e5fbf);border-color:var(--brand,#1e5fbf);color:#fff}
@@ -119,6 +133,42 @@ details.tag-editor>summary{cursor:pointer;font-weight:600}
 .act-l,.act-r{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .seq-btn{font-weight:600}
 .cons-act{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.rem-btn{border:none;cursor:pointer;font:inherit;font-size:13px}
+.rem-row>td{background:#fffbeb;padding:8px 12px !important;border-bottom:1px solid #fde68a}
+.rem-item{margin:8px 0;padding-bottom:8px;border-bottom:1px dashed #e5e7eb}
+.rem-item:last-of-type{border-bottom:none}
+.rem-act{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.rem-form{margin-top:10px;padding:10px;border:2px solid var(--brand,#1e5fbf);border-radius:10px;background:#fff}
+.mg-dev{display:grid;grid-template-columns:minmax(0,1fr) 160px 160px;gap:8px;align-items:end;padding:6px 0;border-top:1px dashed #e2e8f0}
+@media (max-width:640px){.mg-dev{grid-template-columns:1fr}}
+.due-tbl{width:100%;border-collapse:collapse;min-width:0 !important}
+.due-tbl th{text-align:left;font-size:13px;color:#475569;padding:8px 10px;border-bottom:2px solid #cbd5e1;white-space:nowrap}
+.due-tbl th.c-num,.due-tbl td.c-num{text-align:center;white-space:nowrap}
+.due-tbl tr.due-sum{cursor:pointer;border-bottom:1px solid #e2e8f0}
+.due-tbl tr.due-sum:hover{background:#f8fafc}
+.due-tbl tr.due-sum td{padding:9px 10px;vertical-align:top}
+.due-tbl tr.due-sum.due-alldone{opacity:.62}
+.due-btn{all:unset;cursor:pointer;display:inline-flex;gap:6px;align-items:baseline;font-weight:700}
+.due-btn:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+.dn{font-weight:700}.dn-rem{color:#6d28d9}.dn-od{color:#b91c1c}.dn-un{color:#c2410c}.dn-ok{color:#15803d}.dn-zero{color:#94a3b8;font-weight:400}
+.due-det>td{background:#f8fafc;padding:8px 12px;border-bottom:1px solid #e2e8f0}
+.due-unit{margin:0 0 14px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff}
+.due-unit-h{display:flex;gap:4px 12px;flex-wrap:wrap;align-items:baseline;margin:0 0 6px;font-size:14px}
+.due-rem{font-size:12px;color:#475569;margin-top:3px;max-width:260px}
+.due-sumline{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:6px 0 8px;font-size:14px}
+@media (max-width:640px){
+  .due-tbl thead{display:none}
+  .due-tbl,.due-tbl tbody{display:block}
+  .due-tbl tr.due-sum{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:14px;border:1px solid #e2e8f0;border-radius:10px;margin:8px 0 0;padding:8px 10px;background:#fff}
+  .due-tbl tr.due-sum td{padding:0;border:none;text-align:left}
+  .due-tbl td.c-name{flex:1 0 100%}
+  .due-tbl td.c-num::before{content:attr(data-label) ' ';color:#64748b;font-weight:400}
+  .due-tbl td.c-asg{flex:1 0 100%}
+  .due-tbl td.c-asg::before{content:'擔當：';color:#64748b}
+  .due-tbl tr.due-det{display:block;margin:0 0 8px}
+  .due-tbl tr.due-det[hidden]{display:none}
+  .due-tbl tr.due-det>td{display:block}
+}
 .cons-act button{padding:3px 8px;font-size:12px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
@@ -126,7 +176,7 @@ details.tag-editor>summary{cursor:pointer;font-weight:600}
 </head>
 <body>
 <header>
-  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v60</span></h1>
+  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v65</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="dash" class="active" onclick="go('dash')">儀表板</button>
     <button data-v="plan" onclick="go('plan')">保養客戶一覽</button>
@@ -151,21 +201,174 @@ const WIN = 183, M = WIN / MONTH;          // 近六個月視窗
 const WARN_CONS = 60, URGENT_DAYS = 21;   // 備料提醒：60 天內需備料；立即提醒：21 天內可能用完
 const WARN_SVC = 14, WARN_ABN_DAYS = 180;
 const EARLY_RATIO = 0.6, REPEAT_DAYS = 60;
-const KIND = {copier:'事務設備', printer:'事務設備', purifier:'商用空氣清淨機', ozone:'商用臭氧機', phi:'PHI商用除味機', nex:'NEX除味系統'};
-const kindIsPrint = k => !['purifier','phi','ozone','nex'].includes(k);   // V47：非列印機型不計張數、無色彩與選用功能
-const CYCLE_OPTS = [{m:1,label:'一個月',days:30},{m:2,label:'雙月',days:60},{m:3,label:'每季',days:90},{m:6,label:'半年',days:180}];
-const cycleOf = c => CYCLE_OPTS.find(o => o.m === (c && c.cycleMonths)) || CYCLE_OPTS[2];
-// V49：保養週期一律以「客戶」為準，設備不再各自設定
-const devCycle = d => cycleOf(d && S.customers.find(x => x.id === d.customerId));
+const KIND = {copier:'事務設備', printer:'事務設備', purifier:'商用空氣清淨機', ozone:'商用臭氧機', phi:'PHI商用除味機', nex:'NEX除味系統', body:'全身除味機'};
+const kindIsPrint = k => !['purifier','phi','ozone','nex','body'].includes(k);   // V47：非列印機型不計張數、無色彩與選用功能
+// V62：週期名稱統一為「每月、雙月、一季、4個月、半年、一年」
+const CYCLE_OPTS = [{m:1,label:'每月',days:30},{m:2,label:'雙月',days:60},{m:3,label:'一季',days:90},{m:4,label:'4個月',days:120},{m:6,label:'半年',days:180},{m:12,label:'一年',days:365}];
+const cycOpt = m => CYCLE_OPTS.find(o => o.m === m) || null;
+// V62：保養週期改在「每台設備」上設定（d.cycleMonths）。設備還沒有自己的週期時，依序取：
+//  ① 客戶 V61 的組別週期（cycleOffice／cycleOdor）② 客戶舊的 cycleMonths ③ 類別預設值（事務設備每月、除味設備一季）
+const CYC_GRPS = [{g: 'office', label: '事務設備', short: '事務別', field: 'cycleOffice', def: 1}, {g: 'odor', label: '除味設備', short: '除味別', field: 'cycleOdor', def: 3}];
+const grpOfKind = k => kindIsPrint(k) ? 'office' : 'odor';
+const grpInfo = g => CYC_GRPS.find(x => x.g === g) || CYC_GRPS[0];
+const defCycleOfKind = k => cycOpt(grpInfo(grpOfKind(k)).def);
+// 客戶上的舊週期（V61 兩組、V60 以前一組）；只用來帶入還沒設定週期的設備
+function cycleGrp(c, g) {
+  const v = c ? c[grpInfo(g).field] : null;
+  return cycOpt(v) || cycOpt(c && c.cycleMonths) || cycOpt(grpInfo(g).def);
+}
+const cycleOf = c => cycleGrp(c, 'office');
+const devCycle = d => (d && cycOpt(d.cycleMonths)) || cycleGrp(d && S.customers.find(x => x.id === d.customerId), grpOfKind(d && d.kind));
+// 客戶的週期摘要：依設備彙總，格式「事務別／每月、除味別／一季」；同組週期不同時列出全部（例：事務別／每月、雙月）
+function cycleText(c, g) {
+  const devs = devsOf(c.id).filter(d => !g || grpOfKind(d.kind) === g);
+  if (!devs.length) return g ? '—' : '尚無設備';
+  return CYC_GRPS.filter(x => !g || x.g === g).map(x => {
+    const ms = [...new Set(devs.filter(d => grpOfKind(d.kind) === x.g).map(d => devCycle(d).m))].sort((a, b) => a - b);
+    return ms.length ? `${x.short}／${ms.map(m => cycOpt(m).label).join('、')}` : '';
+  }).filter(Boolean).join('、');
+}
+// 設備表單的保養週期選單
+function cycleSelHtml(name, cur, extra = '') {
+  return `<select name="${name}" ${extra}>${CYCLE_OPTS.map(o => `<option value="${o.m}" ${o.m === cur ? 'selected' : ''}>${o.label}</option>`).join('')}</select>`;
+}
+const cycleFieldHtml = (kind, cur) => `<div><label>保養週期</label>${cycleSelHtml('cycleMonths', cur || defCycleOfKind(kind).m, 'data-cyc="1"')}</div>`;
+const cycleIn = (f, name, fallback) => { const v = +f.get(name); return cycOpt(v) ? v : fallback; };
 const devCycleDays = d => devCycle(d).days;
 const VAR_WARN = 0.3;      // 用量變化達 ±30% 才提示
 const REPAIR_WARN = 1.5;   // 近30日維修 ≥ 前六個月月均 × 1.5 才提示
 const TYPES = ['定期保養','維修','換耗材','建立客戶關係','軟體服務','送貨','抄表','其他'];
-// V55：「抄表」只記錄讀數（例如客戶回報、計價系統登打），不算到府保養：不影響保養週期、本月已保養與逾期判斷
-const isSvcLog = l => !!l && l.type !== '抄表';
+// V63：每一筆服務紀錄都算一次保養（含抄表、送貨、其他；計價系統登打的抄表也算）。抄表的讀數仍照常用於印量、計價與碳粉推估
+const isSvcLog = l => !!l;
+// V61：除味設備（商用空氣清淨機、臭氧機、PHI、NEX）的保養紀錄分兩區：服務紀錄（可複選）與耗材更換
+const ODOR_KINDS = ['purifier', 'ozone', 'phi', 'nex', 'body'];
+// V63：服務紀錄選項固定為這 5 項（順序固定、不可在設定頁修改）；耗材更換項目仍可由管理者維護
+const ODOR_SVC_FIXED = ['保養清潔', '燈號歸復', '維修', '送貨', '其他'];
+const ODOR_SVC_DEF = ODOR_SVC_FIXED;
+const ODOR_CONS_DEF = {purifier: ['前置濾網', '電漿濾網'], ozone: [], phi: [], nex: [], body: []};
+const ITEM_MAX = 20, ITEM_LIST_MAX = 20;
+// 耗材更換項目存在 S.ui.odorItems[kind] = {svc, cons:[{name,off}]}；服務選項一律使用固定的 5 項（舊設定中的服務選項不再使用）
+function odorItems(kind) {
+  const cfg = S.ui && S.ui.odorItems && typeof S.ui.odorItems === 'object' ? S.ui.odorItems[kind] : null;
+  const norm = (arr, def) => Array.isArray(arr)
+    ? arr.filter(x => x && typeof x.name === 'string' && x.name.trim()).slice(0, ITEM_LIST_MAX).map(x => ({name: x.name.trim().slice(0, ITEM_MAX), off: x.off === true}))
+    : def.map(n => ({name: n, off: false}));
+  return {svc: ODOR_SVC_FIXED.map(n => ({name: n, off: false})), cons: norm(cfg && cfg.cons, ODOR_CONS_DEF[kind] || [])};
+}
+// 舊紀錄（V62 以前）的「保養」＝「保養清潔」：只改顯示與編輯時的勾選，雲端資料不改寫；「大保養」「燈號歸復」維持原樣
+const SVC_ALIAS = {'保養': '保養清潔'};
+const svcName = n => SVC_ALIAS[n] || n;
+const OLD_TYPE_MAP = {'定期保養': '保養清潔', '維修': '維修'};
+function svcItemsOf(l) {
+  if (!l) return [];
+  if (Array.isArray(l.svcItems)) return [...new Set(l.svcItems.filter(x => typeof x === 'string').map(svcName))];
+  return OLD_TYPE_MAP[l.type] ? [OLD_TYPE_MAP[l.type]] : [];
+}
+const consReplOf = l => (l && Array.isArray(l.consRepl) ? l.consRepl : []).filter(x => x && typeof x.name === 'string').map(x => ({name: x.name, qty: Number.isInteger(x.qty) && x.qty > 0 ? x.qty : 1}));
+// 顯示用文字：有服務項目時顯示項目，否則顯示原本的服務類型
+const svcText = l => (l && Array.isArray(l.svcItems) && l.svcItems.length) ? svcItemsOf(l).join('、') : String((l && l.type) || '');
+const consReplText = l => consReplOf(l).map(x => `${x.name} ×${x.qty}`).join('、');
+const svcHtml = l => esc(svcText(l)) + (consReplText(l) ? `<div class="muted">耗材更換：${esc(consReplText(l))}</div>` : '');
+// 維修次數：服務類型為維修，或服務項目含「維修」
+const isRepairLog = l => !!l && (l.type === '維修' || (Array.isArray(l.svcItems) && l.svcItems.includes('維修')));
+// 由服務項目推算服務類型（相容舊版與統計）：有保養清潔（含舊的保養、大保養）→ 定期保養；沒有但有維修 → 維修；只有送貨 → 送貨；其他 → 其他
+function typeFromItems(items) {
+  if (items.some(n => n === '保養清潔' || n === '保養' || n === '大保養')) return '定期保養';
+  if (items.includes('維修')) return '維修';
+  if (items.length && items.every(n => n === '送貨')) return '送貨';
+  return '其他';
+}
+// 表單上列出的項目：固定的 5 項＋這筆舊紀錄原本就有的項目（例如大保養，編輯時仍保留、不會被洗掉）
+function odorSvcList(dev, l) {
+  const on = odorItems(dev.kind).svc.filter(x => !x.off).map(x => x.name);
+  return [...new Set([...on, ...svcItemsOf(l)])];
+}
+function odorConsList(dev, l) {
+  const on = odorItems(dev.kind).cons.filter(x => !x.off).map(x => x.name);
+  return [...new Set([...on, ...consReplOf(l).map(x => x.name)])];
+}
+// V63：除味設備的耗材更換只記錄在保養紀錄上，不扣庫存、不連動耗材管理。以下由紀錄統計「每個項目最近一次更換」
+function odorLastRepl(dev) {
+  const m = new Map();
+  visitsOf(dev.id).forEach(l => consReplOf(l).forEach(x => {
+    const o = m.get(x.name) || {n: 0};
+    m.set(x.name, {date: l.date, qty: x.qty, n: o.n + 1});
+  }));
+  return m;
+}
+function odorReplNames(dev) {
+  return [...new Set([...odorItems(dev.kind).cons.filter(x => !x.off).map(x => x.name), ...odorLastRepl(dev).keys()])];
+}
+// 上次保養清潔：最近一筆有「保養清潔」（含舊紀錄的保養、大保養）的服務紀錄日期
+function lastCleanSvc(dev) { const l = visitsOf(dev.id).filter(x => { const it = svcItemsOf(x); return it.includes('保養清潔') || it.includes('大保養'); }).pop(); return l ? l.date : null; }
+function odorReplHtml(dev) {
+  const names = odorReplNames(dev), m = odorLastRepl(dev);
+  if (!names.length) return '<span class="muted">此設備類別尚未設定耗材更換項目</span>';
+  return names.map(n => { const r = m.get(n); return `<div>${esc(n)}：${r ? `${esc(r.date)}（${r.qty} 件）` : '<span class="muted">尚無更換紀錄</span>'}</div>`; }).join('');
+}
+function odorFormHtml(dev, l) {
+  const sel = svcItemsOf(l), cr = consReplOf(l);
+  const svc = odorSvcList(dev, l).map(n => `<label class="tgck" style="display:inline-flex;gap:6px;align-items:center;margin:4px 10px 4px 0"><input type="checkbox" name="svcItem" value="${esc(n)}" ${sel.includes(n) ? 'checked' : ''}> ${esc(n)}${ODOR_SVC_FIXED.includes(n) ? '' : ' <span class="tag t-gray">舊項目</span>'}</label>`).join('');
+  const cons = odorConsList(dev, l).map((n, i) => {
+    const had = cr.find(x => x.name === n);
+    return `<div class="cr-row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid #eef2f7">
+      <input type="hidden" name="crn_${i}" value="${esc(n)}">
+      <label style="display:flex;gap:6px;align-items:center;min-width:140px"><input type="checkbox" name="cr_${i}" value="1" ${had ? 'checked' : ''}> <b>${esc(n)}</b> 已更換</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:0">數量 <input type="number" name="crq_${i}" min="1" max="99" step="1" value="${had ? had.qty : 1}" style="width:70px"></label></div>`;
+  }).join('');
+  return `<div class="form-row odor-box"><div style="grid-column:1/-1;border:1px solid #fdba74;background:#fff7ed;border-radius:8px;padding:10px 12px">
+      <label style="font-weight:700">服務紀錄（可複選，至少勾一項）</label><div>${svc}</div>
+      <div class="muted" style="margin-top:4px">勾選「其他」時，請在下方「備註」寫明做了什麼。</div></div></div>
+    <div class="form-row odor-box"><div style="grid-column:1/-1;border:1px solid #fdba74;background:#fff7ed;border-radius:8px;padding:10px 12px">
+      <label style="font-weight:700">耗材更換（勾選「已更換」只記錄在這筆保養紀錄，不會扣庫存）</label>
+      ${cons || '<div class="muted">此設備類別尚未設定耗材更換項目（管理者可到「設定 → 保養紀錄項目」新增）。</div>'}</div></div>`;
+}
+// 讀取除味表單；不合法則整筆不儲存
+function readOdorForm(dev, f, old) {
+  const allowS = odorSvcList(dev, old);
+  const items = [...new Set(f.getAll('svcItem').map(String))].filter(n => allowS.includes(n));
+  if (!items.length) return {ok: false, msg: '請至少勾選一項服務紀錄（保養清潔、燈號歸復、維修、送貨或其他）'};
+  if (items.includes('其他') && !String(f.get('note') ?? '').trim()) return {ok: false, msg: '勾選「其他」時，請在備註欄寫明做了什麼'};
+  const allowC = odorConsList(dev, old), repl = [];
+  for (let i = 0; i < allowC.length; i++) {
+    if (f.get('cr_' + i) !== '1') continue;
+    const n = String(f.get('crn_' + i) || '');
+    if (n !== allowC[i]) return {ok: false, msg: '耗材更換項目已被管理者修改，請重新整理頁面後再儲存'};
+    const raw = String(f.get('crq_' + i) ?? '').trim(), q = raw === '' ? 1 : +raw;
+    if (!Number.isInteger(q) || q < 1 || q > 99) return {ok: false, msg: `「${n}」更換數量請填 1～99 的整數`};
+    repl.push({name: n, qty: q});
+  }
+  return {ok: true, svcItems: items, consRepl: repl, type: typeFromItems(items)};
+}
+// V63：指定擔當＝這台設備平常由誰負責（設在設備上，欄位 d.assignee）；和保養紀錄上的「擔當工程師」（這一次是誰做的）不同。
+// 名單存在 S.ui.assignees（管理者可增減），排第一位的是預設；舊設備沒有此欄位 → 畫面上一律顯示預設，不改寫雲端（下次儲存該設備才寫入）
+const ASG_DEF = ['林政鋐', '許紋賓'], ASG_MAX = 10, ASG_NAME_MAX = 20;
+function asgList() {
+  const a = S.ui && Array.isArray(S.ui.assignees) ? S.ui.assignees : ASG_DEF, out = [];
+  a.forEach(x => { const n = typeof x === 'string' ? x.trim().slice(0, ASG_NAME_MAX) : ''; if (n && !out.includes(n)) out.push(n); });
+  return out.length ? out.slice(0, ASG_MAX) : ASG_DEF.slice();
+}
+const asgDefault = () => asgList()[0];
+const asgInList = n => asgList().includes(n);
+const asgOf = d => { const n = d && typeof d.assignee === 'string' ? d.assignee.trim() : ''; return n || asgDefault(); };
+const asgRank = n => { const i = asgList().indexOf(n); return i < 0 ? 999 : i; };
+const asgLabelHtml = d => { const n = asgOf(d); return esc(n) + (asgInList(n) ? '' : ' <span class="muted">（已不在名單）</span>'); };
+function asgSummaryHtml(rs) {
+  const m = new Map(); rs.forEach(r => { const n = asgOf(r.d); m.set(n, (m.get(n) || 0) + 1); });
+  const names = [...m.keys()].sort((a, b) => asgRank(a) - asgRank(b) || a.localeCompare(b, 'zh-TW'));
+  const lab = n => esc(n) + (asgInList(n) ? '' : '<span class="muted">（已不在名單）</span>');
+  return names.length === 1 ? lab(names[0]) : names.map(n => `${lab(n)} ${m.get(n)}`).join('、');
+}
+// 下拉選單：名單內的人；設備原本的人若已不在名單，仍保留（標示已不在名單），沒改動時不會被洗掉
+function asgSelHtml(name, cur, extra = '') {
+  const list = asgList(), all = cur && !list.includes(cur) ? [...list, cur] : list;
+  return `<select name="${name}" ${extra}>${all.map(n => `<option value="${esc(n)}" ${n === cur ? 'selected' : ''}>${esc(n)}${list.includes(n) ? '' : '（已不在名單）'}</option>`).join('')}</select>`;
+}
+// 讀取下拉選單：名單內的人，或這台設備原本的人（沒修改）才有效；其他回傳 null
+const asgFrom = (f, name, d) => { const v = String(f.get(name) ?? '').trim(); return v && (asgInList(v) || (d && asgOf(d) === v)) ? v : null; };
 // V57：合約型態改在「設備」上設定，選項依設備類別不同
 const OFFICE_CONTRACTS = ['計張', '賣斷', '零元機'];              // 事務設備（複合機、印表機）
-const AIR_CONTRACTS = ['租賃', '服務合約', '賣斷', '專案'];        // 異味處理與空氣設備（清淨機、臭氧機、PHI、NEX）
+const AIR_CONTRACTS = ['租賃', '服務合約', '賣斷', '專案'];        // 除味與空氣設備（清淨機、臭氧機、PHI、NEX）
 const CONTRACTS = ['計張', '賣斷', '零元機', '租賃', '服務合約', '專案'];
 const CONTRACT_CLS = {計張:'t-info', 賣斷:'t-gray', 零元機:'t-warn', 租賃:'t-info', 服務合約:'t-ok', 專案:'t-warn'};
 const CATS = ['黑色碳粉','藍色碳粉','紅色碳粉','黃色碳粉','感光滾筒','回收盒','濾網','其他'];
@@ -192,6 +395,19 @@ let CUR = null;
 try { CUR = sessionStorage.getItem(CUR_KEY); } catch (e) {}
 const curStaff = () => ((S && S.staff) || []).find(s => s.id === CUR && s.active) || null;
 const isAdmin = () => !!(curStaff() && curStaff().admin);
+// V62：人員身份：管理者／工程部／會計部／行政人員。admin 欄位與「管理者」同步（舊版仍以 admin 判斷）
+// 舊資料：admin=true → 管理者；其他 → 工程部。身份只在管理者儲存人員時寫入，不在載入時改寫（避免非管理者送出人員資料）
+const ROLES = ['管理者', '工程部', '會計部', '行政人員'];
+const roleOf = s => !s ? '' : s.admin ? '管理者' : (['工程部', '會計部', '行政人員'].includes(s.role) ? s.role : '工程部');
+const myRole = () => roleOf(curStaff());
+// V62：工程部只看得到事務設備、商用空氣清淨機、商用臭氧機（畫面隱藏）；會計部、行政人員、管理者看得到全部
+const ENG_KINDS = ['copier', 'printer', 'purifier', 'ozone'];
+const kindVisible = k => myRole() !== '工程部' || ENG_KINDS.includes(k);
+const devVisible = d => !!d && kindVisible(d.kind);
+// 客戶：工程部看不到「只有看不到的設備」的客戶（沒有任何設備的客戶照常顯示）
+const custVisible = c => !!c && (myRole() !== '工程部' || !S.devices.some(d => d.customerId === c.id) || S.devices.some(d => d.customerId === c.id && devVisible(d)));
+const visCusts = () => S.customers.filter(custVisible);
+const visCats = () => KIND_CATS.filter(c => c.kinds.some(kindVisible));
 let S = readKey(KEY);
 if (!S || !Array.isArray(S.devices)) {
   const old = readKey(OLD_KEY);
@@ -264,7 +480,14 @@ let sb = null, synced = new Map(), cloudReady = false, cloudPhase = 'init', clou
 let syncing = false, pendingPush = false, renderTimer = null, accessReqs = [];
 let cursor = null, pollCount = 0;               // 增量同步的時間點（以伺服器的 updated_at 為準）
 const photoUrl = {};
-const openCusts = new Set();   // 設備頁：記住哪些客戶展開中
+const openCusts = new Set();   // （舊版）設備頁展開狀態；V61 起改為預設展開，記住「收合」的客戶
+// V61：設備資料總覽每位客戶預設展開；使用者收合的客戶記在這台電腦（瀏覽器），下次打開仍收合
+// V62：設備資料總覽一進來所有客戶都收合，只顯示客戶那一行；點了才展開設備清單。不記憶（離開頁面再進來又是收合）
+try { localStorage.removeItem('printtown-closed-custs-v61'); } catch (e) {}
+const openCustSet = new Set();
+function toggleCustOpen(cid) { if (openCustSet.has(cid)) openCustSet.delete(cid); else openCustSet.add(cid); render(); }
+function custRowClick(e, cid) { if (e.target.closest('a,button,select,input,label,summary')) return; toggleCustOpen(cid); }
+function setAllCustOpen(open) { if (open) visCusts().forEach(c => openCustSet.add(c.id)); else openCustSet.clear(); render(); }
 const pendingKey = () => 'printtown-pending-v32|' + AUTH_EMAIL;   // 每位使用者各自保存未送出的變更
 
 // 雲端模式：瀏覽器只暫存「尚未送出的變更」（很小，不受容量限制）；本機模式：暫存完整資料
@@ -276,7 +499,7 @@ function cacheLocal() {
 const FEAT_LABEL = {warranty: '原廠保固資訊', tune: '設備優化確認', large: '彩色大尺寸張數'};
 let lastSavedLogId = null;   // V51：剛儲存的服務紀錄（列表中以淡黃色標示）
 let planCust = null, editLogId = null, planDevId = null, lastStockAlert = null, planCustEdit = false;           // 保養客戶一覽：目前展開的客戶、正在修改的服務紀錄
-// V60：選用功能為事務設備專用；商用空氣清淨機、臭氧機、PHI、NEX（異味處理）一律不顯示、不啟用
+// V60：選用功能為事務設備專用；商用空氣清淨機、臭氧機、PHI、NEX（除味）一律不顯示、不啟用
 function featOn(d, k) { return !!(d && kindIsPrint(d.kind) && d.feat && d.feat[k]); }
 function isLarge(d) { return !!d && isPrint(d) && !!d.hasColor && featOn(d, 'large'); }
 // 彩色張數（含大尺寸合併）：每張彩色大尺寸＝一張一般彩色。
@@ -360,7 +583,7 @@ function stockPreviewText(c, raw) {
   }
   if (!g) return '';
   if (g.missing || g.stock == null) return '<span class="tag t-info">尚未填寫庫存數量</span>';
-  if (!g.ok) return `<span class="tag t-info">資料不足</span> <span class="muted">${esc(g.reason)}</span>`;
+  if (!g.ok) return `<span class="muted">尚無法推估：${esc(g.reason)}</span>`;
   return `${supplyText(g)} ${tierTag(g)}`;
 }
 function previewStock(input) {
@@ -485,6 +708,7 @@ function consSummaryText(dev) {
 }
 // 儲存後的系統提示：21 天內、60 天內需備料、尚未填寫庫存
 function stockAlertHtml(dev) {
+  if (!isPrint(dev)) return '';   // V63：除味設備不連動庫存
   const seen = new Set(), rows = [];
   S.consumables.filter(x => x.deviceId === dev.id).forEach(c => {
     const list = isToner(c) && isMerged(dev) ? mergeMates(c) : [c];
@@ -537,21 +761,22 @@ function logFormHtml(dev, l, o) {
     <input type="hidden" name="deviceId" value="${sv(dev.id)}">
     <div class="form-row">
       <div><label>日期（可選過去日期補登）</label><input type="date" name="date" min="2000-01-01" max="${iso(today())}" value="${sv(l ? l.date : iso(today()))}" required></div>
-      <div><label>服務類型</label><select name="type">${[...TYPES, ...(l && l.type && !TYPES.includes(l.type) ? [l.type] : [])].map(t => `<option ${(l ? l.type : TYPES[0]) === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>
+      ${isPrint(dev) ? `<div><label>服務類型</label><select name="type">${[...TYPES, ...(l && l.type && !TYPES.includes(l.type) ? [l.type] : [])].map(t => `<option ${(l ? l.type : TYPES[0]) === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>` : ''}
       ${isPrint(dev) ? `<div><label>黑白張數</label><input type="number" name="bw" min="0" value="${nv('bw')}" placeholder="${!l && lr0 ? '上次 ' + fmt(lr0.bw) : '計數器黑白'}"></div>` : ''}
       ${isPrint(dev) && dev.hasColor ? `<div><label>彩色張數</label><input type="number" name="color" min="0" value="${nv('color')}" placeholder="彩色機必填"></div>` : ''}
       ${isLarge(dev) ? `<div><label>彩色大尺寸張數</label><input type="number" name="colorLarge" min="0" value="${nv('colorLarge')}" placeholder="大尺寸計數器（未用填 0）"></div>` : ''}
       <div><label>擔當工程師</label>${engineerField(l ? (l.engineer || '') : undefined)}</div>
     </div>
-    <div class="form-row"><div style="grid-column:1/-1"><label>服務紀錄</label>
+    ${isPrint(dev) ? '' : odorFormHtml(dev, l)}
+    <div class="form-row"><div style="grid-column:1/-1"><label>${isPrint(dev) ? '服務紀錄' : '服務紀錄說明（細節）'}</label>
       <textarea class="taBox" name="serviceRecord" rows="2" placeholder="本次做了什麼、結果如何">${sv(l && l.serviceRecord)}</textarea></div></div>
     <div class="form-row"><div style="grid-column:1/-1"><label>客戶交代事宜</label>
       <textarea class="taBox" name="customerInstruction" rows="2" placeholder="客戶提出的要求或需要注意的事">${sv(l && l.customerInstruction)}</textarea></div></div>
-    <div class="form-row"><div style="grid-column:1/-1"><label>耗材庫存（依機型列出；每項填手邊庫存件數，空白不變；「其他」只需文字說明）</label>
-      ${consStockFormHtml(dev, l)}</div></div>
+    ${isPrint(dev) ? `<div class="form-row"><div style="grid-column:1/-1"><label>耗材庫存（依機型列出；每項填手邊庫存件數，空白不變；「其他」只需文字說明）</label>
+      ${consStockFormHtml(dev, l)}</div></div>` : `<input type="hidden" name="consOther" value="${sv(l && l.consOther)}">`}
     <div class="form-row"><div style="grid-column:1/-1"><label>採購信號</label>
       <textarea class="taBox" name="purchaseSignal" rows="2" placeholder="例如：客戶下月加印，需先備黑色碳粉 2 支">${sv(l && l.purchaseSignal)}</textarea></div></div>
-    <div class="form-row"><div style="grid-column:1/-1"><label>備註</label><input name="note" value="${sv(l && l.note)}"></div></div>
+    <div class="form-row"><div style="grid-column:1/-1"><label>備註${isPrint(dev) ? '' : '（服務紀錄勾選「其他」時必填）'}</label><input name="note" value="${sv(l && l.note)}"></div></div>
     <div class="form-row" style="margin-top:6px"><div style="grid-column:1/-1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px">
       <label style="display:flex;gap:8px;align-items:center;font-size:15px;font-weight:600;color:var(--ink,#0f172a)">
         <input type="checkbox" name="engConfirmed" style="width:18px;height:18px" ${l && l.engConfirmed ? 'checked' : ''}> 服務卡客戶已親簽：客戶已在服務卡親簽確認</label>
@@ -580,18 +805,21 @@ function saveLogEdit(e, id) {
   const rIss = readingIssues(dev, date, l.id, bw, coNew, colorLarge);
   if (rIss.length && !confirmTwice(`${rIss.join('；')}。張數應依日期遞增；若為換機或歸零請按確定。`)) return;
   if (l.supSigned && !isAdmin() && !confirmTwice('此紀錄已由主管簽核，修改後簽核紀錄仍保留。確定要修改嗎？')) return;
-  const stk = applyStockInputs(dev, f);
+  const od = isP ? null : readOdorForm(dev, f, l);
+  if (od && !od.ok) return toast(od.msg);
+  const stk = od ? {ok: true, changes: []} : applyStockInputs(dev, f);
   if (!stk.ok) return toast(stk.msg);
-  const ncs = applyNewCats(dev, f, {bw, color: colorOf(dev, {color, colorLarge})});
+  const ncs = od ? {ok: true, creates: [], pending: []} : applyNewCats(dev, f, {bw, color: colorOf(dev, {color, colorLarge})});
   if (!ncs.ok) return toast(ncs.msg);
   const other = txt('consOther').slice(0, 300);
   commitStock(dev, stk.changes);
   commitNewCats(dev, ncs, txt('date'));
-  Object.assign(l, {date, type: txt('type'), bw, color, colorLarge, engineer: txt('engineer'),
+  if (od) Object.assign(l, {svcItems: od.svcItems, consRepl: od.consRepl});
+  Object.assign(l, {date, type: od ? od.type : txt('type'), bw, color, colorLarge, engineer: txt('engineer'),
     serviceRecord: txt('serviceRecord'), customerInstruction: txt('customerInstruction'),
-    consumableStock: stockText(dev, ncs, other), consOther: other, purchaseSignal: txt('purchaseSignal'), note: txt('note'),
+    consumableStock: od ? (l.consumableStock || '') : stockText(dev, ncs, other), consOther: other, purchaseSignal: txt('purchaseSignal'), note: txt('note'),
     engConfirmed: f.get('engConfirmed') === 'on'});
-  editLogId = null; chartIdx = null; histEdit = null;
+  editLogId = null; chartIdx = null; histEdit = null; remEditLog = null;
   lastStockAlert = {devId: dev.id, html: stockAlertHtml(dev)};
   logOp('修改服務紀錄', `${custName(dev)}｜${dev.model}｜${date}`);
   save(); toast('已儲存服務紀錄修改'); render();
@@ -627,7 +855,7 @@ function openDevFromHist(id) { view = 'manage'; pickDev(id); }
 // V53：平均月印量（截至該次的近六個月平均；黑白／彩色）
 function avgCellHtml(dev, mm) {
   if (!isPrint(dev)) return '—';
-  if (mm.avgBw == null) return '<span class="muted">資料不足</span>';
+  if (mm.avgBw == null) return '<span class="muted">—</span>';
   return fmt(mm.avgBw) + (dev.hasColor ? ' ／ ' + (mm.avgCo != null ? fmt(mm.avgCo) : '—') : '');
 }
 const avgHeadOf = dev => isPrint(dev) ? `平均月印量（${dev.hasColor ? `黑白／彩色${isLarge(dev) ? '含大尺寸' : ''}` : '黑白'}）` : '平均月印量';
@@ -646,7 +874,7 @@ function histPanelHtml() {
     const ek = vs.findIndex(x => x.id === histEdit); if (histEdit && ek < 0) histEdit = null;
     const mms = vs.map((x, k) => visitMetrics(dev, vs, k));
     const rows = vs.map((x, k) => k).reverse().map(k => { const x = vs[k]; return `<tr class="hist-row" data-vk="${k}" data-seq="${seqNo(n, k)}" data-lid="${esc(x.id)}" onclick="openHistVisit(${k})" title="點擊查看這次服務的詳細內容" style="cursor:pointer;${histVisit === x.id || histEdit === x.id ? 'background:#eff6ff' : lastSavedLogId === x.id ? 'background:#fef9c3' : ''}">
-      <td style="white-space:nowrap"><button class="ghost seq-btn" type="button" style="padding:3px 8px;white-space:nowrap" onclick="event.stopPropagation();openHistVisit(${k})">第 ${seqNo(n, k)} 筆 ›</button>${seqTag(n, k)}</td><td style="white-space:nowrap">${esc(x.date)}</td><td style="white-space:nowrap">${esc(x.type)}</td>
+      <td style="white-space:nowrap"><button class="ghost seq-btn" type="button" style="padding:3px 8px;white-space:nowrap" onclick="event.stopPropagation();openHistVisit(${k})">第 ${seqNo(n, k)} 筆 ›</button>${seqTag(n, k)}</td><td style="white-space:nowrap">${esc(x.date)}</td><td>${svcHtml(x)}</td>
       <td class="num">${pr && x.bw != null ? fmt(x.bw) : '—'}</td><td class="num">${pr && dev.hasColor && x.color != null ? fmt(x.color) : '—'}</td>${lg ? `<td class="num">${x.colorLarge != null ? fmt(x.colorLarge) : '—'}</td>` : ''}
       <td class="num" style="white-space:nowrap">${avgCellHtml(dev, mms[k])}</td>
       <td style="white-space:nowrap">${esc(x.engineer || '—')}</td><td style="font-size:13px;white-space:pre-wrap;min-width:160px">${clip(x.serviceRecord, 50)}</td>
@@ -691,14 +919,14 @@ function histDetailHtml(dev, vs, k, mm, ctx) {
   const kv = (label, val) => `<div class="hd-kv"><div class="muted" style="font-size:12px">${label}</div><div style="font-weight:600">${val}</div></div>`;
   const tx = (label, val, opt) => opt && !String(val || '').trim() ? '' : `<div style="margin-top:10px"><div class="muted" style="font-size:12px">${label}</div><div style="white-space:pre-wrap;padding:6px 8px;background:#f8fafc;border-radius:6px;margin-top:2px">${esc(val || '—')}</div></div>`;
   const grid = [
-    kv('服務日期', esc(v.date)), kv('服務類型', esc(v.type || '—')), kv('擔當工程師', esc(v.engineer || '—')),
+    kv('服務日期', esc(v.date)), kv(pr ? '服務類型' : '服務', esc(svcText(v) || '—')), ...(!pr && consReplText(v) ? [kv('耗材更換', esc(consReplText(v)))] : []), kv('擔當工程師', esc(v.engineer || '—')),
     kv('距上次服務', mm.gap == null ? '首次服務' : `${mm.gap} 天`),
     ...(pr ? [kv('黑白張數', v.bw != null ? fmt(v.bw) : '—')] : []),
     ...(pr && dev.hasColor ? [kv('彩色張數', v.color != null ? fmt(v.color) : '—')] : []),
     ...(lg ? [kv('彩色大尺寸張數', v.colorLarge != null ? fmt(v.colorLarge) : '—')] : []),
     ...(pr ? [kv(`本次增量（黑白${dev.hasColor ? `／彩色${lg ? '含大尺寸' : ''}` : ''}）`, sg(mm.bwDelta) + (dev.hasColor ? ' ／ ' + sg(mm.coDelta) : ''))] : []),
     ...(pr ? [kv('本期平均月印量（距上次）', mm.rate != null ? `${fmt(mm.rate)}${dev.hasColor ? ' ／ ' + (coRate != null ? fmt(coRate) : '—') : ''} 張／月` : '<span class="muted">需前一次讀數</span>')] : []),
-    ...(pr ? [kv('近六個月平均月印量', mm.avgBw != null ? `${fmt(mm.avgBw)}${dev.hasColor ? ' ／ ' + (mm.avgCo != null ? fmt(mm.avgCo) : '—') : ''} 張／月` : '<span class="muted">資料不足</span>')] : []),
+    ...(pr ? [kv('近六個月平均月印量', mm.avgBw != null ? `${fmt(mm.avgBw)}${dev.hasColor ? ' ／ ' + (mm.avgCo != null ? fmt(mm.avgCo) : '—') : ''} 張／月` : '<span class="muted">—</span>')] : []),
     kv('服務卡客戶親簽', v.engConfirmed ? '<span class="tag t-ok">客戶已親簽</span>' : '<span class="muted">未勾選</span>'),
     kv('主管簽核', v.supSigned ? `<span class="tag t-ok">已簽核</span>${v.supDate ? ' <span class="muted">' + esc(v.supDate) + '</span>' : ''}` : '<span class="muted">未簽核</span>')
   ].join('');
@@ -706,7 +934,7 @@ function histDetailHtml(dev, vs, k, mm, ctx) {
   const evs = mm.events.length ? mm.events.map(x => `<span class="tag t-info">${esc(x)}</span>`).join(' ') : '<span class="muted">本次未更換耗材</span>';
   return `<div id="${isH ? 'histDetail' : 'planDetail'}" class="card hist-detail" style="margin-top:12px;border:2px solid #93c5fd;background:#fff">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-      <div><h2 style="margin:0">第 ${seqNo(n, k)} 筆｜${esc(v.date)}｜${esc(v.type || '')}${seqTag(n, k)}</h2>${isH ? '' : `<div class="muted">${esc(KIND[dev.kind])} ${esc(dev.model || '')}${dev.location ? '｜' + esc(dev.location) : ''}</div>`}</div>
+      <div><h2 style="margin:0">第 ${seqNo(n, k)} 筆｜${esc(v.date)}｜${esc(svcText(v))}${seqTag(n, k)}</h2>${isH ? '' : `<div class="muted">${esc(KIND[dev.kind])} ${esc(dev.model || '')}${dev.location ? '｜' + esc(dev.location) : ''}</div>`}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="ghost" type="button" title="日期較近的一筆" ${k === n - 1 ? 'disabled' : `onclick="${go(k + 1)}"`}>← 較新一筆</button>
         <button class="ghost" type="button" title="日期較早的一筆" ${k === 0 ? 'disabled' : `onclick="${go(k - 1)}"`}>較舊一筆 →</button>
@@ -749,7 +977,7 @@ function planCustHtml() {
   const shown = logs.slice(0, 60);
   const rowsArr = shown.map(({l, d}) => { const inf = info.get(l.id), sq = seqNo(inf.vs.length, inf.k); return `<tr class="plan-row" data-lid="${esc(l.id)}" data-seq="${sq}" onclick="openPlanVisit('${l.id}')" title="點擊查看這次服務的詳細內容" style="cursor:pointer;${editLogId === l.id || planVisit === l.id ? 'background:#eff6ff' : lastSavedLogId === l.id ? 'background:#fef9c3' : ''}">
       <td style="white-space:nowrap"><b>第 ${sq} 筆</b>${seqTag(inf.vs.length, inf.k)}</td>
-      <td style="white-space:nowrap">${esc(l.date)}<div class="muted">${esc(l.type)}</div></td>
+      <td style="white-space:nowrap">${esc(l.date)}<div class="muted">${svcHtml(l)}</div></td>
       <td>${esc(KIND[d.kind])} ${esc(d.model || '')}<div class="muted">${esc(d.location || '—')}</div></td>
       <td class="num">${isPrint(d) && l.bw != null ? fmt(l.bw) : '—'}</td>
       <td class="num">${isPrint(d) && d.hasColor && l.color != null ? fmt(l.color) : '—'}</td>
@@ -1096,7 +1324,7 @@ function approveAccess(email) {
   if (S.staff.some(s => (s.email || '').toLowerCase() === email)) { toast('此信箱已有人員資料'); return; }
   let name = (r.name || email.split('@')[0]).trim();
   if (S.staff.some(s => s.name === name)) name = email;
-  S.staff.push({id: uid(), name, title: '', phone: '', email, active: true, admin: false, pw: null, extra: {}});
+  S.staff.push({id: uid(), name, title: '', phone: '', email, active: true, admin: false, role: '工程部', pw: null, extra: {}});
   logOp('核准登入', `${name}｜${email}`);
   save();
   flushCloud().then(() => dropAccess(email));
@@ -1312,9 +1540,9 @@ function observedRatio(c) {
  4. 日均用量 = 月均 ÷ 30.4；本支可用天數 = 本支剩餘 ÷ 日均
  5. 庫存可撐天數 = (本支剩餘 + 庫存件數 × 有效壽命) ÷ 日均
 */
-function consStatus(c, stockOv) {
-  const dev = S.devices.find(x => x.id === c.deviceId);
-  if (!dev) return null;
+function consStatus(c, stockOv, dm) {
+  const dev = dm ? dm.get(c.deviceId) : S.devices.find(x => x.id === c.deviceId);
+  if (!dev || !isPrint(dev)) return null;   // V63：除味設備的耗材不推估
   const t = today(), b = effBasis(c);
   const L = effLife(c), u = unitOf(c), lead = c.leadDays ?? 7;
   const stock = stockOv !== undefined ? stockOv : (c.stock == null ? null : c.stock);
@@ -1355,10 +1583,10 @@ function mergeMates(c) {
 const sharedStock = c => { const m = mergeMates(c).find(x => x.stock != null); return m ? m.stock : null; };
 const setSharedStock = (c, v) => mergeMates(c).forEach(x => { x.stock = v; });
 // 群組推估：單機為一組；合併（同客戶同機種的碳粉）則庫存共用（只看總量，任一台登打即同步），張數與用量加總
-function consGroupStatus(list) {
+function consGroupStatus(list, dm) {
   const shared = list.length > 1 && isToner(list[0]);
   const stockOv = shared ? (list.find(c => c.stock != null)?.stock ?? null) : undefined;
-  const sts = list.map(c => consStatus(c, stockOv)).filter(Boolean);
+  const sts = list.map(c => consStatus(c, stockOv, dm)).filter(Boolean);
   if (!sts.length) return null;
   const first = sts[0], merged = sts.length > 1;
   const head = {members: sts, merged, c: first.c, name: first.c.name, cat: first.cat, toner: first.toner, u: first.u,
@@ -1385,15 +1613,15 @@ function consGroupStatus(list) {
           remind: tier !== null, overdue: daysLeft < 0};
 }
 function consGroups() {
-  const map = new Map();
+  const map = new Map(), dm = new Map(S.devices.map(d => [d.id, d]));   // V65：先建設備索引，避免每項耗材都掃一遍全部設備
   S.consumables.forEach(c => {
-    const dev = S.devices.find(x => x.id === c.deviceId);
-    if (!dev) return;
+    const dev = dm.get(c.deviceId);
+    if (!dev || !isPrint(dev)) return;
     const key = isToner(c) && isMerged(dev) ? `M|${dev.customerId}|${dev.model}|${c.catalogId}` : `S|${c.id}`;
     if (!map.has(key)) map.set(key, []);
     map.get(key).push(c);
   });
-  return [...map.values()].map(consGroupStatus).filter(Boolean);
+  return [...map.values()].map(l => consGroupStatus(l, dm)).filter(Boolean);
 }
 // 預期週期（天）：有效壽命 ÷ 近六個月日均用量；不需要庫存資料
 function expectedCycle(c) {
@@ -1408,13 +1636,14 @@ function cycleSignal(c) {
   if (isToner(c)) return null;
   const evs = S.events.filter(e => e.consId === c.id).sort((a, b) => a.date.localeCompare(b.date));
   if (evs.length < 2) return {n: evs.length, last: null, avg: null, expect: null, abnormal: false};
+  const lastDate = evs[evs.length - 1].date;
   const gaps = evs.slice(1).map((e, i) => daysBetween(toDate(evs[i].date), toDate(e.date)));
   const last = gaps[gaps.length - 1], avg = gaps.reduce((a, b) => a + b, 0) / gaps.length;
   const expect = expectedCycle(c);
-  return {n: evs.length, last, avg, expect, abnormal: expect != null && last < expect * EARLY_RATIO};
+  return {n: evs.length, last, avg, expect, abnormal: expect != null && last < expect * EARLY_RATIO && daysBetween(toDate(lastDate), today()) <= WARN_ABN_DAYS};   // V65：太久以前的週期異常不再提醒
 }
 // 提醒標籤：21 天內可能用完（立即）／60 天內需備料（備料）／未填寫庫存（略過）
-const tierTag = g => !g.ok ? (g.missing ? '<span class="tag t-info">尚未填寫庫存</span>' : '<span class="tag t-info">資料不足</span>')
+const tierTag = g => !g.ok ? (g.missing ? '<span class="tag t-info">尚未填寫庫存</span>' : '<span class="muted">尚無法推估</span>')
   : g.tier === 'out' ? '<span class="tag t-danger">庫存已用完</span>'
   : g.tier === 'urgent' ? '<span class="tag t-danger">21 天內可能用完</span>'
   : g.tier === 'prep' ? '<span class="tag t-warn">60 天內需備料</span>'
@@ -1463,7 +1692,7 @@ function monthVol(dev, y, m) {
   const exact = me <= t && bw.exact && (!dev.hasColor || !co || co.exact);
   return {y, m, bw: bw.d, color: co ? co.d : null, src: exact ? 'actual' : 'mixed'};
 }
-const printDevs = () => S.devices.filter(isPrint).sort((a, b) => custName(a).localeCompare(custName(b), 'zh-TW') || String(a.location || '').localeCompare(String(b.location || ''), 'zh-TW'));
+const printDevs = () => S.devices.filter(d => isPrint(d) && devVisible(d)).sort((a, b) => custName(a).localeCompare(custName(b), 'zh-TW') || String(a.location || '').localeCompare(String(b.location || ''), 'zh-TW'));
 const dashMonthOf = () => { const t = today(); return dashMonth || new Date(t.getFullYear(), t.getMonth(), 1); };
 function setDashMonth(off) { const c = dashMonthOf(); dashMonth = new Date(c.getFullYear(), c.getMonth() + off, 1); render(); }
 
@@ -1572,12 +1801,6 @@ function svcMonthTag(dev) {
   return m.state === 'overdue' ? `<span class="tag t-warn">逾期 ${m.months} 個月未保養</span>` : SVC_TAG[m.state];
 }
 const svcNeedsNow = dev => ['due', 'overdue', 'new'].includes(svcMonthState(dev).state);
-function statusOf(left, warnAt) {
-  if (left == null) return '<span class="tag t-info">資料不足</span>';
-  if (left < 0) return '<span class="tag t-danger">已超過</span>';
-  if (left <= warnAt) return `<span class="tag t-warn">${left} 天內</span>`;
-  return '<span class="tag t-ok">正常</span>';
-}
 const leftTxt = s => s.daysLeft < 0
   ? `已超過 ${Math.abs(Math.round(s.daysLeft))} 天`
   : `約 ${Math.round(s.daysLeft)} 天（${(s.daysLeft / 7).toFixed(1)} 週）`;
@@ -1586,6 +1809,7 @@ const leftTxt = s => s.daysLeft < 0
 /* ================= 共用 UI ================= */
 let view = 'dash';
 function go(v) {
+  if (v !== view) { if (v === 'plan' && typeof planOpen !== 'undefined') { planOpen.clear(); if (typeof dueDevOpen !== 'undefined') { dueDevOpen.clear(); editDevId = null; } if (typeof remReset === 'function') remReset(); } if (v === 'manage' && typeof openCustSet !== 'undefined') { openCustSet.clear(); devPanel = null; quickDev = null; editDevId = null; if (typeof remReset === 'function') remReset(); } }
   view = v;
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
   render();
@@ -1607,14 +1831,14 @@ function render() {
   const nb = document.querySelector('#navBilling'); if (nb) nb.style.display = BILLING_OK ? '' : 'none';
   $('#nav').style.display = ''; $('#roleBox').style.display = 'flex';
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.v === view));
-  const me = curStaff(); $('#roleLabel').textContent = me ? `${me.name}${isAdmin() ? '（管理者）' : ''}` : '';
+  const me = curStaff(); $('#roleLabel').textContent = me ? `${me.name}（${roleOf(me)}）` : '';
   if (cloudReady) loadPhotoThumbs();
 }
 function toast(msg) {
   const el = $('#toast'); el.textContent = msg; el.style.display = 'block';
   clearTimeout(toast._t); toast._t = setTimeout(() => el.style.display = 'none', 4800);
 }
-const custOpts = sel => S.customers.map(c =>
+const custOpts = sel => visCusts().map(c =>
   `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}${contractText(c) ? '（' + esc(contractText(c)) + '）' : ''}</option>`).join('');
 
 /* ================= 儀表板 ================= */
@@ -1622,28 +1846,58 @@ const custOpts = sel => S.customers.map(c =>
 /* ================= 月保養名單 ================= */
 let rosterMonth = null;
 function curRosterMonth() { const t = today(); return rosterMonth || new Date(t.getFullYear(), t.getMonth(), 1); }
-// 每台設備：依客戶週期推算下次到期月；本月應保養、逾期未保養、本月已保養者皆列出
+// V61：每台設備依「所屬組別」的週期推算本月是否應保養。
+//  ‧本月應保養（含逾期、從未保養）→ 列出；本月有任何服務紀錄 → 已完成
+//  ‧本月不在週期內 → 不列出（即使本月有維修等紀錄）
+const monIdxOf = l => { const t = toDate(l.date); return t.getFullYear() * 12 + t.getMonth(); };
+function rosterRowOf(d, ms) {
+  const cur = ms.getFullYear() * 12 + ms.getMonth();
+  const c = S.customers.find(x => x.id === d.customerId);
+  const cyc = devCycle(d), logs = svcVisitsOf(d.id);
+  const inMonth = logs.filter(l => monIdxOf(l) === cur), done = inMonth.length > 0;
+  const prev = logs.filter(l => monIdxOf(l) < cur).pop() || null;
+  let status, overdue = 0;
+  if (!prev) status = done ? 'done' : 'new';
+  else {
+    const dueIdx = monIdxOf(prev) + cyc.m;
+    if (dueIdx > cur) return null;
+    status = done ? 'done' : dueIdx < cur ? 'overdue' : 'due';
+    if (!done) overdue = cur - dueIdx;
+  }
+  const last = done ? inMonth[inMonth.length - 1] : prev;
+  return {d, c, label: cyc.label, last: last ? last.date : null, status, overdue, grp: grpOfKind(d.kind), first: !prev};
+}
 function rosterRows(ms) {
-  const y = ms.getFullYear(), m = ms.getMonth(), cur = y * 12 + m;
-  const end = new Date(y, m + 1, 0);
-  const rows = [];
-  S.devices.forEach(d => {
-    const c = S.customers.find(x => x.id === d.customerId);
-    const cm = devCycle(d).m, label = devCycle(d).label;
-    const logs = svcVisitsOf(d.id);
-    const done = logs.some(l => { const dt = toDate(l.date); return dt.getFullYear() === y && dt.getMonth() === m; });
-    const last = logs.filter(l => toDate(l.date) <= end).pop() || null;
-    let status, include = false, overdue = 0;
-    if (!last) { include = true; status = 'new'; }
-    else {
-      const lt = toDate(last.date), dueIdx = lt.getFullYear() * 12 + lt.getMonth() + cm;
-      if (done) { include = true; status = 'done'; }
-      else if (dueIdx <= cur) { include = true; status = dueIdx < cur ? 'overdue' : 'due'; overdue = cur - dueIdx; }
-    }
-    if (include) rows.push({d, c, label, last: last ? last.date : null, status, overdue});
-  });
+  const rows = S.devices.filter(devVisible).map(d => rosterRowOf(d, ms)).filter(Boolean);
   const order = {overdue: 0, due: 1, new: 2, done: 3};
   return rows.sort((a, b) => order[a.status] - order[b.status] || (a.c?.name || '').localeCompare(b.c?.name || ''));
+}
+// 行程表「完成」欄的手動標記（存在設備上，以月份為鍵）：off＝自動打勾後手動取消；on＝沒有紀錄但手動標記完成
+// 只影響保養行程表；年度表、逾期判斷與下次保養月份仍依保養紀錄
+const PLAN_KEY_RE = /^\d{4}-\d{2}$/;
+const planKeyOf = ms => `${ms.getFullYear()}-${String(ms.getMonth() + 1).padStart(2, '0')}`;
+function planMarkOf(d, key) { const v = d && d.planMark && typeof d.planMark === 'object' ? d.planMark[key] : null; return v === 'on' || v === 'off' ? v : null; }
+// 實際顯示的完成狀態：auto＝依紀錄自動判斷
+function planDoneOf(r, key) {
+  const mk = planMarkOf(r.d, key), auto = r.status === 'done';
+  return {auto, mark: mk, done: auto ? mk !== 'off' : mk === 'on'};
+}
+function togglePlanDone(devId, key) {
+  const d = S.devices.find(x => x.id === devId);
+  if (!d) return toast('找不到此設備，可能已被刪除');
+  if (!PLAN_KEY_RE.test(String(key))) return;
+  const t = today();
+  if (key > planKeyOf(new Date(t.getFullYear(), t.getMonth(), 1))) return toast('未來月份不能標記完成');
+  const [y, m] = key.split('-').map(Number);
+  const r = rosterRowOf(d, new Date(y, m - 1, 1));
+  if (!r) return toast('此設備這個月不在保養行程表內');
+  const st = planDoneOf(r, key), pm = Object.assign({}, d.planMark && typeof d.planMark === 'object' ? d.planMark : {});
+  let txt;
+  if (st.auto) { if (st.mark === 'off') { delete pm[key]; txt = '恢復自動判斷（已完成）'; } else { pm[key] = 'off'; txt = '手動取消完成'; } }
+  else { if (st.mark === 'on') { delete pm[key]; txt = '取消手動完成'; } else { pm[key] = 'on'; txt = '手動標記完成（尚未登錄紀錄）'; } }
+  d.planMark = pm;
+  logOp('保養行程表標記', `${custName(d)}｜${d.model || ''}｜${key}｜${txt}`);
+  save(); toast(`${txt}（只影響保養行程表）`); render();
 }
 function statusTag(r) {
   if (r.status === 'done') return '<span class="tag t-ok">本月已保養</span>';
@@ -1678,7 +1932,7 @@ function custAnalysis(c) {
   };
   const cur = use(W.cur), prev = use(W.prev), half = use(W.half);
   const halfM = half ? half.total / 6 : null;
-  const repairs = w => S.logs.filter(l => devs.some(x => x.id === l.deviceId) && l.type === '維修' &&
+  const repairs = w => S.logs.filter(l => devs.some(x => x.id === l.deviceId) && isRepairLog(l) &&
     toDate(l.date) > w[0] && toDate(l.date) <= w[1]).length;
   const rc = repairs(W.cur), rp = repairs(W.prev), rh = repairs(W.half) / 6;
   return {cur, prev, half, halfM, rc, rp, rh, hasPrint: printDevs.length > 0};
@@ -1690,7 +1944,7 @@ function chgTag(p) {
   return Math.abs(p) >= VAR_WARN ? `<span class="tag t-warn">${txt}</span>` : `<span class="muted">${txt}</span>`;
 }
 function analysisCardHtml() {
-  const rows = S.customers.map(c => ({c, a: custAnalysis(c)}));
+  const rows = visCusts().map(c => ({c, a: custAnalysis(c)}));
   const body = rows.length ? `<table style="min-width:1100px"><thead><tr>
       <th>客戶</th><th class="num">近30日印量</th><th class="num">前30日印量</th><th class="num">較前30日</th>
       <th class="num">前六個月月均</th><th class="num">較月均</th>
@@ -1706,7 +1960,7 @@ function analysisCardHtml() {
         if ((a.cur && a.cur.partial) || (a.prev && a.prev.partial) || (a.half && a.half.partial)) notes.push('資料不完整（期初讀數缺漏）');
       }
       const f = v => v == null ? '<span class="muted">—</span>' : fmt(v);
-      return `<tr><td>${esc(c.name)} ${contractTagOf(c)}<div class="muted">保養：${cycleOf(c).label}</div></td>
+      return `<tr><td>${esc(c.name)} ${contractTagOf(c)}<div class="muted">保養：${esc(cycleText(c))}</div></td>
         <td class="num">${a.hasPrint ? f(a.cur && a.cur.total) : '—'}</td>
         <td class="num">${a.hasPrint ? f(a.prev && a.prev.total) : '—'}</td>
         <td class="num">${a.hasPrint ? chgTag(pCur) : '—'}</td>
@@ -1745,10 +1999,12 @@ function toCsv(rows) { return rows.map(r => r.map(csvCell).join(',')).join('\r\n
 function exportRosterCsv() {
   if (!denyIO()) return;
   const ms = curRosterMonth();
-  const head = ['月份','客戶','契約','安裝地點','設備種類','機型','保養週期','上次保養','本月狀態'];
+  const head = ['月份','客戶','契約','安裝地點','設備種類','機型','保養週期','上次保養','本月狀態','完成'];
   const label = {done:'本月已保養', overdue:'逾期未保養', due:'本月待保養', new:'尚無紀錄・首次保養'};
-  const rows = rosterRows(ms).map(r => [`${ms.getFullYear()}-${String(ms.getMonth() + 1).padStart(2, '0')}`,
-    r.c ? r.c.name : '', devContract(r.d), r.d.location, KIND[r.d.kind], r.d.model, r.label, r.last || '', label[r.status]]);
+  const key = planKeyOf(ms);
+  const rows = rosterRows(ms).map(r => { const st = planDoneOf(r, key); return [key,
+    r.c ? r.c.name : '', devContract(r.d), r.d.location, KIND[r.d.kind], r.d.model, r.label, r.last || '', label[r.status],
+    st.done ? (st.mark === 'on' ? '是（手動）' : '是') : (st.mark === 'off' ? '否（已手動取消）' : '否')]; });
   download(`printtown_roster_${ms.getFullYear()}${String(ms.getMonth() + 1).padStart(2, '0')}.csv`, toCsv([head, ...rows]), 'text/csv', true);
   toast('已匯出本月名單');
 }
@@ -1763,19 +2019,29 @@ const PLAN_ST = {new: '首次保養', due: '本月應保養', overdue: '逾期�
 function planMonthHtml() {
   const t = today();
   const ms = planMonth || new Date(t.getFullYear(), t.getMonth(), 1);
-  const mStr = `${ms.getFullYear()}-${pad2(ms.getMonth() + 1)}`;
-  const byKey = (a, b) => ((a.c && a.c.address) || '').localeCompare((b.c && b.c.address) || '', 'zh-TW')
+  const mStr = planKeyOf(ms), curKey = planKeyOf(new Date(t.getFullYear(), t.getMonth(), 1)), future = mStr > curKey;
+  const byAddr = (a, b) => ((a.c && a.c.address) || '').localeCompare((b.c && b.c.address) || '', 'zh-TW')
     || (a.c ? a.c.name : '').localeCompare(b.c ? b.c.name : '', 'zh-TW')
     || (a.d.location || '').localeCompare(b.d.location || '', 'zh-TW');
-  const rows = rosterRows(ms).sort(byKey);
-  const cnt = k => rows.filter(r => r.d.kind === k).length;
-  const pending = rows.filter(r => r.status !== 'done').length;
-  const body = rows.length ? rows.map((r, i) => {
-    const c = r.c || {};
-    const stTxt = r.status === 'overdue' ? `逾期 ${r.overdue} 個月未保養` : PLAN_ST[r.status];
-    const stCls = r.status === 'done' ? 't-ok' : r.status === 'overdue' ? 't-warn' : 't-info';
-    return `<tr>
-      <td class="ck">☐</td><td>${i + 1}</td>
+  // 與上方分類按鈕連動：選了分類只列該分類的設備
+  const all = rosterRows(ms).filter(r => planKind === 'all' || catOfKind(r.d.kind) === planKind)
+    .map(r => ({...r, st: planDoneOf(r, mStr)}));
+  // 區內順序：逾期 → 本月應保養 → 首次保養 → 已完成；同狀態依客戶地址
+  const rank = r => r.st.done ? 3 : r.status === 'overdue' ? 0 : r.status === 'new' ? 2 : 1;
+  const secs = CYC_GRPS.map(x => ({x, rows: all.filter(r => r.grp === x.g).sort((a, b) => rank(a) - rank(b) || byAddr(a, b))})).filter(s0 => s0.rows.length);
+  const total = all.length, doneN = all.filter(r => r.st.done).length, pending = total - doneN;
+  let seq = 0;
+  const rowHtml = r => {
+    const c = r.c || {}, st = r.st;
+    seq++;
+    const stTxt = st.done ? (st.mark === 'on' ? '手動完成（尚未登錄紀錄）' : PLAN_ST.done)
+      : st.mark === 'off' ? '已手動取消（本月有紀錄）'
+      : r.status === 'overdue' ? `逾期 ${r.overdue} 個月未保養` : PLAN_ST[r.status];
+    const stCls = st.done ? 't-ok' : r.status === 'overdue' ? 't-warn' : 't-info';
+    const box = st.done ? '☑' : '☐';
+    const tip = future ? '未來月份不會自動打勾' : st.auto ? (st.mark === 'off' ? '點擊恢復自動打勾' : '點擊手動取消（只影響行程表）') : (st.mark === 'on' ? '點擊取消手動完成' : '尚無本月保養紀錄；點擊可手動標記完成');
+    return `<tr data-dev="${esc(r.d.id)}" data-done="${st.done ? 1 : 0}">
+      <td class="ck"><button type="button" class="ck-btn" title="${tip}" aria-label="完成" ${future ? 'disabled' : `onclick="togglePlanDone('${r.d.id}','${mStr}')"`}>${box}</button></td><td>${seq}</td>
       <td><b>${esc(c.name || '（未指定）')}</b>${c.contact ? `<div>${esc(c.contact)}</div>` : ''}${c.phone ? `<div>☎ ${esc(c.phone)}</div>` : ''}${c.phone2 ? `<div>備用 ☎ ${esc(c.phone2)}</div>` : ''}</td>
       <td>${esc(c.address || '—')}</td>
       <td>${esc(KIND[r.d.kind])}　${esc(r.d.brand || '')} ${esc(r.d.model || '')}</td>
@@ -1784,19 +2050,25 @@ function planMonthHtml() {
       <td>${r.last || '—'}</td>
       <td><span class="tag ${stCls}">${stTxt}</span></td>
       <td class="blank"></td><td class="blank"></td></tr>`;
-  }).join('') : '<tr><td colspan="11" class="empty">本月沒有應保養設備。</td></tr>';
-  return `<div class="card" style="margin-top:16px">
+  };
+  const head = `<thead><tr><th>完成</th><th>#</th><th>客戶／聯絡人／電話</th><th>客戶地址</th><th>設備別・機型</th><th>安裝地點</th><th>保養週期</th><th>上次保養</th><th>本月狀態</th><th>預定日</th><th>備註</th></tr></thead>`;
+  const body = secs.length ? secs.map(({x, rows}) => {
+    const dn = rows.filter(r => r.st.done).length;
+    return `<div class="plan-sec" data-grp="${x.g}"><h3 style="margin:14px 0 6px">${x.label}　<span class="muted" style="font-size:13px;font-weight:400">${rows.length} 台｜尚待保養 ${rows.length - dn}｜已完成 ${dn}</span></h3>
+      <table class="plan-table">${head}<tbody>${rows.map(rowHtml).join('')}</tbody></table></div>`;
+  }).join('') : `<div class="empty">${planKind === 'all' ? '這個月沒有應保養的設備。' : `這個月沒有應保養的「${esc(kindCatLabel(planKind))}」設備。`}</div>`;
+  return `<div class="card" style="margin-top:16px" id="planMonthCard">
     <div class="noprint" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;justify-content:space-between">
       <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
         <div><label>行程月份</label><input type="month" value="${mStr}" onchange="setPlanMonth(this.value)"></div>
         <button class="primary" onclick="window.print()">列印本月行程</button></div>
-      <div class="muted">共 ${rows.length} 台${KIND_CATS.map(c => '｜' + c.label + ' ' + c.kinds.reduce((n, k) => n + cnt(k), 0)).join('')}｜尚待保養 ${pending}｜已完成 ${rows.length - pending}</div></div>
+      <div class="muted" id="planStat">共 ${total} 台｜尚待保養 ${pending}｜已完成 ${doneN}${planKind === 'all' ? '' : `｜只列「${esc(kindCatLabel(planKind))}」`}</div></div>
     <div id="printArea">
       <h2 style="margin:12px 0 2px">${ms.getFullYear()} 年 ${ms.getMonth() + 1} 月 保養行程表</h2>
-      <div class="muted print-only" style="margin-bottom:8px">列印日期：${iso(today())}　排序：客戶地址（方便串接路線）　共 ${rows.length} 台，尚待保養 ${pending} 台</div>
-      <table class="plan-table"><thead><tr><th>完成</th><th>#</th><th>客戶／聯絡人／電話</th><th>客戶地址</th><th>設備別・機型</th><th>安裝地點</th><th>保養週期</th><th>上次保養</th><th>本月狀態</th><th>預定日</th><th>備註</th></tr></thead>
-        <tbody>${body}</tbody></table>
-    </div></div>`;
+      <div class="muted print-only" style="margin-bottom:8px">列印日期：${iso(today())}　排序：逾期 → 本月應保養 → 首次保養 → 已完成，同狀態依客戶地址　共 ${total} 台，尚待保養 ${pending} 台</div>
+      ${body}
+    </div>
+    <p class="note noprint">只列出這個月依保養週期應保養的設備（事務設備、除味分區）：逾期未保養排在最前面，從未保養的設備每個月都會列出（首次保養）。本月有任何服務紀錄（含抄表、送貨）會自動打勾；按「完成」欄可手動取消或手動標記，<b>只影響這張行程表</b>，上方年度表、逾期判斷與下次保養月份仍依保養紀錄。未來月份不會自動打勾。</p></div>`;
 }
 
 let planYear = null, planQ = '', planKind = 'all';
@@ -1804,37 +2076,151 @@ function setPlanYear(y) { planYear = y; render(); }
 function setPlanKind(k) { planKind = okKindCat(k) ? k : 'all'; render(); }
 // 分類按鈕：點選篩選，再點一次同一個分類就取消（回到全部客戶）
 function togglePlanKind(k) { setPlanKind(planKind === k ? 'all' : k); }
-// 搜尋時只更新表格，輸入框不會失去焦點
-function filterPlan(v) { planQ = String(v || '').slice(0, 100); const g = document.getElementById('planGrid'); if (g) g.innerHTML = planGridHtml(); }
+// V62：展開中的區塊（全年表、各分類、各客戶）；只在這次瀏覽有效，重新進入「保養客戶一覽」都收合
+const planOpen = new Set();
+function planTog(key, open) { if (open) planOpen.add(key); else planOpen.delete(key); }
+// 搜尋時只更新清單，輸入框不會失去焦點
+function filterPlan(v) {
+  planQ = String(v || '').slice(0, 100);
+  [['planGrid', planGridHtml], ['planDue', planDueHtml], ['planTabs', planTabsHtml]].forEach(([id, fn]) => { const el = document.getElementById(id); if (el) el.innerHTML = fn(); });
+}
 // 本月應保養（與「月保養名單」相同定義與用詞）：逾期未保養、本月應保養、首次保養、本月已保養
 function planMonthStatus() { const t = today(); return new Map(rosterRows(new Date(t.getFullYear(), t.getMonth(), 1)).map(r => [r.d.id, r])); }
+// 全年表：沒選分類列出全部客戶；選了分類只列有該分類設備的客戶（台數只算該分類）
 function planRows() {
   const st = planKind === 'all' ? null : planMonthStatus();
   const rows = [];
-  S.customers.forEach(c => {
+  visCusts().forEach(c => {
     if (!custMatch(c, planQ)) return;
     if (planKind === 'all') { rows.push({c, devs: devsOf(c.id), due: null}); return; }
     const devs = devsOf(c.id).filter(d => catOfKind(d.kind) === planKind);
-    const due = devs.map(d => st.get(d.id)).filter(Boolean);
-    if (due.length) rows.push({c, devs, due});
+    if (devs.length) rows.push({c, devs, due: devs.map(d => st.get(d.id)).filter(Boolean)});
   });
-  if (planKind !== 'all') {
-    const rank = r => Math.min(...r.due.map(x => ({overdue: 0, due: 1, new: 2, done: 3})[x.status]));
-    rows.sort((a, b) => rank(a) - rank(b) || (a.c.name || '').localeCompare(b.c.name || '', 'zh-TW'));
-  }
   return rows;
 }
+// V65：分類按鈕的數字＝本月應保養的「設備台數」（含已保養；跟著搜尋），與下方「本月應保養」表的台數一致
+function planDueCount(k) {
+  return [...planMonthStatus().values()].filter(r => catOfKind(r.d.kind) === k && r.c && custVisible(r.c) && custMatch(r.c, planQ)).length;
+}
+function planTabsHtml() {
+  return visCats().map(c => `<button class="${planKind === c.k ? 'primary' : 'ghost'}" onclick="togglePlanKind('${c.k}')">${esc(c.label)} ${planDueCount(c.k)} 台</button>`).join('');
+}
 function planFilterHtml() {
-  const st = planMonthStatus(), t = today(), ym = `${t.getFullYear()} 年 ${t.getMonth() + 1} 月`;
-  const n = k => new Set([...st.values()].filter(r => catOfKind(r.d.kind) === k).map(r => r.d.customerId)).size;
-  const tabs = KIND_CATS.map(c => c.k).map(k => `<button class="${planKind === k ? 'primary' : 'ghost'}" onclick="togglePlanKind('${k}')">${kindCatLabel(k)} ${n(k)}</button>`).join('');
+  const t = today(), ym = `${t.getFullYear()} 年 ${t.getMonth() + 1} 月`;
   return `<div class="card" id="planFilter">
     <label for="planSearch">客戶搜尋</label>
     <input type="search" id="planSearch" value="${esc(planQ)}" placeholder="客戶名稱、聯絡人、電話、地址、標籤（可輸入多個關鍵字）" oninput="filterPlan(this.value)">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${tabs}</div>
+    <div id="planTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${planTabsHtml()}</div>
     <p class="note" style="margin:8px 0 0">${planKind === 'all'
-      ? `目前顯示全部 ${S.customers.length} 位客戶的全年保養狀況。點設備分類，只列出該分類<b>本月（${ym}）應保養</b>的客戶：逾期未保養、本月應保養、首次保養與本月已保養。分類按鈕上的數字是本月應保養的客戶數。`
-      : `目前顯示：<b>${esc(kindCatLabel(planKind))}</b>本月（${ym}）應保養的客戶；表格中的台數只計算此分類的設備。再點一次「${esc(kindCatLabel(planKind))}」取消篩選。`}</p></div>`;
+      ? `分類按鈕上的數字是<b>本月（${ym}）應保養的設備台數</b>（台，含已保養）。點設備分類，下方「本月應保養」與「保養行程表」只算該分類的設備；再點一次取消。`
+      : `目前只顯示：<b>${esc(kindCatLabel(planKind))}</b>。再點一次「${esc(kindCatLabel(planKind))}」取消篩選。`}</p></div>`;
+}
+const PLAN_RANK = {overdue: 0, due: 1, new: 2, done: 3};
+const planStTags = due => ['overdue', 'due', 'new', 'done'].map(k => { const n = due.filter(x => x.status === k).length;
+  return n ? `<span class="tag ${k === 'done' ? 't-ok' : k === 'new' ? 't-info' : 't-warn'}">${PLAN_ST[k]} ${n}</span>` : ''; }).join(' ');
+// V63：本月應保養的客戶——一位客戶只出現一列（事務設備與除味設備台數合併），預設收合，點那一列展開本月應保養的每台設備
+// V64：狀態只依保養紀錄判斷——已保養（本月有任何服務紀錄）／未保養（含首次保養）／逾期未保養。行程表上的手動打勾或取消只影響行程表（會在設備列旁邊註明）
+// V64：「修改設備」按鈕展開的客戶（重新進入保養客戶一覽就收合）
+const dueDevOpen = new Set();
+function openDueDev(cid) { if (dueDevOpen.has(cid)) dueDevOpen.delete(cid); else dueDevOpen.add(cid); editDevId = null; render(); }
+const dueClassOf = r => r.st.done ? 'done' : r.status === 'overdue' ? 'overdue' : 'todo';
+// V64：同一個客戶只出現一列——名稱相同，或名稱以另一位客戶的完整名稱開頭（至少 2 個字，例如「榮總」與「榮總行政大樓8F」）合併；展開後分「單位」（每筆客戶資料）列出設備
+const gNorm = s => String(s || '').replace(/\s+/g, '').toLowerCase();
+function custGroupMap() {
+  const first = new Map();
+  visCusts().forEach(c => { const k = gNorm(c.name); if (k && !first.has(k)) first.set(k, c); });
+  const m = new Map();
+  visCusts().forEach(c => {
+    const k = gNorm(c.name); let key = k || ('#' + c.id);
+    for (let i = 2; i < k.length; i++) if (first.has(k.slice(0, i))) { key = k.slice(0, i); break; }
+    m.set(c.id, {key, name: first.has(key) ? String(first.get(key).name).trim() : c.name});
+  });
+  return m;
+}
+function dueCustRows() {
+  const t = today(), ms = new Date(t.getFullYear(), t.getMonth(), 1), key = planKeyOf(ms);
+  const rows = rosterRows(ms).filter(r => r.c && custVisible(r.c) && custMatch(r.c, planQ) && (planKind === 'all' || catOfKind(r.d.kind) === planKind))
+    .map(r => ({...r, st: {done: r.status === 'done', mark: planMarkOf(r.d, key)}}));
+  const byC = new Map(); rows.forEach(r => { if (!byC.has(r.c.id)) byC.set(r.c.id, []); byC.get(r.c.id).push(r); });
+  const units = [...byC.values()].map(rs => {
+    const n = {done: 0, todo: 0, overdue: 0}; rs.forEach(r => n[dueClassOf(r)]++);
+    return {c: rs[0].c, rs, n, total: rs.length};
+  });
+  const gm = custGroupMap(), byG = new Map();
+  units.forEach(u => { const g = gm.get(u.c.id) || {key: '#' + u.c.id, name: u.c.name};
+    if (!byG.has(g.key)) byG.set(g.key, {key: g.key, name: g.name, units: []}); byG.get(g.key).units.push(u); });
+  const rank = x => x.n.overdue ? 0 : x.n.todo ? 1 : 2;
+  const loc = (a, b) => String(a || '').localeCompare(String(b || ''), 'zh-TW');
+  const cg = consGroups();
+  const list = [...byG.values()].map(g => {
+    g.units.sort((a, b) => rank(a) - rank(b) || loc(a.c.address, b.c.address) || loc(a.c.name, b.c.name));
+    const n = {done: 0, todo: 0, overdue: 0}; g.units.forEach(u => { n.done += u.n.done; n.todo += u.n.todo; n.overdue += u.n.overdue; });
+    const rs = g.units.flatMap(u => u.rs);
+    const rem = rs.reduce((a, r) => a + reminderItems(r.d, cg).length, 0);
+    const rep = (g.units.find(u => gNorm(u.c.name) === g.key) || g.units[0]).c;
+    return {key: g.key, name: g.name, c: rep, units: g.units, rs, n, total: rs.length, rem};
+  });
+  list.sort((a, b) => rank(a) - rank(b) || loc(a.c.address, b.c.address) || loc(a.name, b.name));
+  return list;
+}
+const dnCell = (n, cls) => n ? `<span class="dn ${cls}">${n}</span>` : '<span class="dn-zero">—</span>';
+function dueStTag(r) {
+  const mk = r.st.mark;
+  const note = t => ` <span class="muted" style="font-size:12px">（${t}）</span>`;
+  if (r.st.done) return `<span class="tag t-ok">${PLAN_ST.done}</span>${mk === 'off' ? note('保養行程表上被手動取消打勾，但本月有保養紀錄，仍算已保養') : ''}`;
+  const on = mk === 'on' ? note('保養行程表上已手動打勾，但本月沒有保養紀錄') : '';
+  if (r.status === 'overdue') return `<span class="tag t-danger">逾期 ${r.overdue} 個月未保養</span>${on}`;
+  if (r.status === 'new') return `<span class="tag t-warn">尚無紀錄・首次保養</span>${on}`;
+  return `<span class="tag t-warn">本月未保養</span>${on}`;
+}
+function dueToggle(tr, ck) {
+  const det = tr.nextElementSibling; if (!det || !det.classList.contains('due-det')) return;
+  const open = det.hidden; det.hidden = !open;
+  const b = tr.querySelector('.due-btn'); if (b) b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  const ar = tr.querySelector('.due-arrow'); if (ar) ar.textContent = open ? '▾' : '▸';
+  planTog(ck, open);
+}
+function dueRemCell(d, items) {
+  if (!items.length) return '<span class="dn-zero">—</span>';
+  const open = remOpen.has(d.id);
+  return `<button type="button" class="tag t-warn rem-btn" aria-expanded="${open ? 'true' : 'false'}" onclick="toggleRem('${esc(d.id)}')">${items.length} ${open ? '▾' : '▸'}</button>
+    <div class="due-rem">${items.map(i => esc(String(i.tag).replace(/<[^>]*>/g, ''))).join('、')}</div>`;
+}
+function dueUnitHtml(u, multi, cg) {
+  const c = u.c;
+  const devRows = u.rs.map(r => `<tr data-duedev="${esc(r.d.id)}"><td>${kindTag(r.d)} <b>${esc(r.d.model || '—')}</b><div class="muted">${esc(r.d.location || '—')}</div></td><td>${esc(r.label)}</td><td>${r.last || '—'}</td>
+        <td>${dueStTag(r)}</td><td>${dueRemCell(r.d, reminderItems(r.d, cg))}</td><td>${asgLabelHtml(r.d)}</td></tr>${remRowHtml(r.d, 6)}`).join('');
+  const hd = multi ? `<div class="due-unit-h"><b>${esc(c.name)}</b>${c.address ? `<span class="muted">${esc(c.address)}</span>` : ''}${c.contact ? `<span class="muted">聯絡人：${esc(c.contact)}</span>` : ''}
+      <span class="muted">${u.total} 台｜已保養 ${dnCell(u.n.done, 'dn-ok')}　未保養 ${dnCell(u.n.todo, 'dn-un')}　逾期 ${dnCell(u.n.overdue, 'dn-od')}</span></div>` : '';
+  return `<div class="${multi ? 'due-unit' : ''}" data-unit="${esc(c.id)}">${hd}
+    <div style="overflow-x:auto"><table style="min-width:760px"><thead><tr><th>設備</th><th>週期</th><th>上次保養</th><th>本月狀態</th><th>提醒</th><th>指定擔當</th></tr></thead><tbody>${devRows}</tbody></table></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="primary" type="button" onclick="openPlanCust('${c.id}')">${planCust === c.id ? '收合' : '新增保養紀錄'}</button><button class="ghost" type="button" onclick="openHist('${c.id}')">${histCust === c.id ? '收合紀錄' : '歷史服務紀錄'}</button><button class="ghost" type="button" onclick="openDueDev('${c.id}')">${dueDevOpen.has(c.id) ? '收合設備' : '修改設備'}</button><button class="ghost" type="button" onclick="custEditFromPlan(event,'${c.id}')">修改客戶</button></div>
+    ${dueDevOpen.has(c.id) ? custDevPanelHtml(c) : ''}</div>`;
+}
+function planDueHtml() {
+  const t = today(), ym = `${t.getFullYear()} 年 ${t.getMonth() + 1} 月`;
+  const list = dueCustRows(), cg = consGroups();
+  const sum = list.reduce((a, x) => ({n: a.n + x.total, done: a.done + x.n.done, todo: a.todo + x.n.todo, od: a.od + x.n.overdue, rem: a.rem + x.rem, u: a.u + x.units.length}), {n: 0, done: 0, todo: 0, od: 0, rem: 0, u: 0});
+  const head = `<div class="due-sumline" id="dueSum"><span>本月應保養 <b>${list.length}</b> 位客戶、<b>${sum.n}</b> 台${sum.u !== list.length ? `<span class="muted">（含 ${sum.u} 個單位）</span>` : ''}</span>
+    <span>已保養 <span class="dn dn-ok">${sum.done}</span></span><span>未保養 <span class="dn dn-un">${sum.todo}</span></span><span>逾期未保養 <span class="dn dn-od">${sum.od}</span></span><span>提醒 <span class="dn dn-rem">${sum.rem}</span></span>
+    ${planKind === 'all' ? '' : `<span class="muted">只算「${esc(kindCatLabel(planKind))}」</span>`}</div>`;
+  const body = list.map(x => {
+    const c = x.c, ck = `c:${c.id}`, open = planOpen.has(ck), allDone = x.n.overdue === 0 && x.n.todo === 0, multi = x.units.length > 1;
+    return `<tr class="due-sum ${allDone ? 'due-alldone' : ''}" data-cid="${esc(c.id)}" data-gkey="${esc(x.key)}" data-units="${x.units.length}" data-od="${x.n.overdue}" data-un="${x.n.todo}" data-dn="${x.n.done}" data-rem="${x.rem}" onclick="dueToggle(this,'${ck}')">
+        <td class="c-name" data-label="客戶"><button type="button" class="due-btn" aria-expanded="${open ? 'true' : 'false'}"><span class="due-arrow">${open ? '▾' : '▸'}</span><span>${esc(x.name)}</span></button>
+          <div class="muted" style="font-size:13px">${multi ? `${x.units.length} 個單位` : esc(c.address || '')}</div></td>
+        <td class="c-num" data-label="應保養"><b>${x.total}</b> 台</td>
+        <td class="c-num" data-label="已保養">${dnCell(x.n.done, 'dn-ok')}${allDone ? ' <span class="dn-ok">✓</span>' : ''}</td>
+        <td class="c-num" data-label="未保養">${dnCell(x.n.todo, 'dn-un')}</td>
+        <td class="c-num" data-label="逾期">${dnCell(x.n.overdue, 'dn-od')}</td>
+        <td class="c-num" data-label="提醒">${dnCell(x.rem, 'dn-rem')}</td>
+        <td class="c-asg" data-label="指定擔當">${asgSummaryHtml(x.rs)}</td></tr>
+      <tr class="due-det" ${open ? '' : 'hidden'}><td colspan="7">${x.units.map(u => dueUnitHtml(u, multi, cg)).join('')}</td></tr>`;
+  }).join('');
+  const tbl = list.length ? `<table class="due-tbl" id="dueTbl"><thead><tr><th>客戶</th><th class="c-num">應保養</th><th class="c-num">已保養</th><th class="c-num">未保養</th><th class="c-num">逾期未保養</th><th class="c-num">提醒</th><th>指定擔當</th></tr></thead><tbody>${body}</tbody></table>`
+    : `<div class="empty">本月沒有應保養的客戶${(() => { const w = [planKind === 'all' ? '' : `只算「${esc(kindCatLabel(planKind))}」`, planQ.trim() ? '符合搜尋條件' : ''].filter(Boolean).join('、'); return w ? `（${w}）` : ''; })()}。</div>`;
+  return `<div class="card" id="planDueCard"><h2 style="margin:0 0 4px">本月（${ym}）應保養的客戶</h2>
+    <p class="note" style="margin:0 0 6px">一位客戶一列，事務設備與除味設備的台數合併計算。名稱相同的客戶（含名稱以另一位客戶名稱開頭的單位，例如「榮總」與「榮總行政大樓8F」）也合併成一列；點那一列展開各單位與本月應保養的設備。<span class="dn dn-od">紅</span>＝逾期未保養、<span class="dn dn-un">橘</span>＝未保養（含首次保養）、<span class="dn dn-ok">綠</span>＝已保養（本月有任何服務紀錄）、<span class="dn dn-rem">紫</span>＝提醒（耗材庫存、保養到期、拜訪提示、異常更換；點設備旁的提醒數字可直接處理）。數字依保養紀錄計算；下方保養行程表上手動打勾或取消，只影響行程表。</p>${head}${tbl}</div>`;
 }
 const MON = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 // 每台設備：依最近一次保養推算應保養月（每 cm 個月一次）
@@ -1854,26 +2240,27 @@ function devPlanState(d, c, idx, curIdx) {
   return null;
 }
 function viewPlan() {
-  const t = today(), Y = planYear || t.getFullYear(), curIdx = t.getFullYear() * 12 + t.getMonth();
-  const head = `<div class="card">
-    <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+  const t = today(), Y = planYear || t.getFullYear();
+  const yearNav = `<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:10px">
       <button class="ghost" onclick="setPlanYear(${Y - 1})">← ${Y - 1} 年</button>
-      <h2 style="margin:0">保養客戶一覽表（${Y} 年）</h2>
+      <b>保養客戶一覽表（${Y} 年）</b>
       <button class="ghost" onclick="setPlanYear(${Y + 1})">${Y + 1} 年 →</button></div>
-    <p class="note" style="margin-top:10px">每列是一位客戶，每欄是一個月。依客戶的保養週期與各設備上次保養月推算應保養月份。
-      <span class="tag t-ok">✓ 已保養</span> <span class="tag t-warn">⚠ 應保養未完成</span> <span class="tag t-info">○ 應保養（未到期）</span> 空白 ＝ 非保養月。本月欄位已標示。</p></div>`;
-  const body = `<div id="planGrid">${planGridHtml()}</div>`;
-  return planFilterHtml() + head + histPanelHtml() + planCustHtml() + body + planMonthHtml();
+    <p class="note" style="margin-top:8px">每列是一位客戶，每欄是一個月。依各設備的保養週期與上次保養月推算應保養月份。
+      <span class="tag t-ok">✓ 已保養</span> <span class="tag t-warn">⚠ 應保養未完成</span> <span class="tag t-info">○ 應保養（未到期）</span> 空白 ＝ 非保養月。本月欄位已標示。</p>`;
+  const year = `<details class="card" id="planYear" ${planOpen.has('year') ? 'open' : ''} ontoggle="planTog('year', this.open)">
+    <summary style="cursor:pointer;font-weight:700;font-size:16px">全部客戶（${Y} 年保養一覽表）<span class="muted" style="font-size:13px;font-weight:400">　點此展開／收合</span></summary>
+    ${yearNav}<div id="planGrid">${planGridHtml()}</div></details>`;
+  return planFilterHtml() + histPanelHtml() + planCustHtml() + year + `<div id="planDue">${planDueHtml()}</div>` + planMonthHtml();
 }
 function planGridHtml() {
   const t = today(), Y = planYear || t.getFullYear(), curIdx = t.getFullYear() * 12 + t.getMonth();
-  if (!S.customers.length) return '<div class="card"><div class="empty">尚無客戶。請到「設備資料總覽」最上方新增客戶。</div></div>';
+  if (!S.customers.length) return '<div class="empty">尚無客戶。請到「設備資料總覽」最上方新增客戶。</div>';
   const rows = planRows();
-  if (!rows.length) return `<div class="card"><div class="empty">${planKind === 'all' ? '找不到符合搜尋條件的客戶。' : `本月沒有需要保養的「${esc(kindCatLabel(planKind))}」客戶${planQ.trim() ? '（符合搜尋條件）' : ''}。`}</div></div>`;
+  if (!rows.length) return `<div class="empty">${planKind === 'all' ? '找不到符合搜尋條件的客戶。' : `沒有「${esc(kindCatLabel(planKind))}」的客戶${planQ.trim() ? '（符合搜尋條件）' : ''}。`}</div>`;
   const cat = planKind !== 'all';
   const stTags = due => ['overdue', 'due', 'new', 'done'].map(k => { const n = due.filter(x => x.status === k).length;
     return n ? `<span class="tag ${k === 'done' ? 't-ok' : k === 'new' ? 't-info' : 't-warn'}">${PLAN_ST[k]} ${n}</span>` : ''; }).join(' ');
-  return `<div class="card" style="overflow-x:auto"><div class="muted" style="margin-bottom:8px">共 ${rows.length} 位客戶${cat ? `、${rows.reduce((a, r) => a + r.due.length, 0)} 台本月應保養` : ''}</div><table style="min-width:${cat ? 1360 : 1220}px"><thead><tr>
+  return `<div style="overflow-x:auto"><div class="muted" style="margin-bottom:8px">共 ${rows.length} 位客戶、${rows.reduce((a, r) => a + r.devs.length, 0)} 台${cat ? `（只算「${esc(kindCatLabel(planKind))}」）；本月應保養 ${rows.reduce((a, r) => a + r.due.length, 0)} 台` : ''}</div><table style="min-width:${cat ? 1360 : 1220}px"><thead><tr>
       <th style="min-width:170px">客戶</th><th style="width:250px">操作</th>${cat ? '<th style="min-width:140px">本月狀態</th>' : ''}<th>週期</th><th class="num">設備</th>
       ${MON.map((m, i) => `<th style="text-align:center;${Y * 12 + i === curIdx ? 'background:#eff6ff;color:var(--brand,#1e5fbf)' : ''}">${m}</th>`).join('')}
     </tr></thead><tbody>${rows.map(({c, devs, due}) => {
@@ -1889,9 +2276,9 @@ function planGridHtml() {
         return `<td style="text-align:center;${idx === curIdx ? 'background:#f5f9ff' : ''}">${parts.join(' ')}</td>`;
       }).join('');
       return `<tr data-cust="${esc(c.id)}"><td><div><a href="#" class="cust-link" title="點擊修改客戶資料" onclick="custEditFromPlan(event,'${c.id}')"><b>${esc(c.name)}</b></a> ${contractTagOf(c)}</div>${!devs.length ? '<div class="muted">尚無設備</div>' : !hasLog ? '<div class="muted">尚無保養紀錄，請先登錄首次保養</div>' : ''}</td><td style="white-space:nowrap"><div style="display:flex;gap:6px"><button class="ghost" style="padding:4px 8px;white-space:nowrap" onclick="openPlanCust('${c.id}')">${planCust === c.id ? '收合' : '新增保養紀錄'}</button><button class="ghost" style="padding:4px 8px;white-space:nowrap" onclick="openHist('${c.id}')">${histCust === c.id ? '收合紀錄' : '歷史服務紀錄'}</button></div></td>
-        ${cat ? `<td>${stTags(due)}</td>` : ''}<td>${cycleOf(c).label}</td><td class="num">${devs.length}</td>${cells}</tr>`;
+        ${cat ? `<td>${stTags(due)}</td>` : ''}<td style="white-space:nowrap">${esc(cat ? cycleText(c, planKind === 'office' ? 'office' : 'odor') : cycleText(c))}</td><td class="num">${devs.length}</td>${cells}</tr>`;
     }).join('')}</tbody></table>
-    <p class="note">數字為台數。⚠ 表示該月應保養但未到府（僅計算該設備第一次保養之後的月份）。</p></div>`;
+    <p class="note">數字為台數。⚠ 表示該月應保養但沒有任何服務紀錄（僅計算該設備第一次保養之後的月份）。</p></div>`;
 }
 
 
@@ -1923,7 +2310,7 @@ function viewSettings() {
           <span class="muted" style="font-size:13px">${used ? `目前有 ${used} 台設備使用，刪除時會一併移除這些設備的此耗材與其更換事件（需二次確認）。` : '未被使用，可直接刪除（需二次確認）。'}</span></div>` : ''}
       </details></td></tr>`;
   }).join('');
-  return (CLOUD_ON ? accessHtml() : '') + consCardHtml() + staffHtml() + exportPanelHtml() + backupPanelHtml() + clearPanelHtml() + restorePanelHtml() + importPanelHtml() + `<div class="card sec-set"><h2>耗材目錄</h2>
+  return (CLOUD_ON ? accessHtml() : '') + dataCheckHtml() + asgCfgHtml() + odorItemsHtml() + consCardHtml() + staffHtml() + exportPanelHtml() + backupPanelHtml() + clearPanelHtml() + restorePanelHtml() + importPanelHtml() + `<div class="card sec-set"><h2>耗材目錄</h2>
     <p class="note">在此設定耗材名稱、壽命與成本。修改後會同步套用到所有使用此項目的設備。更換依據決定用黑色、彩色或總計張數計算壽命，建立後不可更改。新增設備耗材時，請依此依據填寫「更換當下」的黑色、彩色、總計張數。</p>
     <form onsubmit="addCatalog(event)" class="form-row" style="margin-top:10px">${fields(null)}
       <div><button class="primary" type="submit">新增耗材項目</button></div></form>
@@ -1945,6 +2332,119 @@ function catalogViewHtml() {
     <p class="note">僅管理者可以新增、修改與刪除耗材目錄。如需調整，請聯絡管理者。</p>
     <div style="overflow-x:auto;margin-top:12px"><table style="min-width:760px"><thead><tr><th>耗材</th><th>有效壽命</th><th class="num">單位成本</th><th class="num">售價</th><th class="num">交期</th><th class="num">使用中</th></tr></thead>
     <tbody>${rows || '<tr><td colspan="6" class="empty">尚無耗材項目。</td></tr>'}</tbody></table></div></div>`;
+}
+/* V62：資料檢查（只有管理者）：沒有客戶的設備、客戶名稱重複、型號空白、類別待確認 */
+let dataCheckOpen = false;
+function dataChecks() {
+  const orphan = S.devices.filter(d => !custOf(d));
+  const byName = new Map();
+  S.customers.forEach(c => { const k = String(c.name || '').trim(); byName.set(k, (byName.get(k) || []).concat([c])); });
+  // V65：同名但地址不同＝同一客戶的不同單位（保養客戶一覽會合併成一列），不算要確認；名稱和地址都相同才列為可能重複
+  const addrKey = c => String(c.address || '').replace(/\s+/g, '').toLowerCase();
+  const dup = [], units = [];
+  [...byName.entries()].filter(([, a]) => a.length > 1).forEach(e => {
+    const m = new Map(); e[1].forEach(c => { const k = addrKey(c); m.set(k, (m.get(k) || 0) + 1); });
+    (Math.max(...m.values()) > 1 ? dup : units).push(e);
+  });
+  const blank = S.devices.filter(d => custOf(d) && (!String(d.model || '').trim() || d.model === '（未填型號）'));
+  const unsure = S.devices.filter(d => custOf(d) && d.kindUnsure);
+  return {orphan, dup, units, blank, unsure};
+}
+function goEditDev(id) {
+  const d = S.devices.find(x => x.id === id); if (!d) return toast('找不到此設備');
+  view = 'manage'; devQuery = ''; devKind = 'all'; devCust = ''; tagFilter = 0; editDevId = id; openCustSet.add(d.customerId);
+  render(); setTimeout(() => { const el = document.querySelector(`#devList tr form[onsubmit*="${id}"]`); if (el) el.scrollIntoView({block: 'center'}); }, 0);
+}
+function dataCheckHtml() {
+  if (!isAdmin()) return '';
+  const r = dataChecks(), n = r.orphan.length + r.dup.length + r.blank.length + r.unsure.length;
+  const devLine = (d, act) => `<tr><td>${esc(custName(d))}</td><td>${esc(KIND[d.kind] || d.kind)} ${esc(d.model || '')}</td><td>${esc(d.location || '—')}</td><td>${act}</td></tr>`;
+  const sec = (title, rows, head) => rows ? `<h3 style="margin:12px 0 4px">${title}</h3><div style="overflow-x:auto"><table style="min-width:560px"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>` : '';
+  return `<details class="card sec-set" id="dataCheck" ${dataCheckOpen ? 'open' : ''} ontoggle="dataCheckOpen=this.open"><summary style="cursor:pointer;font-weight:700;font-size:16px">資料檢查 ${n ? `<span class="tag t-warn">${n} 項需要確認</span>` : '<span class="tag t-ok">沒有問題</span>'}</summary>
+    <p class="note">全部 ${S.customers.length} 位客戶、${S.devices.length} 台設備（${KIND_CATS.map(c => `${c.label} ${S.devices.filter(d => custOf(d) && c.kinds.includes(d.kind)).length}`).join('、')}）。下面列出可能讓數量對不起來的資料。</p>
+    ${sec(`沒有客戶的設備（${r.orphan.length} 台）：客戶已被刪除，設備還留著，不會出現在客戶清單`, r.orphan.map(d => devLine(d, `<button class="ghost danger" type="button" onclick="delDevice('${d.id}')">刪除設備</button>`)).join(''), '<th>客戶</th><th>設備</th><th>地點</th><th></th>')}
+    ${sec(`客戶名稱重複（${r.dup.length} 組）：名稱和地址都相同，可能是重複建立的客戶資料`, r.dup.map(([nm, a]) => `<tr><td>${esc(nm || '（空白）')}</td><td>${a.length} 位</td><td>${a.map(c => devsOf(c.id).length + ' 台').join('、')}</td><td><button class="ghost" type="button" data-q="${esc(nm)}" onclick="view='manage'; devQuery=this.dataset.q; render()">到設備資料總覽查看</button></td></tr>`).join(''), '<th>客戶名稱</th><th>筆數</th><th>各自設備</th><th></th>')}
+    ${r.units.length ? `<p class="note" id="dcUnits">另有 ${r.units.length} 組同名客戶（共 ${r.units.reduce((a, e) => a + e[1].length, 0)} 筆客戶資料）地址不同，視為同一客戶的不同單位，保養客戶一覽會合併成一列，不算問題。</p>` : ''}
+    ${sec(`型號空白（${r.blank.length} 台）`, r.blank.map(d => devLine(d, `<button class="ghost" type="button" onclick="goEditDev('${d.id}')">編輯設備</button>`)).join(''), '<th>客戶</th><th>設備</th><th>地點</th><th></th>')}
+    ${sec(`類別待確認（${r.unsure.length} 台）：匯入時看不懂設備類別，先建為事務設備`, r.unsure.map(d => devLine(d, `<button class="ghost" type="button" onclick="goEditDev('${d.id}')">編輯設備</button>`)).join(''), '<th>客戶</th><th>設備</th><th>地點</th><th></th>')}
+  </details>`;
+}
+/* V63：指定擔當名單（僅管理者）：可新增、改名、移除；排第一位（選「預設」）的人是新設備的預設擔當 */
+let asgCfgOpen = false;
+function asgCfgHtml() {
+  if (!isAdmin()) return '';
+  const list = asgList(), use = n => S.devices.filter(d => asgOf(d) === n).length;
+  const rows = list.map((n, i) => `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:4px 0">
+      <input name="an_${i}" maxlength="${ASG_NAME_MAX}" value="${esc(n)}" style="max-width:200px">
+      <label style="display:flex;gap:6px;align-items:center;margin:0;white-space:nowrap"><input type="radio" name="asgDef" value="${i}" ${i === 0 ? 'checked' : ''}> 預設</label>
+      <span class="muted">目前 ${use(n)} 台設備</span></div>`).join('')
+    + `<div style="display:flex;gap:8px;align-items:center;margin:4px 0"><input name="an_new" maxlength="${ASG_NAME_MAX}" placeholder="新增擔當（選填）" style="max-width:200px"></div>`;
+  return `<details class="card sec-set" ${asgCfgOpen ? 'open' : ''} ontoggle="asgCfgOpen=this.open"><summary style="cursor:pointer;font-weight:700;font-size:16px">指定擔當名單</summary>
+    <p class="note">每台設備有一位「指定擔當」（平常由誰負責），在設備的新增、編輯與「管理」區選擇。這裡維護可選的名單：可新增、改名、把名字清空＝移除。選「預設」的人是新設備的預設擔當，也是舊設備（還沒設定過）顯示的人。移除名單中的人後，原本設給他的設備仍顯示原名字並標示「（已不在名單）」，修改時再改選名單內的人。</p>
+    <form onsubmit="saveAssignees(event)"><input type="hidden" name="asgN" value="${list.length}">${rows}
+      <button class="primary" type="submit" style="margin-top:8px">儲存指定擔當名單</button></form></details>`;
+}
+function saveAssignees(e) {
+  e.preventDefault();
+  if (!guardAdmin('僅管理者可以修改指定擔當名單')) return;
+  const f = new FormData(e.target), cutN = v => String(v || '').trim().slice(0, ASG_NAME_MAX), old = asgList();
+  const names = [];
+  for (let i = 0; i < Math.min(+f.get('asgN') || 0, ASG_MAX); i++) { const n = cutN(f.get('an_' + i)); if (n) names.push({n, i}); }
+  const nw = cutN(f.get('an_new')); if (nw) names.push({n: nw, i: -1});
+  const uniq = names.map(x => x.n);
+  if (!uniq.length) return toast('指定擔當名單至少要有一位');
+  if (new Set(uniq).size !== uniq.length) return toast('名單裡有重複的名字，請修改後再儲存');
+  if (uniq.length > ASG_MAX) return toast(`指定擔當名單最多 ${ASG_MAX} 位`);
+  const defIdx = +f.get('asgDef'), def = names.find(x => x.i === defIdx) || names[0];
+  const next = [def.n, ...uniq.filter(n => n !== def.n)];
+  const gone = old.filter(n => !next.includes(n)), inUse = gone.filter(n => S.devices.some(d => asgOf(d) === n));
+  if (inUse.length && !confirmTwice(`移除「${inUse.join('、')}」？仍有設備設給他，之後會顯示「（已不在名單）」`)) return;
+  S.ui.assignees = next;
+  logOp('修改指定擔當名單', `${old.join('、')} → ${next.join('、')}`);
+  asgCfgOpen = true;
+  save(); toast('已儲存指定擔當名單'); render();
+}
+/* V61：保養紀錄項目（除味設備）—— 管理者新增、改名、停用；停用的項目不再出現在表單，舊紀錄照常顯示 */
+let odorCfgOpen = false;
+function odorItemsHtml() {
+  if (!isAdmin()) return '';
+  const list = (k, key, items) => items.map((x, i) => `<div style="display:flex;gap:8px;align-items:center;margin:4px 0">
+      <input name="${key}n_${i}" maxlength="${ITEM_MAX}" value="${esc(x.name)}" style="max-width:220px">
+      <label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" name="${key}o_${i}" value="1" ${x.off ? 'checked' : ''}> 停用</label></div>`).join('')
+    + `<div style="display:flex;gap:8px;align-items:center;margin:4px 0"><input name="${key}new" maxlength="${ITEM_MAX}" placeholder="新增項目（選填）" style="max-width:220px"></div>`;
+  const forms = ODOR_KINDS.map(k => {
+    const it = odorItems(k);
+    return `<form onsubmit="saveOdorItems(event,'${k}')" data-kind="${k}" style="border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin:10px 0">
+      <b>${esc(KIND[k])}</b>
+      <input type="hidden" name="consN" value="${it.cons.length}">
+      <div class="form-row" style="margin:6px 0 0;align-items:start">
+        <div><label>服務選項（固定，不可修改）</label><div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${ODOR_SVC_FIXED.map(n => `<span class="tag t-gray">${esc(n)}</span>`).join('')}</div></div>
+        <div><label>耗材更換項目</label>${list(k, 'c', it.cons)}</div></div>
+      <button class="primary" type="submit">儲存「${esc(KIND[k])}」項目</button></form>`;
+  }).join('');
+  return `<details class="card sec-set" ${odorCfgOpen ? 'open' : ''} ontoggle="odorCfgOpen=this.open"><summary style="cursor:pointer;font-weight:700;font-size:16px">保養紀錄項目（除味設備）</summary>
+    <p class="note">除味設備（商用空氣清淨機、臭氧機、PHI、NEX、全身除味機）的保養紀錄分「服務紀錄」與「耗材更換」兩區。服務紀錄的選項固定為「保養清潔、燈號歸復、維修、送貨、其他」，不可修改；耗材更換項目由管理者在這裡維護（可新增、改名、停用；停用的項目不再出現在表單，舊紀錄照常顯示）。勾選「已更換」只記錄在那一筆保養紀錄上，不會扣庫存，也不會連動事務設備的耗材管理。</p>
+    ${forms}</details>`;
+}
+function saveOdorItems(e, kind) {
+  e.preventDefault();
+  if (!guardAdmin('僅管理者可以修改保養紀錄項目')) return;
+  if (!ODOR_KINDS.includes(kind)) return;
+  const f = new FormData(e.target), cut = v => String(v || '').trim().slice(0, ITEM_MAX);
+  const read = (key, n) => {
+    const out = [];
+    for (let i = 0; i < n; i++) { const name = cut(f.get(`${key}n_${i}`)); if (name) out.push({name, off: f.get(`${key}o_${i}`) === '1'}); }
+    const nw = cut(f.get(`${key}new`)); if (nw) out.push({name: nw, off: false});
+    return out;
+  };
+  const svc = ODOR_SVC_FIXED.map(n => ({name: n, off: false})), cons = read('c', Math.min(+f.get('consN') || 0, ITEM_LIST_MAX));
+  { const names = cons.map(x => x.name);
+    if (new Set(names).size !== names.length) return toast('耗材更換項目有重複的名稱，請修改後再儲存');
+    if (cons.length > ITEM_LIST_MAX) return toast(`耗材更換項目最多 ${ITEM_LIST_MAX} 項`); }
+  S.ui.odorItems = Object.assign({}, S.ui.odorItems && typeof S.ui.odorItems === 'object' ? S.ui.odorItems : {}, {[kind]: {svc, cons}});
+  logOp('修改保養紀錄項目', `${KIND[kind]}｜服務：${svc.map(x => x.name + (x.off ? '（停用）' : '')).join('、')}｜耗材：${cons.map(x => x.name + (x.off ? '（停用）' : '')).join('、') || '無'}`);
+  odorCfgOpen = true;
+  save(); toast(`已儲存「${KIND[kind]}」的保養紀錄項目`); render();
 }
 /* 儀表板：本月印量統計、期間統計的表格 */
 function monthTableHtml() {
@@ -2079,20 +2579,22 @@ function groupDevCell(g) {
     <div class="muted" style="font-size:12px">${g.members.map(s => esc(s.dev.location || '—')).join('、')}</div>`;
 }
 function viewDash() {
-  const groups = consGroups();
+  const groups = consGroups().filter(g => g.members.every(m => devVisible(m.dev)));
   const ok = groups.filter(g => g.ok), bad = groups.filter(g => !g.ok);
-  const missing = bad.filter(g => g.missing), trouble = bad.filter(g => !g.missing);
+  const missing = bad.filter(g => g.missing);   // V65：資料不足（無法推估）不列入提醒
   const urgent = ok.filter(g => g.tier === 'urgent' || g.tier === 'out').sort((a, b) => a.coverDays - b.coverDays);
   const prep = ok.filter(g => g.tier === 'prep').sort((a, b) => a.coverDays - b.coverDays);
-  const list = [...urgent, ...prep, ...missing, ...trouble];
+  const list = [...urgent, ...prep, ...missing];
   const cyc = S.consumables.filter(c => !isToner(c)).map(c => ({c, dev: S.devices.find(d => d.id === c.deviceId), sig: cycleSignal(c)}))
-    .filter(x => x.dev && x.sig && x.sig.abnormal);
-  const svcDue = S.devices.filter(d => ['due', 'overdue'].includes(svcMonthState(d).state));
-  const abn = S.events.filter(e => e.flags && e.flags.length && daysBetween(toDate(e.date), today()) <= WARN_ABN_DAYS)
+    .filter(x => x.dev && isPrint(x.dev) && devVisible(x.dev) && x.sig && x.sig.abnormal);
+  const svcDue = S.devices.filter(d => devVisible(d) && ['due', 'overdue'].includes(svcMonthState(d).state));
+  const visEv = e => { const c = S.consumables.find(x => x.id === e.consId); const d = c && S.devices.find(x => x.id === c.deviceId); return !d || (isPrint(d) && devVisible(d)); };
+  const abn = S.events.filter(e => e.flags && e.flags.length && visEv(e) && daysBetween(toDate(e.date), today()) <= WARN_ABN_DAYS)
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  const sigRecent = S.logs.filter(l => l.purchaseSignal && daysBetween(toDate(l.date), today()) <= 30);
-  const signals = [...S.logs].filter(l => l.purchaseSignal).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+  const visLog = l => { const d = S.devices.find(x => x.id === l.deviceId); return !d || devVisible(d); };
+  const sigRecent = S.logs.filter(l => l.purchaseSignal && visLog(l) && daysBetween(toDate(l.date), today()) <= 30);
+  const signals = [...S.logs].filter(l => l.purchaseSignal && visLog(l)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
   const signalHtml = signals.length
     ? `<table><thead><tr><th>日期</th><th>客戶／地點</th><th>採購信號</th><th>耗材庫存</th></tr></thead><tbody>${signals.map(l => {
         const d = S.devices.find(x => x.id === l.deviceId);
@@ -2208,7 +2710,7 @@ function viewDash() {
 
 /* ================= 設備資料總覽（單一頁面） ================= */
 let selCust = null, selDev = null, chartIdx = null;
-const devsOf = cid => S.devices.filter(d => d.customerId === cid);
+const devsOf = cid => S.devices.filter(d => d.customerId === cid && devVisible(d));
 // 客戶的合約：由其設備彙總（例：計張 2、租賃 1、未設定 1）
 function contractCounts(c) {
   const m = new Map();
@@ -2247,34 +2749,66 @@ const seqNo = (n, k) => n - k;
 const seqTag = (n, k) => n - k === 1 ? ' <span class="tag t-ok">最近</span>' : '';
 const clip = (x, n = 28) => { const t = String(x ?? ''); return t.length > n ? esc(t.slice(0, n)) + '…' : esc(t); };
 
-// 設備的提醒：耗材（資料不足／60 天內／已超過）、保養到期、最近一次拜訪提示、異常更換
-function reminderItems(dev) {
+// V65 設備的提醒：只列「需要人處理、處理後會消失」的項目——耗材（尚未填寫庫存／60 天內／已用完）、最近一次紀錄的張數問題、近期使用週期異常、近期異常更換
+// 不列：耗材資料不足（無法處理）、保養到期（「保養狀態」「本月狀態」欄已經寫了）、拜訪間隔／月用量偏高偏低（只是參考，留在服務歷史）
+let remCgMemo = null;   // V65：畫「設備資料總覽」時只算一次耗材分組，畫完立刻清掉（不會用到舊資料）
+function reminderItems(dev, cg) {
   const items = [];
-  consGroups().filter(g => g.members.some(s => s.dev.id === dev.id)).forEach(g => {
-    if (!g.ok) items.push({tag: g.missing ? '<span class="tag t-info">尚未填寫庫存</span>' : '<span class="tag t-info">資料不足</span>',
-      text: g.missing ? `${g.name}：尚未填寫耗材庫存，本次略過推估` : `${g.name}：${g.reason}`});
-    else if (g.tier) items.push({tag: tierTag(g),
+  (cg || remCgMemo || consGroups()).filter(g => g.members.some(s => s.dev.id === dev.id)).forEach(g => {
+    const mine = g.members.filter(s => s.dev.id === dev.id).map(s => s.c.id);
+    if (!g.ok) { if (g.missing) items.push({kind: 'cons', cons: mine, tag: '<span class="tag t-info">尚未填寫庫存</span>', text: `${g.name}：尚未填寫耗材庫存，本次略過推估`}); }
+    else if (g.tier) items.push({kind: 'cons', cons: mine, tag: tierTag(g),
       text: `${g.name}${g.merged ? `（與同機種 ${g.members.length - 1} 台合併計算）` : ''}：庫存可撐約 ${Math.round(g.coverDays)} 天，建議補貨 ${g.orderIn < 0 ? '已逾期' : iso(g.orderDate)}`});
   });
-  S.consumables.filter(c => c.deviceId === dev.id && !isToner(c)).forEach(c => {
+  const myCons = S.consumables.filter(c => c.deviceId === dev.id);
+  (isPrint(dev) ? myCons.filter(c => !isToner(c)) : []).forEach(c => {
     const sig = cycleSignal(c);
-    if (sig && sig.abnormal) items.push({tag: '<span class="tag t-warn">使用週期異常</span>',
+    if (sig && sig.abnormal) items.push({kind: 'cyc', tag: '<span class="tag t-warn">使用週期異常</span>',
       text: `${c.name}：最近一次更換間隔 ${sig.last} 天，預期約 ${fmt(sig.expect)} 天（可能機器異常或更換不當）`});
   });
-  const svm = svcMonthState(dev);
-  if (svm.state === 'overdue' || svm.state === 'due')
-    items.push({tag: svcMonthTag(dev),
-      text: svm.state === 'overdue' ? `定期保養已逾期 ${svm.months} 個月（上次 ${svm.last}）` : `本月為應保養月份（上次 ${svm.last}）`});
   const vs = visitsOf(dev.id);
-  if (vs.length) visitMetrics(dev, vs, vs.length - 1).alerts
-    .filter(a => !a.startsWith('耗材更換異常'))
-    .forEach(a => items.push({tag: '<span class="tag t-warn">拜訪提示</span>', text: a}));
-  S.events.forEach(e => {
-    const c = S.consumables.find(x => x.id === e.consId && x.deviceId === dev.id);
-    if (c && (e.flags || []).length && daysBetween(toDate(e.date), today()) <= WARN_ABN_DAYS)
-      items.push({tag: '<span class="tag t-warn">異常更換</span>', text: `${e.date} ${c.name}：${e.flags.join('；')}`});
+  if (vs.length) visitMetrics(dev, vs, vs.length - 1).fix
+    .forEach(a => items.push({kind: 'visit', tag: '<span class="tag t-warn">拜訪提示</span>', text: a}));
+  const myConsById = new Map(myCons.map(c => [c.id, c]));
+  if (myCons.length && isPrint(dev)) S.events.forEach(e => {
+    const c = (e.flags || []).length ? myConsById.get(e.consId) : null;
+    if (c && daysBetween(toDate(e.date), today()) <= WARN_ABN_DAYS)
+      items.push({kind: 'event', tag: '<span class="tag t-warn">異常更換</span>', text: `${e.date} ${c.name}：${e.flags.join('；')}`});
   });
   return items;
+}
+
+// V64：提醒欄的數字可以點，直接在設備下方展開提醒項目並就地修改（不跳轉）
+const remOpen = new Set();
+let remAddDev = null, remEditLog = null;   // 提醒區內：正在新增保養紀錄的設備、正在修改的服務紀錄
+function remReset() { remOpen.clear(); remAddDev = null; remEditLog = null; }
+function toggleRem(id) {
+  if (remOpen.has(id)) { remOpen.delete(id); if (remAddDev === id) remAddDev = null; const l = remEditLog && S.logs.find(x => x.id === remEditLog); if (l && l.deviceId === id) remEditLog = null; }
+  else remOpen.add(id);
+  render();
+}
+function remStartAdd(id) { remAddDev = id; remEditLog = null; render(); }
+function remStartEdit(lid) { remEditLog = lid; remAddDev = null; render(); }
+function remCancel() { remAddDev = null; remEditLog = null; render(); }
+function remOpenFull(id) { selDev = id; devPanel = id; chartIdx = null; quickDev = null; pendingPanelScroll = true; render(); }
+function remRowHtml(d, span = 4) {
+  if (!remOpen.has(d.id)) return '';
+  const items = reminderItems(d), vs = visitsOf(d.id), last = vs.length ? vs[vs.length - 1] : null;
+  const body = items.length ? items.map(i => {
+    let act = '';
+    if (i.kind === 'cons') act = (i.cons || []).map(id => { const c = S.consumables.find(x => x.id === id); if (!c) return '';
+      return `<form class="rem-stock" onsubmit="setStock(event,'${esc(c.id)}')" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0"><label style="margin:0">${esc(c.name)} 庫存</label><input name="stock" type="number" min="0" step="1" value="${c.stock == null ? '' : esc(c.stock)}" placeholder="未填寫" style="width:96px"><span class="muted">件</span><button class="ghost" type="submit">儲存庫存</button></form>`; }).join('');
+    else if (i.kind === 'visit' && last) act = `<button class="ghost" type="button" onclick="remStartEdit('${esc(last.id)}')">修改最近一筆服務紀錄（${esc(last.date)}）</button>`;
+    else act = `<button class="ghost" type="button" onclick="remOpenFull('${esc(d.id)}')">開啟完整設備紀錄</button>`;
+    return `<div class="rem-item"><div>${i.tag} ${esc(i.text)}</div>${act ? `<div class="rem-act">${act}</div>` : ''}</div>`;
+  }).join('') : '<span class="tag t-ok">目前沒有提醒</span>';
+  const addForm = remAddDev === d.id ? `<div class="rem-form"><b>新增保養紀錄｜${esc(d.model || '')}</b>${logFormHtml(d, null, {formId: '', banner: '', onsubmit: 'addLog(event)',
+    buttons: '<button class="primary" type="submit">儲存服務紀錄</button><button class="ghost" type="button" onclick="remCancel()">取消</button>'})}</div>` : '';
+  const el = remEditLog ? S.logs.find(x => x.id === remEditLog && x.deviceId === d.id) : null;
+  const editForm = el ? `<div class="rem-form"><b>修改服務紀錄｜${esc(el.date)}</b>${logFormHtml(d, el, {formId: '', banner: '', onsubmit: `saveLogEdit(event,'${esc(el.id)}')`,
+    buttons: '<button class="primary" type="submit">儲存修改</button><button class="ghost" type="button" onclick="remCancel()">取消修改</button>'})}</div>` : '';
+  return `<tr class="rem-row" data-remrow="${esc(d.id)}"><td colspan="${span}"><b>提醒項目（${items.length}）</b>${body}${addForm}${editForm}
+    <div style="margin-top:6px"><button class="ghost" type="button" onclick="toggleRem('${esc(d.id)}')">收合提醒</button></div></td></tr>`;
 }
 
 let devQuery = '';
@@ -2282,7 +2816,7 @@ let editDevId = null;   // 目前正在編輯的設備
 let devKind = 'all', devCust = '', quickDev = null, pendingScroll = false;
 // V50：目前展開「設備紀錄」的設備（只在按「快速紀錄」「查看設備」或新增設備後展開；顯示在該客戶的設備列表正下方）
 let devPanel = null, pendingPanelScroll = false;
-const panelDev = () => S.devices.find(d => d.id === devPanel) || null;
+const panelDev = () => S.devices.find(d => d.id === devPanel && devVisible(d)) || null;
 function devPanelHtml(dev) {
   return `<div id="devPanel" data-dev="${esc(dev.id)}" style="margin-top:12px;border:2px solid var(--brand,#1e5fbf);border-radius:12px;padding:10px 10px 2px;background:#f8fafc">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
@@ -2291,9 +2825,9 @@ function devPanelHtml(dev) {
     ${deviceHtml(dev)}${remindHtml(dev)}${serviceHtml(dev)}${consHtml(dev)}${customerInfoCard()}</div>`;
 }
 function closeDevPanel() { devPanel = null; quickDev = null; render(); }
-const KIND_ORDER = ['copier', 'printer', 'purifier', 'ozone', 'phi', 'nex'];
+const KIND_ORDER = ['copier', 'printer', 'purifier', 'ozone', 'phi', 'nex', 'body'];
 /* ================= V47：新設備類別（PHI除味機、商用臭氧機、NEX除味系統）與方形按鈕 ================= */
-const NEW_KINDS = ['ozone', 'phi', 'nex'];      // 只需要安裝時間、保固、備註；不列張數、色彩與選用功能
+const NEW_KINDS = ['ozone', 'phi', 'nex', 'body'];      // 只需要安裝時間、保固、備註；不列張數、色彩與選用功能
 const KIND_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const NEW_KIND_OPTS = NEW_KINDS.map(k => `<option value="${k}">${KIND[k]}</option>`).join('');
 // V48：設備類別標籤顏色（列印機＝鵝黃；商用空氣清淨機、臭氧、PHI、NEX＝橘）
@@ -2303,10 +2837,16 @@ const KIND_CATS = [
   {k: 'purifier', label: '商用空氣清淨機', kinds: ['purifier']},
   {k: 'ozone', label: '商用臭氧機', kinds: ['ozone']},
   {k: 'phi', label: 'PHI商用除味機', kinds: ['phi']},
-  {k: 'nex', label: 'NEX除味系統', kinds: ['nex']}];
+  {k: 'nex', label: 'NEX除味系統', kinds: ['nex']},
+  {k: 'body', label: '全身除味機', kinds: ['body']}];
 const catOfKind = kind => (KIND_CATS.find(c => c.kinds.includes(kind)) || {}).k || '';
 const kindCatLabel = k => k === 'all' ? '全部設備' : (KIND_CATS.find(c => c.k === k) || {}).label || '';
-const okKindCat = k => k === 'all' || KIND_CATS.some(c => c.k === k);
+const okKindCat = k => k === 'all' || visCats().some(c => c.k === k);
+// V62：設備類別選單；工程部只列看得到的類別（目前的類別即使看不到也保留，避免選單錯亂）
+function kindOptsHtml(cur, long = true) {
+  return KIND_ORDER.filter(k => k !== 'printer' && (kindVisible(k) || k === cur))
+    .map(k => `<option value="${k}" ${k === cur ? 'selected' : ''}>${k === 'copier' ? (long ? '事務設備（複合機、印表機）' : '事務設備') : KIND[k]}</option>`).join('');
+}
 function kindTag(d) { return `<span class="tag ${kindIsPrint(d.kind) ? 'k-print' : 'k-other'}">${esc(KIND[d.kind])}</span>`; }
 function newKindFrom(f) {
   const cut = (n, m) => (f.get(n) || '').toString().trim().slice(0, m);
@@ -2329,6 +2869,8 @@ function syncKindFields(sel) {
   form.querySelectorAll('.f-feat').forEach(el => el.style.display = pr ? 'grid' : 'none');
   const cs = form.querySelector('select[name=contract]');
   if (cs) { const cur = cs.value; cs.innerHTML = contractOptsHtml(k, contractsFor(k).includes(cur) ? cur : ''); }
+  const cy = form.querySelector('select[data-cyc]');
+  if (cy && cy.dataset.base !== grpOfKind(k)) { cy.value = String(defCycleOfKind(k).m); cy.dataset.base = grpOfKind(k); }   // 換到另一組：帶入該組預設值
 }
 function newKindInfoHtml(d) {
   if (!d || !NEW_KINDS.includes(d.kind) || (!d.installDate && !d.warrantyText && !d.devNote)) return '';
@@ -2407,8 +2949,9 @@ function saveTagNames(e) {
   logOp('修改標籤設定', next.map((t, k) => `${t.name || '標籤' + (k + 1)}（${TAG_PALETTE[t.color].n}）`).join('、'));
   save(); toast('已儲存標籤設定'); render();
 }
-function devMatch(d, q) {
-  if (devKind !== 'all' && catOfKind(d.kind) !== devKind) return false;
+function devMatch(d, q, anyKind) {
+  if (!devVisible(d)) return false;
+  if (!anyKind && devKind !== 'all' && catOfKind(d.kind) !== devKind) return false;
   if (devCust && d.customerId !== devCust) return false;
   const c = S.customers.find(x => x.id === d.customerId) || {};
   if (tagFilter && !tagsOf(d).includes(tagFilter) && !tagsOf(c).includes(tagFilter)) return false;
@@ -2427,12 +2970,14 @@ function startEditDev(id) { editDevId = id; render(); }
 function cancelEditDev() { editDevId = null; render(); }
 function devEditFormHtml(d) {
   return `<tr><td colspan="4"><form onsubmit="saveDeviceInfo(event,'${d.id}')" class="form-row" style="margin:6px 0">
-    <div><label>設備類別</label><select name="kind" onchange="syncKindFields(this)">${KIND_ORDER.filter(k => k !== 'printer').map(k => `<option value="${k}" ${k === d.kind || (k === 'copier' && d.kind === 'printer') ? 'selected' : ''}>${k === 'copier' ? '事務設備（複合機、印表機）' : KIND[k]}</option>`).join('')}</select></div>
+    <div><label>設備類別</label><select name="kind" onchange="syncKindFields(this)">${kindOptsHtml(baseKind(d.kind))}</select></div>
     <div><label>品牌</label><input name="brand" value="${esc(d.brand || '')}"></div>
     <div><label>型號</label><input name="model" required value="${esc(d.model || '')}"></div>
     <div><label>安裝地點</label><input name="location" value="${esc(d.location || '')}"></div>
     <div class="f-print" style="display:${kindIsPrint(d.kind) ? '' : 'none'}"><label>色彩</label><select name="hasColor"><option value="1" ${d.hasColor ? 'selected' : ''}>彩色</option><option value="0" ${d.hasColor ? '' : 'selected'}>黑白</option></select></div>
     ${contractFieldHtml(d.kind, devContract(d))}
+    ${cycleFieldHtml(d.kind, devCycle(d).m).replace('data-cyc="1"', `data-cyc="1" data-base="${grpOfKind(d.kind)}"`)}
+    <div><label>指定擔當</label>${asgSelHtml('assignee', asgOf(d))}</div>
     ${newKindFieldsHtml(d)}
     ${featFormHtml(d)}
     ${tagCheckHtml(d)}
@@ -2444,28 +2989,101 @@ function saveDeviceInfo(e, id) {
   const f = new FormData(e.target), t = n => (f.get(n) || '').toString().trim();
   if (!t('model')) return toast('請填寫型號');
   let kind = KIND_ORDER.includes(f.get('kind')) ? f.get('kind') : d.kind;
+  if (!kindVisible(kind) || !devVisible(d)) return toast('你的身份不能使用此設備類別');
   if (kind === 'copier' && d.kind === 'printer') kind = 'printer';   // 事務設備：保留原本的內部類別
   const contract = String(f.get('contract') || '');
   if (!contractsFor(kind).includes(contract)) return toast('請選擇合約型態');
+  const as0 = asgOf(d), rawA = String(f.get('assignee') ?? '').trim(), as1 = rawA ? asgFrom(f, 'assignee', d) : as0;
+  if (!as1) return toast('指定擔當請從名單中選擇');
   if (devContract(d) !== contract) logOp('修改合約型態', `${custName(d)}｜${t('model')}｜${devContract(d) || '未設定'} → ${contract}`);
+  const cyc = cycleIn(f, 'cycleMonths', devCycle(d).m);
+  if (cyc !== devCycle(d).m || !cycOpt(d.cycleMonths)) { if (cyc !== devCycle(d).m) logOp('修改保養週期', `${custName(d)}｜${t('model')}｜${devCycle(d).label} → ${cycOpt(cyc).label}`); d.cycleMonths = cyc; }
+  if (as1 !== as0) logOp('修改指定擔當', `${custName(d)}｜${t('model')}｜${as0} → ${as1}`);
+  d.assignee = as1;
+  if (baseKind(kind) !== baseKind(d.kind)) logOp('修改設備類別', `${custName(d)}｜${t('model')}｜${KIND[d.kind]} → ${KIND[kind]}（合約：${devContract(d) || '未設定'} → ${contract}）`);
   Object.assign(d, {kind, brand: t('brand'), model: t('model'), location: t('location'),
-    hasColor: kindIsPrint(kind) && f.get('hasColor') === '1', contract, billing: kindIsPrint(kind) && contract === '計張'});
+    hasColor: kindIsPrint(kind) ? f.get('hasColor') === '1' : !!d.hasColor, contract, billing: kindIsPrint(kind) && contract === '計張'});
   d.tags = readTags(f);
   Object.assign(d, featFrom(f, kind));
-  if (NEW_KINDS.includes(kind)) Object.assign(d, newKindFrom(f)); else ['installDate', 'warrantyText', 'devNote'].forEach(k => delete d[k]);
+  if (NEW_KINDS.includes(kind)) Object.assign(d, newKindFrom(f));   // V61：改成其他類別時保留（不顯示），改回來會再出現
+  if (kindDraft && kindDraft.id === id) kindDraft = null;
+  delete d.kindUnsure;
   editDevId = null; logOp('修改設備', `${custName(d)}｜${d.model}`); save(); toast('已更新設備資料'); render();
+}
+// V61：設備類別直接在清單上修改。選了新類別不會立刻存；按「確認修改」要連續按兩下（8 秒內）才儲存。所有同仁都可以修改
+let kindDraft = null;   // {id, kind, contract, color, cycle}
+const baseKind = k => k === 'printer' ? 'copier' : k;
+function kindSelHtml(d) {
+  const cur = kindDraft && kindDraft.id === d.id ? kindDraft.kind : baseKind(d.kind);
+  return `<select class="kind-sel ${kindIsPrint(cur) ? 'ks-print' : 'ks-other'}" aria-label="設備類別" title="直接選擇可修改設備類別" onchange="draftKind('${d.id}', this.value)">${kindOptsHtml(cur, false)}</select>`;
+}
+function draftKind(id, k) {
+  const d = S.devices.find(x => x.id === id);
+  if (!d || !KIND_ORDER.includes(k)) return;
+  if (!kindVisible(k)) { toast('你的身份不能使用此設備類別'); return render(); }
+  if (k === baseKind(d.kind)) kindDraft = null;
+  else kindDraft = {id, kind: k, contract: grpOfKind(k) === grpOfKind(d.kind) ? devContract(d) : '', color: '', cycle: String(grpOfKind(k) === grpOfKind(d.kind) ? devCycle(d).m : defCycleOfKind(k).m)};
+  armedMsg = null; render();
+}
+function draftSet(field, v) { if (kindDraft && ['contract', 'color', 'cycle'].includes(field)) kindDraft[field] = String(v || ''); }
+function cancelKind() { kindDraft = null; armedMsg = null; render(); }
+function kindImpact(d, k, contract) {
+  const out = [];
+  if (grpOfKind(k) === grpOfKind(d.kind)) return out;
+  if (devContract(d) === '計張') out.push('此設備原為計張，修改後將不再出現在計張計價系統（已開立的收費單不受影響）');
+  if (contract === '計張') out.push('修改後會出現在計張計價系統');
+  out.push(`保養週期改為「${(cycOpt(+(kindDraft && kindDraft.id === d.id ? kindDraft.cycle : 0)) || defCycleOfKind(k)).label}」（可在下方修改）`);
+  out.push(kindIsPrint(k) ? '之後的保養紀錄改用事務設備表單（張數、耗材庫存）' : '之後的保養紀錄改用除味表單（服務紀錄、耗材更換）；彩色／黑白與選用功能不再顯示，資料保留');
+  return out;
+}
+function confirmKind(id) {
+  const d = S.devices.find(x => x.id === id);
+  if (!d) { kindDraft = null; return toast('找不到此設備，可能已被刪除'); }
+  if (!kindDraft || kindDraft.id !== id) return;
+  if (!kindVisible(kindDraft.kind) || !devVisible(d)) { kindDraft = null; return toast('你的身份不能使用此設備類別'); }
+  const k = kindDraft.kind, cross = grpOfKind(k) !== grpOfKind(d.kind);
+  const contract = cross ? kindDraft.contract : devContract(d);
+  if (cross && !contractsFor(k).includes(contract)) return toast('類別改到另一組（事務設備／除味），請先選擇新的合約型態');
+  if (cross && kindIsPrint(k) && !['0', '1'].includes(kindDraft.color)) return toast('改為事務設備，請選擇彩色或黑白');
+  const imp = kindImpact(d, k, contract);
+  const msg = `將把「${d.model || ''}」由 ${KIND[d.kind]} 改為 ${KIND[k]}${cross ? `（合約：${devContract(d) || '未設定'} → ${contract}）` : ''}${imp.length ? '。' + imp.join('；') : ''}`;
+  if (!confirmTwice(msg)) return;
+  const fromK = KIND[d.kind], fromC = devContract(d) || '未設定';
+  d.kind = k; delete d.kindUnsure;
+  if (cross) {
+    d.contract = contract; d.billing = kindIsPrint(k) && contract === '計張';
+    if (kindIsPrint(k)) d.hasColor = kindDraft.color === '1';
+    d.cycleMonths = cycOpt(+kindDraft.cycle) ? +kindDraft.cycle : defCycleOfKind(k).m;
+  }
+  logOp('修改設備類別', `${custName(d)}｜${d.model || ''}｜${fromK} → ${KIND[k]}${cross ? `（合約：${fromC} → ${contract}）` : ''}`);
+  kindDraft = null; save(); toast(`已修改設備類別：${fromK} → ${KIND[k]}`); render();
+}
+function kindDraftRowHtml(d) {
+  if (!kindDraft || kindDraft.id !== d.id) return '';
+  const k = kindDraft.kind, cross = grpOfKind(k) !== grpOfKind(d.kind);
+  const imp = kindImpact(d, k, kindDraft.contract);
+  const ctSel = cross ? `<label style="display:flex;gap:6px;align-items:center;margin:0">新的合約型態 <select class="kd-contract" onchange="draftSet('contract', this.value)">${contractOptsHtml(k, kindDraft.contract)}</select></label>` : '';
+  const cySel = cross ? `<label style="display:flex;gap:6px;align-items:center;margin:0">保養週期 <select class="kd-cycle" onchange="draftSet('cycle', this.value)">${CYCLE_OPTS.map(o => `<option value="${o.m}" ${String(o.m) === kindDraft.cycle ? 'selected' : ''}>${o.label}</option>`).join('')}</select></label>` : '';
+  const colSel = cross && kindIsPrint(k) ? `<label style="display:flex;gap:6px;align-items:center;margin:0">色彩 <select class="kd-color" onchange="draftSet('color', this.value)"><option value="">請選擇</option><option value="1" ${kindDraft.color === '1' ? 'selected' : ''}>彩色</option><option value="0" ${kindDraft.color === '0' ? 'selected' : ''}>黑白</option></select></label>` : '';
+  return `<tr class="kind-draft"><td colspan="4" style="background:#fff7ed;border:2px solid #fdba74">
+    <div><b>修改設備類別：</b>${esc(KIND[d.kind])} → <b>${esc(KIND[k])}</b>${cross ? ' <span class="tag t-warn">跨組修改（事務設備 ↔ 除味）</span>' : ''}</div>
+    ${imp.length ? `<ul style="margin:6px 0;padding-left:20px;font-size:13px">${imp.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div class="muted" style="font-size:13px;margin:4px 0">同組修改：合約型態保留不變。</div>'}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px">${ctSel}${colSel}${cySel}
+      <button class="primary" type="button" onclick="confirmKind('${d.id}')">確認修改</button>
+      <button class="ghost" type="button" onclick="cancelKind()">取消</button>
+      <span class="muted" style="font-size:12px">「確認修改」需連續按兩下（8 秒內）</span></div></td></tr>`;
 }
 function devRowHtml(d) {
   if (editDevId === d.id) return devEditFormHtml(d) + photoRowHtml(d);
   const sv = svcStatus(d), n = reminderItems(d).length;
   const svTxt = svcMonthTag(d);
-  return `<tr style="${d.id === selDev ? 'background:#eff6ff' : ''}">
-    <td>${kindTag(d)} <b>${esc(d.model || '—')}</b>${isPrint(d) ? (d.hasColor ? '・彩色' : '・黑白') : ''}${' ' + contractTag(d)}
-      <div class="muted">${esc(d.brand || '')}${d.brand ? '　' : ''}${esc(d.location || '—')}　保養：${devCycle(d).label}</div>${newKindInfoHtml(d)}${tagsOf(d).length ? `<div>${tagChipsHtml(d)}</div>` : ''}</td>
+  return `<tr data-devrow="${esc(d.id)}" style="${d.id === selDev ? 'background:#eff6ff' : ''}">
+    <td>${kindSelHtml(d)} <b>${esc(d.model || '—')}</b>${d.kindUnsure ? ' <span class="tag t-warn">類別待確認</span>' : ''}${isPrint(d) ? (d.hasColor ? '・彩色' : '・黑白') : ''}${' ' + contractTag(d)}
+      <div class="muted">${esc(d.brand || '')}${d.brand ? '　' : ''}${esc(d.location || '—')}　保養：${devCycle(d).label}　擔當：${asgLabelHtml(d)}</div>${newKindInfoHtml(d)}${tagsOf(d).length ? `<div>${tagChipsHtml(d)}</div>` : ''}</td>
     <td>${svTxt}</td>
-    <td class="num">${n ? `<span class="tag t-warn">${n}</span>` : '0'}</td>
+    <td class="num">${n ? `<button type="button" class="tag t-warn rem-btn" aria-expanded="${remOpen.has(d.id) ? 'true' : 'false'}" title="點一下直接展開提醒項目" onclick="toggleRem('${esc(d.id)}')">${n} ${remOpen.has(d.id) ? '▾' : '▸'}</button>` : '0'}</td>
     <td style="white-space:nowrap"><button class="primary" onclick="quickLog('${d.id}')">快速紀錄</button>
-      <button class="ghost" onclick="startEditDev('${d.id}')">編輯設備</button>${delDevBtnHtml(d)}</td></tr>`;
+      <button class="ghost" onclick="startEditDev('${d.id}')">編輯設備</button>${delDevBtnHtml(d)}</td></tr>${remRowHtml(d)}${kindDraftRowHtml(d)}`;
 }
 // 客戶優先：每位客戶為一區塊，底下列出其設備，並可直接在該客戶下新增設備
 // 設備頁（v29）：以客戶為單位收合，底下列出該客戶的所有設備，並可直接在該客戶下新增設備
@@ -2474,56 +3092,65 @@ function devNewFormHtml(c) {
   return `<form onsubmit="addDevice(event)" class="form-row" style="margin-top:8px">
     <input type="hidden" name="customerId" value="${esc(c.id)}">
     <div><label>安裝地點</label><input name="location" placeholder="例如：行政中心"></div>
-    <div><label>設備類型</label><select name="kind" onchange="syncKindFields(this)"><option value="copier">事務設備（複合機、印表機）</option><option value="purifier">商用空氣清淨機</option>${NEW_KIND_OPTS}</select></div>
+    <div><label>設備類型</label><select name="kind" onchange="syncKindFields(this)">${kindOptsHtml('copier')}</select></div>
     <div class="f-print"><label>色彩（列印機型）</label><select name="hasColor"><option value="1">彩色</option><option value="0">黑白</option></select></div>
     ${contractFieldHtml('copier', '')}
     <div><label>品牌</label><input name="brand"></div>
     <div><label>型號</label><input name="model" required></div>
-    <div class="muted" style="grid-column:1/-1;font-size:13px">保養週期一律沿用客戶設定（目前：${esc(cycleOf(c).label)}），不需在設備個別設定。</div>
+    ${cycleFieldHtml('copier', null)}
+    <div><label>指定擔當</label>${asgSelHtml('assignee', asgDefault())}</div>
     ${newKindFieldsHtml(null)}
     ${featFormHtml(null)}
     ${tagCheckHtml({tags: []})}
     <div><button class="primary" type="submit">新增設備到此客戶</button></div></form>`;
 }
+function devTableHtml(devs, all) {
+  return devs.length
+    ? `<div style="overflow-x:auto"><table class="dev-tbl" style="min-width:660px"><thead><tr><th>設備（設備別・機型・地點・保養週期）</th><th>保養狀態</th><th class="num">提醒</th><th></th></tr></thead>
+        <tbody>${devs.map(devRowHtml).join('')}</tbody></table></div>`
+    : `<div class="muted">${all.length ? '沒有符合搜尋條件的設備。' : '此客戶尚無設備。'}</div>`;
+}
 function devListHtml(slot) {
+  remCgMemo = consGroups();
+  try { return devListHtmlInner(slot); } finally { remCgMemo = null; }
+}
+function devListHtmlInner(slot) {
   const pd = panelDev(); if (devPanel && !pd) devPanel = null;
+  if (kindDraft && !S.devices.some(d => d.id === kindDraft.id)) kindDraft = null;
   let placed = false;
   const panelOut = () => slot ? '<div id="devPanelSlot"></div>' : devPanelHtml(pd);
   const kindFilter = devKind !== 'all';
-  const custs = devCust ? S.customers.filter(c => c.id === devCust) : S.customers;
+  const custs = visCusts().filter(c => !devCust || c.id === devCust);
+  const sortDevs = arr => arr.slice().sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || (a.location || '').localeCompare(b.location || '', 'zh-TW'));
   const blocks = custs.map(c => {
     const all = devsOf(c.id);
-    if (editCustId === c.id) return `<div class="card sec-cust" style="margin-top:12px">
+    if (editCustId === c.id) return `<div class="card sec-cust cust-blk" data-cid="${esc(c.id)}" style="margin-top:12px">
       <h2>編輯客戶資料｜${esc(c.name)}</h2>
       <form onsubmit="saveCustomerInfo(event,'${c.id}')" class="form-row">
         ${customerFieldsHtml(c)}
         <div class="sqrow"><button class="primary sqbtn" type="submit">儲存客戶資料</button>
-          <button class="ghost sqbtn" type="button" onclick="cancelEditCust()">取消</button>
-          <button class="ghost sqbtn" type="button" onclick="openCustDev('${c.id}')">${custDevEdit === c.id ? '收合設備資料' : '編輯設備資料'}</button></div></form>${delCustBtnHtml(c)}${custDevEdit === c.id ? custDevPanelHtml(c) : ''}</div>`;
-    const devs = all.filter(d => devMatch(d, devQuery))
-      .sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || (a.location || '').localeCompare(b.location || '', 'zh-TW'));
+          <button class="ghost sqbtn" type="button" onclick="cancelEditCust()">取消</button></div></form>${delCustBtnHtml(c)}
+      <div style="margin-top:12px"><b>此客戶的設備（${all.length} 台）</b>${devTableHtml(sortDevs(all), all)}</div></div>`;
+    const devs = sortDevs(all.filter(d => devMatch(d, devQuery)));
     if (!devs.length && (kindFilter || tagFilter || !custMatch(c, devQuery))) return '';
     const alerts = devs.filter(d => reminderItems(d).length).length;
     const phones = [c.phone ? '聯繫 ☎ ' + c.phone : '', c.phone2 ? '備用 ☎ ' + c.phone2 : ''].filter(Boolean);
     const sub = [c.contact, ...phones, c.address].filter(Boolean).map(esc).join('　');
     const panelHere = !!pd && pd.customerId === c.id;
-    const open = openCusts.has(c.id) || !!devQuery.trim() || panelHere;
-    const devTable = devs.length
-      ? `<div style="overflow-x:auto"><table style="min-width:660px"><thead><tr><th>設備（設備別・機型・地點・保養週期）</th><th>保養狀態</th><th class="num">提醒</th><th></th></tr></thead>
-          <tbody>${devs.map(devRowHtml).join('')}</tbody></table></div>`
-      : `<div class="muted">${all.length ? '沒有符合搜尋條件的設備。' : '此客戶尚無設備。'}</div>`;
-    return `<details class="card sec-cust" data-cid="${esc(c.id)}" ${open ? 'open' : ''} ontoggle="toggleCust('${c.id}', this.open)" style="margin-top:12px">
-      <summary style="cursor:pointer;list-style:none">
-        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
-          <span><a href="#" class="cust-link" title="點擊修改客戶資料" onclick="custEditFromManage(event,'${c.id}')"><b style="font-size:16px">${esc(c.name)}</b></a> ${contractTagOf(c)} ${tagChipsHtml(c)} <span class="tag t-info">${all.length} 台設備</span>${alerts ? ` <span class="tag t-warn">${alerts} 台需注意</span>` : ''}</span>
-          <span class="muted" style="font-size:13px">保養週期：${esc(cycleOf(c).label)}</span></div>
-</summary>
-      <div style="margin-top:10px">
+    const searching = !!devQuery.trim();
+    const open = openCustSet.has(c.id) || searching || panelHere;
+    const btn = searching || panelHere ? '' : `<button class="ghost cust-toggle" type="button" style="padding:4px 10px" onclick="toggleCustOpen('${c.id}')">${open ? '收合' : '展開設備'}</button>`;
+    const filtered = devs.length !== all.length;
+    return `<div class="card sec-cust cust-blk" data-cid="${esc(c.id)}" data-open="${open ? 1 : 0}" style="margin-top:12px;padding:10px 14px">
+      <div class="cust-head" onclick="custRowClick(event,'${c.id}')" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;cursor:pointer" title="點一下展開或收合設備清單">
+        <span><a href="#" class="cust-link" title="點擊修改客戶資料" onclick="custEditFromManage(event,'${c.id}')"><b style="font-size:16px">${esc(c.name)}</b></a> ${contractTagOf(c)} ${tagChipsHtml(c)} <span class="tag t-info" title="${filtered ? '符合目前篩選的台數／全部台數' : ''}">${filtered ? `${devs.length}／${all.length}` : all.length} 台設備</span>${alerts ? ` <span class="tag t-warn">${alerts} 台需注意</span>` : ''}</span>
+        <span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="muted" style="font-size:13px">保養週期：${esc(cycleText(c))}</span>${btn}</span></div>
+      ${open ? `<div style="margin-top:10px">
         ${sub ? `<div class="muted" style="margin-bottom:8px;font-size:13px">${sub}</div>` : ''}
-        ${devTable}${panelHere ? (placed = true, panelOut()) : ''}
-        <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:600">＋ 在「${esc(c.name)}」新增設備</summary>${devNewFormHtml(c)}</details>
+        ${devTableHtml(devs, all)}${panelHere ? (placed = true, panelOut()) : ''}
+        <details style="margin-top:10px" ${all.length ? '' : 'open'}><summary style="cursor:pointer;font-weight:600">＋ 在「${esc(c.name)}」新增設備</summary>${devNewFormHtml(c)}</details>
         <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="primary" onclick="openPlanFromCust('${c.id}')">新增保養紀錄</button><button class="ghost" onclick="startEditCust('${c.id}')">編輯客戶資料</button></div>
-      </div></details>`;
+      </div>` : ''}</div>`;
   }).join('');
   const lead = pd && !placed ? `<div class="muted" style="margin:4px 0">此設備所屬客戶目前未列在下方（被搜尋或篩選條件隱藏），設備紀錄先顯示於此。</div>${panelOut()}` : '';
   return lead + (blocks || '<div class="empty">找不到符合的客戶或設備。請調整搜尋或篩選條件。</div>');
@@ -2552,32 +3179,43 @@ function filterDevices(v) {
     if (slot) { if (keep) slot.replaceWith(keep); else { const pd = panelDev(); slot.outerHTML = pd ? devPanelHtml(pd) : ''; } }
   }
   const b = document.querySelector('#recentList'); if (b) b.innerHTML = recentRowsHtml();
+  const t = document.getElementById('devTabs'); if (t) t.innerHTML = devTabsHtml();
 }
 function addDeviceForm() {
   if (!S.customers.length) return '<div class="empty">請先在最上方新增客戶。</div>';
   const pick = preDevCust || selCust;
   return `<form onsubmit="addDevice(event)"><div class="form-row">
-    <div><label>客戶</label><select name="customerId">${S.customers.map(c => `<option value="${c.id}" ${c.id === pick ? 'selected' : ''}>${esc(c.name)}${c.contact ? '｜' + esc(c.contact) : ''}${c.address ? '｜' + esc(c.address) : ''}</option>`).join('')}</select></div>
+    <div><label>客戶</label><select name="customerId">${visCusts().map(c => `<option value="${c.id}" ${c.id === pick ? 'selected' : ''}>${esc(c.name)}${c.contact ? '｜' + esc(c.contact) : ''}${c.address ? '｜' + esc(c.address) : ''}</option>`).join('')}</select></div>
     <div><label>安裝地點</label><input name="location" placeholder="例如：行政中心"></div>
-    <div><label>設備類型</label><select name="kind" onchange="syncKindFields(this)"><option value="copier">事務設備（複合機、印表機）</option><option value="purifier">商用空氣清淨機</option>${NEW_KIND_OPTS}</select></div>
+    <div><label>設備類型</label><select name="kind" onchange="syncKindFields(this)">${kindOptsHtml('copier')}</select></div>
     <div class="f-print"><label>色彩（列印機型）</label><select name="hasColor"><option value="1">彩色</option><option value="0">黑白</option></select></div>
     ${contractFieldHtml('copier', '')}
     <div><label>品牌</label><input name="brand"></div>
     <div><label>型號</label><input name="model" required></div>
-    <div class="muted" style="grid-column:1/-1;font-size:13px">保養週期一律沿用該客戶的設定，不需在設備個別設定。</div>
+    ${cycleFieldHtml('copier', null)}
+    <div><label>指定擔當</label>${asgSelHtml('assignee', asgDefault())}</div>
     ${newKindFieldsHtml(null)}
     ${featFormHtml(null)}
     ${tagCheckHtml({tags: []})}
     <div><button class="primary" type="submit">新增設備</button></div></div></form>`;
 }
+function devCount(k) {
+  return S.devices.filter(d => { const c = custOf(d); return c && custVisible(c) && devMatch(d, devQuery, true) && (k === 'all' || catOfKind(d.kind) === k); }).length;
+}
+function devTabsHtml() {
+  const shown = S.devices.filter(d => { const c = custOf(d); return c && custVisible(c) && devMatch(d, devQuery); }).length;
+  const filt = devQuery.trim() || tagFilter || devCust;
+  return visCats().map(c => `<button class="${devKind === c.k ? 'primary' : 'ghost'}" onclick="toggleDevKind('${c.k}')">${esc(c.label)} ${devCount(c.k)} 台</button>`).join('')
+    + `<span class="muted" style="align-self:center;font-size:13px">${devKind === 'all' ? `目前列出 ${shown} 台${filt ? '（符合搜尋或篩選）' : ''}；點分類可篩選` : `目前只顯示「${esc(kindCatLabel(devKind))}」${shown} 台；再點一次取消篩選`}</span>`;
+}
 function overviewHtml() {
-  const count = k => k === 'all' ? S.devices.length : S.devices.filter(d => catOfKind(d.kind) === k).length;
-  const tabs = KIND_CATS.map(c => c.k).map(k => `<button class="${devKind === k ? 'primary' : 'ghost'}" onclick="toggleDevKind('${k}')">${kindCatLabel(k)} ${count(k)}</button>`).join('')
-    + `<span class="muted" style="align-self:center;font-size:13px">${devKind === 'all' ? `目前顯示全部 ${S.devices.length} 台；點分類可篩選` : `目前只顯示「${esc(kindCatLabel(devKind))}」；再點一次取消篩選`}</span>`;
-  const custOpts = S.customers.map(c => `<option value="${c.id}" ${c.id === devCust ? 'selected' : ''}>${esc(c.name)}${c.contact ? '｜' + esc(c.contact) : ''}${c.address ? '｜' + esc(c.address) : ''}</option>`).join('');
+  const tabs = devTabsHtml();
+  const custOpts = visCusts().map(c => `<option value="${c.id}" ${c.id === devCust ? 'selected' : ''}>${esc(c.name)}${c.contact ? '｜' + esc(c.contact) : ''}${c.address ? '｜' + esc(c.address) : ''}</option>`).join('');
   return `<div class="card"><h2>設備資料總覽</h2>
-    <p class="note" style="margin-top:0">以客戶為主：每位客戶底下列出其設備，可在該客戶下新增設備。保養完成後按「快速紀錄」，紀錄區會直接展開在該客戶的設備下方。</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${tabs}</div>
+    <p class="note" style="margin-top:0">以客戶為主：先列出客戶，點客戶那一行展開該客戶的設備，可在該客戶下新增設備。保養完成後按「快速紀錄」，紀錄區會直接展開在該客戶的設備下方。</p>
+    <div id="devTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${tabs}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><button class="ghost" type="button" onclick="setAllCustOpen(true)">全部展開</button><button class="ghost" type="button" onclick="setAllCustOpen(false)">全部收合</button>
+      <span class="muted" style="font-size:13px">預設只顯示客戶；點客戶那一行展開設備。設備類別可直接在清單上選擇修改（需按兩下「確認修改」）。搜尋時符合的客戶會自動展開。</span></div>
     <div class="form-row" style="margin:0">
       <div style="grid-column:span 2"><label>搜尋設備或客戶</label>
         <input type="search" value="${esc(devQuery)}" placeholder="設備、地點、機型，或客戶名稱、聯絡人、電話、地址、標籤" oninput="filterDevices(this.value)"></div>
@@ -2608,7 +3246,7 @@ function recentRowsHtml() {
       const eng = l.engConfirmed ? '<span class="tag t-ok">客戶已親簽</span>' : '<span class="tag t-info">未親簽</span>';
       const opinion = l.supOpinion ? `<div style="margin-top:6px;padding:6px 8px;background:#eff6ff;border-radius:6px"><b>主管意見：</b>${esc(l.supOpinion)}</div>` : '';
       return `<tr>
-        <td>${esc(l.date)}<div class="muted">${esc(l.type)}</div></td>
+        <td>${esc(l.date)}<div class="muted">${svcHtml(l)}</div></td>
         <td style="font-size:13px"><b>${esc(custName(d))}</b>　${esc(d.location || '—')}
           <div class="muted">${esc(KIND[d.kind])} ${esc(d.model)}　擔當工程師：${esc(l.engineer || '—')}</div>
           ${l.bw != null ? `<div class="muted">黑白 ${fmt(l.bw)}${d.hasColor && l.color != null ? ` ／ 彩色 ${fmt(l.color)}` : ''}${isLarge(d) && l.colorLarge != null ? ` ／ 彩色大尺寸 ${fmt(l.colorLarge)}` : ''}</div>` : ''}
@@ -2652,7 +3290,6 @@ function customerFormHtml() {
       <div><label>聯絡人</label><input name="contact" placeholder="例如：王小姐"></div>
       <div><label>地址</label><input name="address"></div>
       <div><label>備註</label><input name="note"></div>
-      <div><label>保養週期建議</label><select name="cycleMonths">${CYCLE_OPTS.map(o => `<option value="${o.m}" ${o.m === 3 ? 'selected' : ''}>${o.label}</option>`).join('')}</select></div>
       <div><button class="primary" type="submit">新增客戶</button></div>
     </div></form></details>`;
 }
@@ -2675,7 +3312,7 @@ function deviceHtml(dev) {
       <tr><th style="width:110px">客戶</th><td>${esc(custName(dev))} ${contractTag(dev)}${(() => { const c = S.customers.find(x => x.id === dev.customerId); return c && (c.phone || c.phone2) ? ` <span class="muted">☎ ${esc(c.phone || '')}${c.phone2 ? '　備用 ☎ ' + esc(c.phone2) : ''}</span>` : ''; })()}</td>
           <th style="width:110px">安裝地點</th><td>${esc(dev.location || '—')}</td></tr>
       <tr><th style="width:110px">機型</th><td>${esc(KIND[dev.kind])}｜${esc(dev.brand)} ${esc(dev.model)}${isPrint(dev) ? `｜${dev.hasColor ? '彩色機' : '黑白機'}` : ''}</td>
-          <th>保養週期</th><td>${devCycle(dev).label}（依客戶設定）　${svTag}</td><th>上次服務</th><td>${sv.last || '—'}</td></tr>
+          <th>保養週期</th><td>${devCycle(dev).label}${cycOpt(dev.cycleMonths) ? '' : '（沿用客戶原本的週期，儲存設備後固定）'}　${svTag}</td><th>上次服務</th><td>${sv.last || '—'}</td></tr>
       <tr><th>黑白月均</th><td>${isPrint(dev) ? avgTxt(avgOf(dev.id, 'bw')) : '—'}</td>
           <th>彩色月均</th><td>${isPrint(dev) && dev.hasColor ? avgTxt(avgOf(dev.id, 'color')) : '—'}</td></tr>
       <tr><th>最近讀數</th><td>${(() => { const lv = visitsOf(dev.id).filter(x => x.bw != null).pop();
@@ -2683,6 +3320,8 @@ function deviceHtml(dev) {
           ${isLarge(dev) ? (() => { const g = visitsOf(dev.id).filter(x => x.colorLarge != null).pop();
             return `<th>彩色大尺寸</th><td>${g ? `${fmt(g.colorLarge)}（${g.date}）` : '—'}</td>`; })() : ''}</tr>
       ${featRowsHtml(dev)}
+      ${isPrint(dev) ? '' : `<tr><th>上次保養清潔</th><td colspan="3">${lastCleanSvc(dev) ? esc(lastCleanSvc(dev)) : '<span class="muted">尚無紀錄</span>'}</td></tr>
+      <tr><th>耗材最近更換</th><td colspan="3">${odorReplHtml(dev)}</td></tr>`}
       <tr><th>最新主管意見</th><td colspan="3">${(() => { const o = latestOpinion(dev.id); return o ? `${esc(o.supOpinion)} <span class="muted">（${o.date}）</span>` : '<span class="muted">尚無</span>'; })()}</td></tr>
     </tbody></table></div>`;
 }
@@ -2691,7 +3330,7 @@ function remindHtml(dev) {
   const items = reminderItems(dev);
   return `<div class="card sec-remind"><h2>提醒</h2>
     ${items.length ? items.map(i => `<div style="margin:6px 0">${i.tag} ${esc(i.text)}</div>`).join('') : '<span class="tag t-ok">目前沒有提醒</span>'}
-    <p class="note">黃色為一般提醒；紅色只用於已逾期需立即備貨。資料不足的耗材會列出原因，補齊後即自動推估。</p></div>`;
+    <p class="note">黃色為一般提醒；紅色只用於已逾期需立即備貨。只列需要處理的事項；耗材暫時無法推估的原因，請看下方「耗材管理」的說明，補齊後即自動推估。</p></div>`;
 }
 
 // 服務紀錄：登錄 ＋ 逐次拜訪病歷 ＋ 一覽
@@ -2703,17 +3342,17 @@ function visitPageHtml(dev, visits, i) {
   const deltaCell = isPrint(dev) ? sg(m.bwDelta) + (dev.hasColor ? ' ／ ' + sg(m.coDelta) : '') : '—';
   const avgCell = !isPrint(dev) ? '—'
     : m.avgBw != null ? fmt(m.avgBw) + (dev.hasColor && m.avgCo != null ? ' ／ ' + fmt(m.avgCo) : '') + ' 張／月'
-    : '<span class="muted">資料不足</span>';
+    : '<span class="muted">—</span>';
   const alertHtml = m.alerts.length
     ? m.alerts.map(a => `<div style="margin:4px 0"><span class="tag t-warn">提示</span> ${esc(a)}</div>`).join('')
     : '<span class="tag t-ok">無系統提示</span>';
   const evHtml = m.events.length ? m.events.map(x => `<span class="tag t-info">${esc(x)}</span>`).join(' ')
     : '<span class="muted">本次未更換耗材</span>';
   return `<div>
-    <h2>第 ${seqNo(visits.length, i)} 筆｜${esc(v.date)}｜${esc(v.type)}${seqTag(visits.length, i)}</h2>
+    <h2>第 ${seqNo(visits.length, i)} 筆｜${esc(v.date)}｜${esc(svcText(v))}${seqTag(visits.length, i)}</h2>
     <table style="min-width:0"><thead><tr><th>拜訪日期</th><th>服務類型</th><th class="num">黑白張數</th><th class="num">彩色張數</th>${isLarge(dev) ? '<th class="num">彩色大尺寸張數</th>' : ''}
       <th class="num">本次增量（黑白 ／ 彩色${isLarge(dev) ? '含大尺寸' : ''}）</th><th class="num">距上次</th><th class="num">近六個月平均</th></tr></thead>
-    <tbody><tr><td>${esc(v.date)}<div class="muted">擔當工程師：${esc(v.engineer || '—')}</div></td><td>${esc(v.type)}</td>
+    <tbody><tr><td>${esc(v.date)}<div class="muted">擔當工程師：${esc(v.engineer || '—')}</div></td><td>${svcHtml(v)}</td>
       <td class="num">${bwCell}</td><td class="num">${coCell}</td>${isLarge(dev) ? `<td class="num">${v.colorLarge != null ? fmt(v.colorLarge) : '—'}</td>` : ''}<td class="num">${deltaCell}</td>
       <td class="num">${m.gap == null ? '首次拜訪' : m.gap + ' 天'}</td><td class="num">${avgCell}</td></tr></tbody></table>
     <h2 style="margin-top:14px">系統提示</h2><div>${alertHtml}</div>
@@ -2762,7 +3401,7 @@ function serviceHtml(dev) {
       const x = visits[k], mm = visitMetrics(dev, visits, k);
       return `<tr class="visit-row" data-seq="${seqNo(n, k)}" onclick="goVisit(${k})" title="點擊查看這次服務的詳細內容" style="cursor:pointer;${k === i ? 'background:#eff6ff' : lastSavedLogId === x.id ? 'background:#fef9c3' : ''}">
         <td style="white-space:nowrap"><button class="ghost seq-btn" type="button" onclick="event.stopPropagation();goVisit(${k})">第 ${seqNo(n, k)} 筆</button>${seqTag(n, k)}</td>
-        <td>${esc(x.date)}</td><td>${esc(x.type)}</td>
+        <td>${esc(x.date)}</td><td>${svcHtml(x)}</td>
         <td class="num">${isPrint(dev) && x.bw != null ? fmt(x.bw) : '—'}</td>
         <td class="num">${isPrint(dev) && dev.hasColor && x.color != null ? fmt(x.color) : '—'}</td>${isLarge(dev) ? `<td class="num">${x.colorLarge != null ? fmt(x.colorLarge) : '—'}</td>` : ''}
         <td class="num" style="white-space:nowrap">${avgCellHtml(dev, mm)}</td>
@@ -2780,7 +3419,15 @@ function serviceHtml(dev) {
 }
 
 // 耗材庫存：自動預估更換時間
+function odorConsCardHtml(dev) {
+  const names = odorReplNames(dev), m = odorLastRepl(dev);
+  const rows = names.map(n => { const r = m.get(n); return `<tr><td><b>${esc(n)}</b></td><td>${r ? esc(r.date) : '<span class="muted">尚無更換紀錄</span>'}</td><td class="num">${r ? r.qty + ' 件' : '—'}</td><td class="num">${r ? r.n + ' 次' : '—'}</td></tr>`; }).join('');
+  return `<div class="card sec-cons"><h2>耗材更換紀錄</h2>
+    ${rows ? `<div style="overflow-x:auto"><table style="min-width:420px"><thead><tr><th>耗材項目</th><th>最近更換日</th><th class="num">最近更換數量</th><th class="num">累計次數</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="empty">此設備類別尚未設定耗材更換項目。</div>'}
+    <p class="note">除味設備的耗材更換只記錄在「服務紀錄」裡：新增保養紀錄時勾選「已更換」即可。這裡只列出紀錄，不管庫存、不推估更換日，也不會出現在儀表板的耗材提醒。</p></div>`;
+}
 function consHtml(dev) {
+  if (!isPrint(dev)) return odorConsCardHtml(dev);   // V63：除味設備不使用耗材管理
   const groups = consGroups();
   const list = S.consumables.filter(c => c.deviceId === dev.id);
   const gOf = c => groups.find(g => g.members.some(s => s.c.id === c.id)) || null;
@@ -2870,23 +3517,19 @@ function consHtml(dev) {
 
 // 管理：客戶保養週期（V55：計張費率移到計張計價系統）
 function manageHtml() {
-  const dev = S.devices.find(d => d.id === selDev) || null;
-  const cust = dev ? S.customers.find(c => c.id === dev.customerId) : (S.customers[0] || null);
+  const custs = S.customers.filter(c => devsOf(c.id).length);
   return `<div class="card"><details ${mgmtOpen ? 'open' : ''} ontoggle="mgmtOpen=this.open">
-    <summary style="cursor:pointer;font-weight:600">管理：客戶保養週期</summary>
+    <summary style="cursor:pointer;font-weight:600">管理：保養週期與指定擔當</summary>
     <div style="margin-top:12px">
-      <h2 style="margin-top:4px">客戶保養週期</h2>
-      ${S.customers.map(c => `<form onsubmit="saveCycle(event,'${c.id}')" class="form-row" style="margin:6px 0;align-items:end">
-        <div style="grid-column:span 2"><b>${esc(c.name)}</b> <span class="muted">（${devsOf(c.id).length} 台設備）</span></div>
-        <div><label>保養週期</label><select name="cm">${CYCLE_OPTS.map(o => `<option value="${o.m}" ${o.m === cycleOf(c).m ? 'selected' : ''}>${o.label}</option>`).join('')}</select></div>
-        <div><button class="ghost" type="submit">儲存週期</button></div></form>`).join('') || '<div class="empty">尚無客戶。</div>'}
-      <p class="note">變更週期後，該客戶所有設備一律依新週期推算應保養月份，並影響月保養名單與到期提醒。</p>
-      ${false ? `<h2 style="margin-top:14px">刪除</h2>
-      ${cust ? `<button class="ghost" onclick="delCustomer('${cust.id}')">刪除客戶「${esc(cust.name)}」（含 ${devsOf(cust.id).length} 台設備）</button> ` : ''}
-      ${dev ? `<button class="ghost" onclick="delDevice('${dev.id}')">刪除設備「${esc(dev.model)}」</button>` : ''}` : ''}
+      <p class="note" style="margin-top:0">保養週期與指定擔當都設在每台設備上，每台設備一行。可一次修改同一位客戶的多台設備，再按「儲存」。灰字「沿用」表示這台設備還沒有自己的週期，目前沿用客戶原本的設定，儲存後就固定在設備上。指定擔當的名單由管理者在「設定」維護。</p>
+      ${custs.map(c => `<form onsubmit="saveCycle(event,'${c.id}')" data-cid="${esc(c.id)}" style="margin:8px 0;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><b>${esc(c.name)}</b><span class="muted" style="font-size:13px">${esc(cycleText(c))}</span></div>
+        ${devsOf(c.id).slice().sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind)).map(d => `<div class="mg-dev" data-dev="${esc(d.id)}"><div><b>${esc(KIND[d.kind])} ${esc(d.model || '')}</b>${d.location ? '<div class="muted">' + esc(d.location) + '</div>' : ''}</div>
+          <div><label>保養週期${cycOpt(d.cycleMonths) ? '' : ' <span class="muted">（沿用）</span>'}</label>${cycleSelHtml('cy_' + d.id, devCycle(d).m)}</div>
+          <div><label>指定擔當</label>${asgSelHtml('as_' + d.id, asgOf(d))}</div></div>`).join('')}
+        <div style="margin-top:6px"><button class="ghost" type="submit">儲存</button></div></form>`).join('') || '<div class="empty">尚無設備。</div>'}
     </div></details></div>`;
 }
-
 
 /* 清除示範資料（僅管理者）：只刪除「範例客戶」及其設備、服務紀錄、耗材、事件，以及示範擔當工程師；耗材目錄與其他資料保留 */
 /* 確認方式：頁面內「按兩次」，不使用瀏覽器確認視窗（部分預覽環境會直接阻擋，造成按鈕沒有反應） */
@@ -2926,9 +3569,27 @@ function saveCycle(e, cid) {
   const f = new FormData(e.target);
   const c = S.customers.find(x => x.id === cid);
   if (!c) return toast('找不到此客戶');
-  c.cycleMonths = +f.get('cm') || 3;
-  logOp('修改保養週期', `${c.name}：${cycleOf(c).label}`);
-  save(); toast(`已設定為「${cycleOf(c).label}」（該客戶所有設備一併適用）`); render();
+  const plan = [];
+  for (const d of devsOf(cid)) {
+    const rawA = String(f.get('as_' + d.id) ?? '').trim(), a1 = rawA ? asgFrom(f, 'as_' + d.id, d) : null;
+    if (rawA && !a1) return toast(`「${d.model || ''}」的指定擔當請從名單中選擇`);
+    plan.push({d, v: cycleIn(f, 'cy_' + d.id, null), a1});
+  }
+  const ch = [], chA = [];
+  plan.forEach(({d, v, a1}) => {
+    if (v != null) {
+      if (v !== devCycle(d).m) ch.push(`${d.model || ''}：${devCycle(d).label} → ${cycOpt(v).label}`);
+      if (v !== devCycle(d).m || !cycOpt(d.cycleMonths)) d.cycleMonths = v;
+    }
+    if (a1) {
+      const a0 = asgOf(d);
+      if (a1 !== a0) chA.push(`${d.model || ''}：${a0} → ${a1}`);
+      if (a1 !== a0 || !d.assignee) d.assignee = a1;
+    }
+  });
+  if (ch.length) logOp('修改保養週期', `${c.name}｜${ch.join('、')}`);
+  if (chA.length) logOp('修改指定擔當', `${c.name}｜${chA.join('、')}`);
+  save(); toast(ch.length || chA.length ? `已更新：${[ch.length ? `${ch.length} 台設備的保養週期` : '', chA.length ? `${chA.length} 台設備的指定擔當` : ''].filter(Boolean).join('、')}` : '已儲存（沒有變動）'); render();
 }
 function addCustomer(e) {
   e.preventDefault();
@@ -2936,7 +3597,7 @@ function addCustomer(e) {
   const name = f.get('name').trim();
   if (!name) return toast('請填寫客戶名稱');
   const t = n => (f.get(n) || '').toString().trim();
-  const c = {id:uid(), name, phone:t('phone'), phone2:t('phone2'), contact:t('contact'), address:t('address'), note:t('note'), cycleMonths:+f.get('cycleMonths') || 3};
+  const c = {id:uid(), name, phone:t('phone'), phone2:t('phone2'), contact:t('contact'), address:t('address'), note:t('note')};
   logOp('新增客戶', c.name);
   S.customers.push(c); selCust = c.id; selDev = null; planNewCust = false;
   save(); toast(`已新增客戶「${c.name}」`); render();
@@ -2946,16 +3607,19 @@ function addDevice(e) {
   const f = new FormData(e.target);
   const kind = f.get('kind');
   if (!KIND_ORDER.includes(kind)) return toast('設備類別不正確');
+  if (!kindVisible(kind)) return toast('你的身份不能新增此類別的設備');
   const contract = String(f.get('contract') || '');
   if (!contractsFor(kind).includes(contract)) return toast('請選擇合約型態');
   const d = {id:uid(), customerId:f.get('customerId'), kind, contract,
              hasColor: kindIsPrint(kind) && f.get('hasColor') === '1',
              brand:f.get('brand').trim(), model:f.get('model').trim(), location:f.get('location').trim(),
-             billing: kindIsPrint(kind) && contract === '計張',
+             billing: kindIsPrint(kind) && contract === '計張', cycleMonths: cycleIn(f, 'cycleMonths', defCycleOfKind(kind).m),
+             assignee: asgFrom(f, 'assignee', null) || asgDefault(),
              tags: readTags(f), ...featFrom(f, kind), ...(NEW_KINDS.includes(kind) ? newKindFrom(f) : {})};
   if (!d.model) return toast('請填寫型號');
   logOp('新增設備', `${custName(d)}｜${d.model}｜${contract}`);
   S.devices.push(d); selCust = d.customerId; selDev = d.id; chartIdx = null; devQuery = ''; preDevCust = null; openCusts.add(d.customerId);
+  openCustSet.add(d.customerId);
   if (!editCustId) devPanel = d.id;
   save(); toast('已新增設備'); render();
 }
@@ -3000,17 +3664,18 @@ const delDevBtnHtml = d => isAdmin() ? ` <button class="ghost danger" type="butt
 function visitMetrics(dev, visits, i) {
   const v = visits[i], prev = i > 0 ? visits[i - 1] : null;
   const dt = toDate(v.date);
-  const out = {gap: null, bwDelta: null, coDelta: null, avgBw: null, avgCo: null, rate: null, alerts: [], events: []};
+  const out = {gap: null, bwDelta: null, coDelta: null, avgBw: null, avgCo: null, rate: null, alerts: [], fix: [], events: []};   // V65：fix＝需要修正這筆紀錄的問題（才會列入設備提醒）
   if (prev) out.gap = daysBetween(toDate(prev.date), dt);
 
-  S.events.filter(e => e.date === v.date).forEach(e => {
+  if (isPrint(dev)) S.events.filter(e => e.date === v.date).forEach(e => {
     const c = S.consumables.find(x => x.id === e.consId && x.deviceId === dev.id);
     if (!c) return;
     out.events.push(c.name);
     (e.flags || []).forEach(f => out.alerts.push(`耗材更換異常（${c.name}）：${f}`));
   });
+  else consReplOf(v).forEach(x => out.events.push(`${x.name} ×${x.qty}`));   // V63：除味設備只讀紀錄上勾選的更換項目
 
-  const prevSvc = isSvcLog(v) ? visits.slice(0, i).reverse().find(isSvcLog) : null;   // V55：拜訪間隔只比對到府服務，不含抄表
+  const prevSvc = isSvcLog(v) ? visits.slice(0, i).reverse().find(isSvcLog) : null;   // V63：所有服務紀錄都算保養，拜訪間隔比對前一筆紀錄
   if (prevSvc) {
     const sg = daysBetween(toDate(prevSvc.date), dt);
     if (sg < 14) out.alerts.push(`距上次拜訪僅 ${sg} 天，請確認是否重複登錄`);
@@ -3019,15 +3684,15 @@ function visitMetrics(dev, visits, i) {
   }
 
   if (isPrint(dev)) {
-    if (v.bw == null) out.alerts.push('本次未記錄張數');
+    if (v.bw == null) { out.alerts.push('本次未記錄張數'); if (devContract(dev) !== '賣斷') out.fix.push('本次未記錄張數'); }   // 賣斷機不需要抄表，不列提醒
     const prevR = visits.slice(0, i).reverse().find(x => x.bw != null);
     if (v.bw != null && prevR) {
       out.bwDelta = v.bw - prevR.bw;
-      if (out.bwDelta < 0) out.alerts.push('黑白張數低於上次，請確認是否換機或歸零');
+      if (out.bwDelta < 0) { out.alerts.push('黑白張數低於上次，請確認是否換機或歸零'); out.fix.push('黑白張數低於上次，請確認是否換機或歸零'); }
       const vCo = colorOf(dev, v), pCo = colorOf(dev, prevR);
       if (dev.hasColor && vCo != null && pCo != null) {
         out.coDelta = vCo - pCo;
-        if (out.coDelta < 0) out.alerts.push('彩色張數低於上次，請確認是否換機或歸零');
+        if (out.coDelta < 0) { out.alerts.push('彩色張數低於上次，請確認是否換機或歸零'); out.fix.push('彩色張數低於上次，請確認是否換機或歸零'); }
       }
       const start = new Date(dt.getTime() - WIN * DAY);
       const pts = visits.slice(0, i + 1).filter(x => x.bw != null).map(x => ({dt: toDate(x.date), bw: x.bw, co: colorOf(dev, x)}));
@@ -3073,25 +3738,28 @@ function addLog(e) {
   const rIss = readingIssues(dev, txt('date'), null, bw, coComb, colorLarge);
   if (rIss.length && !confirmTwice(`${rIss.join('；')}。張數應依日期遞增；若為換機或歸零請按確定。`)) return;
   if (isLarge(dev) && color != null && colorLarge == null && !confirmTwice('已啟用彩色大尺寸張數但未填寫，本次彩色不計入平均。確定要儲存嗎？')) return;
-  const stk = applyStockInputs(dev, f);
+  const od = isP ? null : readOdorForm(dev, f, null);
+  if (od && !od.ok) return toast(od.msg);
+  const stk = od ? {ok: true, changes: []} : applyStockInputs(dev, f);
   if (!stk.ok) return toast(stk.msg);
-  const ncs = applyNewCats(dev, f, {bw, color: colorOf(dev, {color, colorLarge})});
+  const ncs = od ? {ok: true, creates: [], pending: []} : applyNewCats(dev, f, {bw, color: colorOf(dev, {color, colorLarge})});
   if (!ncs.ok) return toast(ncs.msg);
   const other = txt('consOther').slice(0, 300);
   commitStock(dev, stk.changes);
   commitNewCats(dev, ncs, txt('date'));
   const newLogId = uid(); lastSavedLogId = newLogId;
-  S.logs.push({id:newLogId, deviceId:dev.id, date:f.get('date'), type:f.get('type'), bw, color, colorLarge,
+  S.logs.push({id:newLogId, deviceId:dev.id, date:f.get('date'), type: od ? od.type : f.get('type'), bw, color, colorLarge,
+               ...(od ? {svcItems: od.svcItems, consRepl: od.consRepl} : {}),
                engineer: txt('engineer'), serviceRecord: txt('serviceRecord'),
-               customerInstruction: txt('customerInstruction'), consumableStock: stockText(dev, ncs, other), consOther: other,
+               customerInstruction: txt('customerInstruction'), consumableStock: od ? '' : stockText(dev, ncs, other), consOther: other,
                purchaseSignal: txt('purchaseSignal'), note: txt('note'),
                engConfirmed: f.get('engConfirmed') === 'on'});
-  chartIdx = null; quickDev = null;
-  logOp('新增服務紀錄', `${custName(dev)}｜${dev.model}｜${txt('type')}`);
+  chartIdx = null; quickDev = null; remAddDev = null;
+  logOp('新增服務紀錄', `${custName(dev)}｜${dev.model}｜${od ? od.svcItems.join('、') : txt('type')}`);
   if (txt('engineer')) S.ui.lastEngineer = txt('engineer');
   save();
   lastStockAlert = {devId: dev.id, html: stockAlertHtml(dev)};
-  if (!isP) { toast(`已記錄（${txt('date')}）。${siteLabel(dev)}`); return render(); }
+  if (!isP) { toast(`已記錄（${txt('date')}）。${custName(dev)}｜${dev.location || ''}`); return render(); }
   const b = avgOf(dev.id, 'bw'), c = dev.hasColor ? avgOf(dev.id, 'color') : null;
   const parts = [];
   if (b.avg != null) parts.push(`黑白 ${fmt(b.avg)} 張／月`);
@@ -3142,7 +3810,7 @@ function staffExtraFrom(f) {
 function staffHtml() {
   const rows = S.staff.map(s => `<tr><td><b>${esc(s.name)}</b>${s.email ? `<div class="muted" style="font-size:12px">${esc(s.email)}</div>` : ''}</td><td>${esc(s.title || '—')}</td><td>${esc(s.phone || '—')}</td>
       <td>${s.active ? '<span class="tag t-ok">在職</span>' : '<span class="muted">停用</span>'}</td>
-      <td>${s.admin ? '<span class="tag t-warn">管理者</span>' : '<span class="muted">一般</span>'} ${s.pw || CLOUD_ON ? '' : '<span class="tag t-gray">未設密碼</span>'}</td>
+      <td data-role="${esc(roleOf(s))}">${s.admin ? '<span class="tag t-warn">管理者</span>' : `<span class="tag t-info">${esc(roleOf(s))}</span>`} ${s.pw || CLOUD_ON ? '' : '<span class="tag t-gray">未設密碼</span>'}</td>
       <td style="font-size:13px">${S.staffFields.map(fd => esc((s.extra || {})[fd.key] || '')).join(' ／ ') || '—'}</td>
       <td><details><summary style="cursor:pointer">編輯</summary>
         <form onsubmit="saveStaff(event,'${s.id}')" class="form-row" style="margin-top:8px">
@@ -3151,7 +3819,7 @@ function staffHtml() {
           <div><label>電話</label><input name="phone" value="${esc(s.phone || '')}"></div>
           <div><label>登入信箱（Google 帳號）</label><input type="email" name="email" value="${esc(s.email || '')}"></div>
           <div><label>狀態</label><select name="active"><option value="1" ${s.active ? 'selected' : ''}>在職</option><option value="0" ${s.active ? '' : 'selected'}>停用</option></select></div>
-          <div><label>權限</label><select name="admin"><option value="0" ${s.admin ? '' : 'selected'}>一般人員</option><option value="1" ${s.admin ? 'selected' : ''}>管理者</option></select></div>
+          <div><label>身份</label><select name="role">${ROLES.map(r => `<option ${roleOf(s) === r ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
           ${CLOUD_ON ? '' : `<div><label>重設密碼（不改請留空）</label><input type="password" name="newpw" minlength="4" autocomplete="new-password"></div>`}
           ${staffExtraInputs(s)}
           <div><button class="primary" type="submit">儲存</button></div></form></details></td></tr>`).join('');
@@ -3159,17 +3827,17 @@ function staffHtml() {
     ? S.staffFields.map(fd => `<span class="tag t-info">${esc(fd.label)}</span>`).join(' ')
     : '<span class="muted">尚無自訂欄位</span>';
   return `<div class="card sec-set"><h2>人員與權限</h2>
-    <p class="note">${CLOUD_ON ? '每位人員以 Google 帳號登入，「登入信箱」必須與該 Google 帳號相同。' : '每位人員以「姓名＋密碼」登入。'}管理者可新增人員、設定權限與重設密碼；一般人員可修改自己的密碼，並使用所有資料功能（不含設定與操作分析）。停用的人員無法登入，也不會出現在服務紀錄的選單中。</p>
+    <p class="note">${CLOUD_ON ? '每位人員以 Google 帳號登入，「登入信箱」必須與該 Google 帳號相同。' : '每位人員以「姓名＋密碼」登入。'}身份分四種：<b>管理者</b>（全部功能，含設定頁的備份、匯出、還原、匯入、人員與耗材目錄）；<b>工程部</b>（只看得到事務設備、商用空氣清淨機、商用臭氧機）；<b>會計部、行政人員</b>（看得到全部設備，並可進入計張計價系統）。管理者也可進入計張計價系統。停用的人員無法登入，也不會出現在服務紀錄的選單中。</p>
     <form onsubmit="addStaff(event)" class="form-row" style="margin-top:10px">
       <div><label>姓名</label><input name="name" required></div>
       <div><label>職稱</label><input name="title"></div>
       <div><label>電話</label><input name="phone"></div>
       <div><label>登入信箱（Google 帳號）</label><input type="email" name="email"></div>
       ${CLOUD_ON ? '' : '<div><label>初始密碼（至少 4 碼）</label><input type="password" name="pw" required minlength="4" autocomplete="new-password"></div>'}
-      <div><label>權限</label><select name="admin"><option value="0">一般人員</option><option value="1">管理者</option></select></div>
+      <div><label>身份</label><select name="role">${ROLES.map(r => `<option ${r === '工程部' ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
       ${staffExtraInputs(null)}
       <div><button class="primary" type="submit">新增人員</button></div></form>
-    <div style="overflow-x:auto;margin-top:12px"><table style="min-width:640px"><thead><tr><th>姓名</th><th>職稱</th><th>電話</th><th>狀態</th><th>權限</th><th>自訂欄位</th><th></th></tr></thead>
+    <div style="overflow-x:auto;margin-top:12px"><table style="min-width:640px"><thead><tr><th>姓名</th><th>職稱</th><th>電話</th><th>狀態</th><th>身份</th><th>自訂欄位</th><th></th></tr></thead>
       <tbody>${rows || '<tr><td colspan="7" class="empty">尚無人員。</td></tr>'}</tbody></table></div>
     <h2 style="margin-top:14px">人員自訂欄位</h2>
     <div style="margin-bottom:8px">${fieldList}</div>
@@ -3186,10 +3854,11 @@ function addStaff(e) {
   if (CLOUD_ON && !validEmail(t('email'))) return toast('請填寫正確的 Google 登入信箱');
   if (pw && pw.length < 4) return toast('初始密碼至少需要 4 碼');
   if (!pw && !CLOUD_ON) return toast('初始密碼至少需要 4 碼');
-  const s = {id: uid(), name: t('name'), title: t('title'), phone: t('phone'), email: t('email').toLowerCase(), active: true, admin: f.get('admin') === '1', pw: null, extra: staffExtraFrom(f)};
+  const role = ROLES.includes(String(f.get('role'))) ? String(f.get('role')) : '工程部';
+  const s = {id: uid(), name: t('name'), title: t('title'), phone: t('phone'), email: t('email').toLowerCase(), active: true, admin: role === '管理者', role, pw: null, extra: staffExtraFrom(f)};
   if (pw) setPw(s, pw);
   S.staff.push(s);
-  logOp('新增人員', `${s.name}（${s.admin ? '管理者' : '一般人員'}）`);
+  logOp('新增人員', `${s.name}（${s.role}）`);
   save(); toast('已新增人員'); render();
 }
 function saveStaff(e, id) {
@@ -3198,16 +3867,16 @@ function saveStaff(e, id) {
   const f = new FormData(e.target), t = n => (f.get(n) || '').toString().trim();
   if (!t('name')) return toast('請填寫姓名');
   if (S.staff.some(x => x.id !== id && x.name === t('name'))) return toast('已有同名人員');
-  const active = f.get('active') === '1', admin = f.get('admin') === '1';
+  const role = ROLES.includes(String(f.get('role'))) ? String(f.get('role')) : roleOf(s), admin = role === '管理者', active = f.get('active') === '1';
   const newPw = (f.get('newpw') || '').toString();
   if (newPw && newPw.length < 4) return toast('新密碼至少需要 4 碼');
   const otherAdmins = S.staff.filter(x => x.admin && x.active && x.id !== id).length;
   if ((!admin || !active) && s.admin && s.active && otherAdmins === 0) return toast('至少需保留一位在職管理者');
   if (CLOUD_ON && !validEmail(t('email'))) return toast('請填寫正確的 Google 登入信箱');
-  const oldName = s.name, wasAdmin = !!s.admin;
-  Object.assign(s, {name: t('name'), title: t('title'), phone: t('phone'), email: t('email').toLowerCase(), active, admin, extra: staffExtraFrom(f)});
+  const oldName = s.name, oldRole = roleOf(s);
+  Object.assign(s, {name: t('name'), title: t('title'), phone: t('phone'), email: t('email').toLowerCase(), active, admin, role, extra: staffExtraFrom(f)});
   logOp('修改人員', oldName === s.name ? s.name : `${oldName}→${s.name}`);
-  if (wasAdmin !== admin) logOp('變更權限', `${s.name}：${admin ? '設為管理者' : '取消管理者'}`);
+  if (oldRole !== role) logOp('變更身份', `${s.name}：${oldRole} → ${role}`);
   if (newPw) { setPw(s, newPw); logOp('重設密碼', s.name); }
   save(); toast('已更新人員'); render();
 }
@@ -3241,7 +3910,6 @@ function customerFieldsHtml(c) {
       <div><label>聯絡人</label><input name="contact" value="${esc(c.contact || '')}"></div>
       <div><label>聯繫電話</label><input name="phone" type="tel" value="${esc(c.phone || '')}"></div>
       <div><label>備用電話</label><input name="phone2" type="tel" value="${esc(c.phone2 || '')}"></div>
-      <div><label>保養週期</label><select name="cycleMonths">${CYCLE_OPTS.map(o => `<option value="${o.m}" ${o.m === cycleOf(c).m ? 'selected' : ''}>${o.label}</option>`).join('')}</select></div>
       <div style="grid-column:1/-1"><label>地址</label><input name="address" value="${esc(c.address || '')}"></div>
       <div style="grid-column:1/-1"><label>備註</label><textarea class="taBox" name="note" rows="2">${esc(c.note || '')}</textarea></div>
       ${tagCheckHtml(c)}`;
@@ -3279,8 +3947,7 @@ function saveCustomerInfo(e, cid) {
   const f = new FormData(e.target), t = n => (f.get(n) || '').toString().trim();
   if (!t('name')) return toast('客戶名稱不可空白');
   Object.assign(c, {name: t('name'), contact: t('contact'), phone: t('phone'), phone2: t('phone2'),
-    address: t('address'), note: t('note'),
-    cycleMonths: +f.get('cycleMonths') || c.cycleMonths});
+    address: t('address'), note: t('note')});
   c.tags = readTags(f);
   editCustId = null; custDevEdit = null; planCustEdit = false;
   logOp('修改客戶', c.name);
@@ -3314,10 +3981,10 @@ function jsonOut(name, payload) {
   toast('已匯出 JSON');
 }
 function exportLogsCsv(from, to) {
-  const head = ['日期','客戶','契約','安裝地點','設備種類','品牌','機型','保養週期(天)','服務類型','擔當工程師','黑白張數','彩色張數','彩色大尺寸張數','服務紀錄','客戶交代事宜','耗材庫存','採購信號','客戶已親簽','主管已簽核','主管意見','主管簽核日','備註'];
+  const head = ['日期','客戶','契約','安裝地點','設備種類','品牌','機型','保養週期','服務類型','服務項目','耗材更換','擔當工程師','黑白張數','彩色張數','彩色大尺寸張數','服務紀錄','客戶交代事宜','耗材庫存','採購信號','客戶已親簽','主管已簽核','主管意見','主管簽核日','備註'];
   const rows = logsInRange(from, to).map(l => {
     const d = devOfLog(l) || {}; const c = S.customers.find(x => x.id === d.customerId) || {};
-    return [l.date, c.name, devContract(d), d.location, d.kind ? KIND[d.kind] : '', d.brand, d.model, devCycleDays(d), l.type, l.engineer,
+    return [l.date, c.name, devContract(d), d.location, d.kind ? KIND[d.kind] : '', d.brand, d.model, d.kind ? devCycle(d).label : '', l.type, Array.isArray(l.svcItems) ? svcItemsOf(l).join('、') : '', consReplText(l), l.engineer,
       l.bw, l.color, l.colorLarge ?? '', l.serviceRecord, l.customerInstruction, l.consumableStock, l.purchaseSignal,
       l.engConfirmed ? '是' : '否', l.supSigned ? '是' : '否', l.supOpinion, l.supDate, l.note];
   });
@@ -3343,7 +4010,7 @@ function monthlyRows(from, to) {
       const logsM = S.logs.filter(l => l.deviceId === d.id && l.date.slice(0, 7) === m);
       out.push([m, c.name || '', d.location, KIND[d.kind], d.model, end ? end.bw : '', d.hasColor && coEnd ? colorOf(d, coEnd) : '',
         bwUse != null && bwUse >= 0 ? bwUse : '', coUse != null && coUse >= 0 ? coUse : '',
-        logsM.length, logsM.filter(l => l.type === '維修').length]);
+        logsM.length, logsM.filter(isRepairLog).length]);
     });
   });
   return out;
@@ -3356,9 +4023,16 @@ function exportMonthlyCsv(from, to) {
 }
 function exportCustomersCsv() {
   const head = ['客戶名稱','契約','聯絡人','聯繫電話','備用電話','地址','保養週期','備註','設備數'];
-  const rows = S.customers.map(c => [c.name, contractText(c), c.contact, c.phone, c.phone2, c.address, cycleOf(c).label, c.note, devsOf(c.id).length]);
+  const rows = S.customers.map(c => [c.name, contractText(c), c.contact, c.phone, c.phone2, c.address, cycleText(c), c.note, devsOf(c.id).length]);
   download(`printtown_customers_${stampNow()}.csv`, toCsv([head, ...rows]), 'text/csv', true);
   toast('已匯出客戶資料 CSV');
+}
+function exportDevicesCsv() {
+  const head = ['客戶','設備類別','品牌','型號','安裝地點','色彩','合約型態','保養週期','指定擔當','標籤'];
+  const rows = S.devices.map(d => { const c = custOf(d) || {};
+    return [c.name || '（客戶不存在）', KIND[d.kind] || d.kind, d.brand, d.model, d.location, isPrint(d) ? (d.hasColor ? '彩色' : '黑白') : '', devContract(d), devCycle(d).label, asgOf(d), tagNamesOf(d)]; });
+  download(`printtown_devices_${stampNow()}.csv`, toCsv([head, ...rows]), 'text/csv', true);
+  toast(`已匯出設備資料 CSV（${rows.length} 台）`);
 }
 function exportConsCsv() {
   const head = ['客戶','設備','耗材','分類','更換依據','原廠壽命','實際使用比率(%)','安裝日','庫存(件)','安全庫存(件)','交期(天)'];
@@ -3380,6 +4054,8 @@ function runExport(e) {
     : exportLogsCsv(from, to);
   if (what === 'monthly') return exportMonthlyCsv(from, to);
   if (what === 'roster') return exportRosterCsv();
+  if (what === 'devices') return fm === 'json'
+    ? jsonOut(`printtown_devices_${stampNow()}.json`, {devices: S.devices.map(d => ({...d, cycleLabel: devCycle(d).label}))}) : exportDevicesCsv();
   if (what === 'customers') return fm === 'json'
     ? jsonOut(`printtown_customers_${stampNow()}.json`, {customers: S.customers}) : exportCustomersCsv();
   if (what === 'cons') return fm === 'json'
@@ -3395,6 +4071,7 @@ function exportPanelHtml() {
         <option value="monthly">圖表用月彙總（每台每月）</option>
         <option value="roster">月保養名單（${ms.getFullYear()}-${pad2(ms.getMonth() + 1)}）</option>
         <option value="customers">客戶資料</option>
+        <option value="devices">設備資料（含保養週期）</option>
         <option value="cons">耗材設定與庫存</option></select></div>
       <div><label>格式</label><select name="format"><option value="csv">CSV（Excel 可開啟、可製圖）</option><option value="json">JSON（分析用）</option></select></div>
       <div><label>開始日期</label><input type="date" name="from"></div>
@@ -3533,31 +4210,65 @@ function parseCsv(text) {
   if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
   return rows.filter(r => !(r.length === 1 && r[0].trim() === '')).map(r => r.map(c => /^'[=+\-@\t\r]/.test(c) ? c.slice(1) : c));   // 還原匯出時加的防注入符號
 }
-const CYC_BY_LABEL = {'一個月': 1, '雙月': 2, '每季': 3, '半年': 6};
-const DEVICE_KIND_BY_LABEL = {'事務設備': 'copier', '複合機': 'copier', '印表機': 'printer', '商用空氣清淨機': 'purifier', '商用臭氧機': 'ozone', 'PHI商用除味機': 'phi', 'NEX除味系統': 'nex',
-  '空氣清淨機': 'purifier', 'PHI除味機': 'phi'};   // 舊名稱仍可匯入
+const CYC_BY_LABEL = {'每月': 1, '一個月': 1, '雙月': 2, '二個月': 2, '兩個月': 2, '一季': 3, '每季': 3, '三個月': 3,
+  '4個月': 4, '4 個月': 4, '四個月': 4, '半年': 6, '一年': 12, '每年': 12};
+const DEVICE_KIND_BY_LABEL = {'事務設備': 'copier', '複合機': 'copier', '影印機': 'copier', '印表機': 'printer', '商用空氣清淨機': 'purifier', '商用臭氧機': 'ozone', 'PHI商用除味機': 'phi', 'NEX除味系統': 'nex',
+  '空氣清淨機': 'purifier', 'PHI除味機': 'phi', '全身除味機': 'body', '全身除味': 'body'};   // 舊名稱仍可匯入
+// V62：機型欄疑似寫了多台（頓號、逗號、斜線、分號、換行）
+const MULTI_RE = /[、,，;；\/／\n]/;
+let importReport = null;   // 最近一次匯入報告（只存在這個畫面）
 function importCustomers(rows) {
   const head = rows[0].map(x => x.trim()); const at = k => head.indexOf(k);
-  if (at('客戶名稱') < 0) return '找不到「客戶名稱」欄位，請使用範本';
-  let addC = 0, addD = 0;
-  rows.slice(1).forEach(r => {
-    const g = k => { const i = at(k); return i >= 0 ? (r[i] || '').trim() : ''; };
+  if (at('客戶名稱') < 0) { importReport = null; return '找不到「客戶名稱」欄位，請使用範本'; }
+  const R = {at: new Date().toISOString(), rows: 0, custs: 0, devs: 0, byCat: {}, issues: []};
+  const OLD_ODOR = '異味' + '處理保養週期';
+  rows.slice(1).forEach((r, i) => {
+    const line = i + 2; R.rows++;
+    const g = k => { const j = at(k); return j >= 0 ? (r[j] || '').trim() : ''; };
     const c = {id: uid(), name: g('客戶名稱') || '（未填名稱）',
-      contact: g('聯絡人'), phone: g('聯繫電話') || g('電話'), phone2: g('備用電話'), address: g('地址'), note: g('備註'),
-      cycleMonths: CYC_BY_LABEL[g('保養週期')] || 3};
-    S.customers.push(c); addC++;
-    const model = g('機型');
-    if (model) {
-      const kind = DEVICE_KIND_BY_LABEL[g('設備類別') || '事務設備'] || 'copier';
-      const ct = g('契約'), contract = contractsFor(kind).includes(ct) ? ct : '';
-      const dnote = g('設備備註');
-      S.devices.push({id: uid(), customerId: c.id, kind, hasColor: kindIsPrint(kind) && g('色彩') === '彩色',
-        brand: g('品牌'), model, location: g('安裝地點') + (dnote ? `（${dnote}）` : ''), contract, billing: kindIsPrint(kind) && contract === '計張'});
-      addD++;
+      contact: g('聯絡人'), phone: g('聯繫電話') || g('電話'), phone2: g('備用電話'), address: g('地址'), note: g('備註')};
+    if (!g('客戶名稱')) R.issues.push({line, type: '客戶名稱空白（已建立「（未填名稱）」）', text: ''});
+    S.customers.push(c); R.custs++;
+    const modelRaw = g('機型'), rawKind = g('設備類別');
+    if (!modelRaw && !rawKind && !g('品牌') && !g('安裝地點') && !g('色彩') && !g('設備備註')) {
+      R.issues.push({line, type: '只有客戶資料、沒有設備資料（沒有建立設備）', text: c.name}); return;
     }
+    let kind = rawKind ? DEVICE_KIND_BY_LABEL[rawKind] : 'copier', unsure = false;
+    if (!kind) { kind = 'copier'; unsure = true; R.issues.push({line, type: '設備類別看不懂（先建為事務設備，標記「類別待確認」）', text: rawKind}); }
+    const model = modelRaw || '（未填型號）';
+    if (!modelRaw) R.issues.push({line, type: '機型空白（已建立「（未填型號）」設備）', text: c.name});
+    else if (MULTI_RE.test(modelRaw)) R.issues.push({line, type: '機型欄疑似寫了多台（只建立 1 台，請確認）', text: modelRaw});
+    const ct = g('契約'), contract = contractsFor(kind).includes(ct) ? ct : '';
+    if (ct && !contract) R.issues.push({line, type: '契約與設備類別不符（未設定合約）', text: `${ct}／${KIND[kind]}`});
+    const grp = grpOfKind(kind), cyRaw = g('保養週期') || g(grp === 'office' ? '事務設備保養週期' : '除味保養週期') || (grp === 'odor' ? g(OLD_ODOR) : '');
+    if (cyRaw && !CYC_BY_LABEL[cyRaw]) R.issues.push({line, type: '保養週期看不懂（用預設值）', text: cyRaw});
+    const dnote = g('設備備註');
+    const asRaw = g('指定擔當'), asg = asRaw && asgInList(asRaw) ? asRaw : asgDefault();
+    if (asRaw && !asgInList(asRaw)) R.issues.push({line, type: '指定擔當不在名單內（用預設擔當）', text: asRaw});
+    S.devices.push({id: uid(), customerId: c.id, kind, hasColor: kindIsPrint(kind) && g('色彩') === '彩色',
+      brand: g('品牌'), model, location: g('安裝地點') + (dnote ? `（${dnote}）` : ''), contract, billing: kindIsPrint(kind) && contract === '計張',
+      cycleMonths: CYC_BY_LABEL[cyRaw] || defCycleOfKind(kind).m, assignee: asg, ...(unsure ? {kindUnsure: true} : {})});
+    R.devs++; const cl = kindCatLabel(catOfKind(kind)); R.byCat[cl] = (R.byCat[cl] || 0) + 1;
   });
+  importReport = R;
+  logOp('匯入客戶', `${R.rows} 列：客戶 ${R.custs}、設備 ${R.devs}，需確認 ${R.issues.length} 列`);
   save();
-  return `匯入客戶 ${addC} 筆（重複與空白皆匯入），其中建立設備 ${addD} 台`;
+  return `匯入 ${R.rows} 列：客戶 ${R.custs} 位、設備 ${R.devs} 台（${Object.entries(R.byCat).map(([k, n]) => `${k} ${n}`).join('、') || '無'}）${R.issues.length ? `。有 ${R.issues.length} 項需要確認，請看「資料匯入」下方的匯入報告` : ''}`;
+}
+function importReportHtml() {
+  const R = importReport; if (!R) return '';
+  return `<div id="importReport" style="margin-top:12px;padding:10px 12px;border:2px solid #fdba74;border-radius:8px;background:#fff7ed">
+    <b>匯入報告</b>（${esc(fmtTs(R.at))}）
+    <div style="margin:6px 0">讀到 <b>${R.rows}</b> 列；建立客戶 <b>${R.custs}</b> 位、設備 <b>${R.devs}</b> 台：${Object.entries(R.byCat).map(([k, n]) => `${esc(k)} <b>${n}</b> 台`).join('、') || '無'}</div>
+    ${R.issues.length ? `<div style="overflow-x:auto"><table style="min-width:520px"><thead><tr><th>CSV 第幾列</th><th>需要確認</th><th>內容</th></tr></thead><tbody>${R.issues.map(x => `<tr><td class="num">${x.line}</td><td>${esc(x.type)}</td><td>${esc(x.text)}</td></tr>`).join('')}</tbody></table></div>
+      <button class="ghost" type="button" onclick="downloadImportReport()">下載匯入報告（CSV）</button>` : '<span class="tag t-ok">每一列都正常匯入</span>'}
+    <p class="note">「CSV 第幾列」以標題列為第 1 列。</p></div>`;
+}
+function downloadImportReport() {
+  if (!denyIO() || !importReport) return;
+  const R = importReport;
+  download(`printtown_import_report_${stampNow()}.csv`, toCsv([['CSV 第幾列', '需要確認', '內容'], ...R.issues.map(x => [x.line, x.type, x.text]),
+    [], ['讀到列數', R.rows], ['建立客戶', R.custs], ['建立設備', R.devs], ...Object.entries(R.byCat).map(([k, n]) => [k, n])]), 'text/csv', true);
 }
 function importStaff(rows) {
   const head = rows[0].map(x => x.trim()); const at = k => head.indexOf(k);
@@ -3568,7 +4279,8 @@ function importStaff(rows) {
     const name = g('姓名');
     if (!name || S.staff.some(s => s.name === name)) { skip++; return; }
     const act = g('在職');
-    S.staff.push({id: uid(), name, title: g('職稱'), phone: g('電話'), active: !(act === '否' || act === '0'), admin: false, pw: null, email: '', extra: {}});
+    const rl = ['工程部', '會計部', '行政人員'].includes(g('身份')) ? g('身份') : '工程部';   // 匯入不能建立管理者
+    S.staff.push({id: uid(), name, title: g('職稱'), phone: g('電話'), active: !(act === '否' || act === '0'), admin: false, role: rl, pw: null, email: '', extra: {}});
     add++;
   });
   save(); return `匯入人員：新增 ${add} 筆，略過 ${skip} 筆（姓名重複或空白）`;
@@ -3589,21 +4301,21 @@ function importFile(e, kind) {
 function downloadTemplate(kind) {
   if (!denyIO()) return;
   const rows = kind === 'customers'
-    ? [['客戶名稱','契約','聯絡人','聯繫電話','備用電話','地址','保養週期','備註','設備類別','設備備註','品牌','機型','安裝地點','色彩'], ['範例客戶 D','計張','王小姐','02-2345-6789','0912-345-678','台北市大安區和平東路一段1號','每季','','事務設備','','Ricoh','IM C3000','行政中心','彩色']]
-    : [['姓名','職稱','電話','在職'], ['王小明','擔當工程師','0912-345-678','是']];
+    ? [['客戶名稱','契約','聯絡人','聯繫電話','備用電話','地址','保養週期','備註','設備類別','設備備註','品牌','機型','安裝地點','色彩','指定擔當'], ['範例客戶 D','計張','王小姐','02-2345-6789','0912-345-678','台北市大安區和平東路一段1號','每月','','事務設備','','Ricoh','IM C3000','行政中心','彩色','林政鋐']]
+    : [['姓名','職稱','電話','在職','身份'], ['王小明','擔當工程師','0912-345-678','是','工程部']];
   download(`printtown_template_${kind}.csv`, toCsv(rows), 'text/csv', true);
 }
 function importPanelHtml() {
   return `<div class="card sec-set"><h2>資料匯入（CSV）</h2>
-    <p class="note"><b>匯入規則：</b>每一列建立一位客戶，不過濾、不去重：名稱重複或空白的列也會匯入（空白名稱顯示為「（未填名稱）」）。「機型」有填時，會在該客戶底下建立一台設備。匯入只新增，不覆蓋既有資料；重複匯入同一檔案會再次建立。檔案編碼用 UTF-8，請先下載範本填寫。</p>
+    <p class="note"><b>匯入規則：</b>每一列建立一位客戶，不過濾、不去重：名稱重複或空白的列也會匯入（空白名稱顯示為「（未填名稱）」）。該列有任何設備資料（設備類別、機型、品牌、安裝地點、色彩）就在該客戶底下建立一台設備；<b>機型空白會建立「（未填型號）」設備</b>。匯入完成會顯示匯入報告，列出需要確認的列。匯入只新增，不覆蓋既有資料；重複匯入同一檔案會再次建立。檔案編碼用 UTF-8，請先下載範本填寫。</p>
     <div class="form-row" style="margin:0">
-      <div><b>客戶（含設備）</b><div class="muted">欄位：客戶名稱、契約（設備的合約型態：事務設備為計張／賣斷／零元機；其他設備為租賃／服務合約／賣斷／專案）、聯絡人、聯繫電話、備用電話、地址、保養週期（一個月／雙月／每季／半年）、備註、設備類別（事務設備／商用空氣清淨機／商用臭氧機／PHI商用除味機／NEX除味系統）、設備備註、品牌、機型、安裝地點、色彩（彩色／黑白）</div>
+      <div><b>客戶（含設備）</b><div class="muted">欄位：客戶名稱、契約（設備的合約型態：事務設備為計張／賣斷／零元機；其他設備為租賃／服務合約／賣斷／專案）、聯絡人、聯繫電話、備用電話、地址、保養週期（該列設備的週期：每月／雙月／一季／4個月／半年／一年；空白用設備類別的預設值；舊範本的兩組週期欄也可以）、備註、設備類別（事務設備／商用空氣清淨機／商用臭氧機／PHI商用除味機／NEX除味系統／全身除味機）、設備備註、品牌、機型、安裝地點、色彩（彩色／黑白）、指定擔當（名單內的人；空白或不在名單內用預設擔當，不在名單內的會列進匯入報告）</div>
         <div style="margin:6px 0"><button class="ghost" onclick="downloadTemplate('customers')">下載客戶範本</button></div>
         <input type="file" accept=".csv,text/csv" onchange="importFile(event,'customers')"></div>
-      <div><b>擔當工程師人員</b><div class="muted">欄位：姓名、職稱、電話、在職（是／否）</div>
+      <div><b>擔當工程師人員</b><div class="muted">欄位：姓名、職稱、電話、在職（是／否）、身份（工程部／會計部／行政人員，空白＝工程部；管理者請在人員設定指定）</div>
         <div style="margin:6px 0"><button class="ghost" onclick="downloadTemplate('staff')">下載人員範本</button></div>
         <input type="file" accept=".csv,text/csv" onchange="importFile(event,'staff')"></div>
-    </div></div>`;
+    </div>${importReportHtml()}</div>`;
 }
 
 

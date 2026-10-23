@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 計張計價系統 v3</title>
+<title>普印通 計張計價系統 v6</title>
 <style>
 :root{--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#7c2d12;--brand2:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -100,7 +100,7 @@ body.busy button{pointer-events:none;opacity:.6}
 </head>
 <body>
 <header>
-  <h1>普印通 計張計價系統 <span style="font-weight:400;font-size:13px;opacity:.85">v3</span></h1>
+  <h1>普印通 計張計價系統 <span style="font-weight:400;font-size:13px;opacity:.85">v6</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="due" onclick="go('due')">本期待開單</button>
     <button data-v="build" onclick="go('build')">開單</button>
@@ -183,11 +183,33 @@ function addMonths(s, n) {
 const fmt = n => n == null || n === '' ? '—' : Number(n).toLocaleString('zh-TW', {maximumFractionDigits: 4});
 const money = n => (n < 0 ? '-' : '') + Math.abs(Math.round(n)).toLocaleString('zh-TW');
 const clone = x => JSON.parse(JSON.stringify(x));
-const KIND = {copier: '事務設備', printer: '事務設備', purifier: '商用空氣清淨機', ozone: '商用臭氧機', phi: 'PHI商用除味機', nex: 'NEX除味系統'};
-const kindIsPrint = k => !['purifier', 'phi', 'ozone', 'nex'].includes(k);
+const KIND = {copier: '事務設備', printer: '事務設備', purifier: '商用空氣清淨機', ozone: '商用臭氧機', phi: 'PHI商用除味機', nex: 'NEX除味系統', body: '全身除味機'};
+const kindIsPrint = k => !['purifier', 'phi', 'ozone', 'nex', 'body'].includes(k);   // V62：新增全身除味機（除味設備，不列入計張）
 const isPrint = d => !!d && kindIsPrint(d.kind);
 const isLarge = d => isPrint(d) && !!d.hasColor && !!(d.feat && d.feat.large);
 const CYCLES = {1: '每月', 2: '雙月', 3: '每季'};
+// v4：開單月份。雙月、每季直接選實際月份（billAnchor＝該組的第一個月份）
+const ANCHOR_OPTS = {2: [1, 2], 3: [1, 2, 3]};
+const MONTHS12 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const monthsOfAnchor = (cycle, a) => cycle === 1 ? MONTHS12 : MONTHS12.filter(m => (((m - a) % cycle) + cycle) % cycle === 0);
+const anchorText = (cycle, a) => cycle === 1 ? '每個月' : `${monthsOfAnchor(cycle, a).join('、')} 月`;
+const planAnchor = p => !p ? 0 : p.cycle === 1 ? 1 : (ANCHOR_OPTS[p.cycle] || []).includes(p.billAnchor) ? p.billAnchor : 0;
+const cycleLabel = (cycle, a) => (CYCLES[cycle] || '') + (cycle > 1 && a ? `（${anchorText(cycle, a)}）` : '');
+const YM_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+const ymIdx = s => { const [y, m] = String(s).split('-').map(Number); return y * 12 + m - 1; };
+const idxYm = i => `${Math.floor(i / 12)}-${String(i % 12 + 1).padStart(2, '0')}`;
+const ymLabel = s => { const [y, m] = String(s).split('-').map(Number); return `${y} 年 ${m} 月`; };
+const monLabel = s => `${Number(String(s).split('-')[1])} 月`;
+const curYm = () => iso(today()).slice(0, 7);
+function isBillMonth(p, ym) {
+  const a = planAnchor(p);
+  if (!a || !YM_RE.test(ym)) return false;
+  if (p.cycle === 1) return true;
+  const m = ymIdx(ym) % 12 + 1;
+  return (((m - a) % p.cycle) + p.cycle) % p.cycle === 0;
+}
+const marksOf = p => p && p.marks && typeof p.marks === 'object' && !Array.isArray(p.marks) ? p.marks : {};
+const markAt = (p, ym) => { const v = marksOf(p)[ym]; return v && (v.t === 'add' || v.t === 'skip') ? v : null; };
 const LARGE_MODES = {own: '獨立單價', as_color: '折算一般彩色', none: '不另計費'};
 const STATUS = {draft: '草稿', issued: '已開立', void: '已作廢'};
 const STATUS_CLS = {draft: 't-info', issued: 't-ok', void: 't-gray'};
@@ -268,7 +290,7 @@ async function reloadBilling() {
     sb.from('billing_settings').select('key,data').eq('key', 'company'),
     fetchPaged(() => sb.from('billing_plans').select('customer_id,data,updated_at').order('customer_id')),
     fetchPaged(() => sb.from('billing_members').select('email,name,role,active,updated_at').order('email')),
-    fetchPaged(() => sb.from('billing_invoices').select('id,no,customer_id,status,period_from,period_to,months,subtotal,tax,total,note,created_at,created_by,updated_at,issued_at,issued_by,void_at,void_by,void_reason').order('created_at').order('id')),
+    fetchPaged(() => sb.from('billing_invoices').select('id,no,customer_id,status,period_from,period_to,months,subtotal,tax,total,note,created_at,created_by,updated_at,issued_at,issued_by,void_at,void_by,void_reason,bm:snapshot->>billMonth').order('created_at').order('id')),
     fetchPaged(() => sb.from('billing_invoice_lines').select('invoice_id,device_id,group_id,start_date,end_date,start_bw,end_bw,start_color,end_color,start_large,end_large,start_log_id,end_log_id').order('invoice_id').order('device_id'))]);
   if (st.error) throw new Error(st.error.message);
   SETTINGS = (st.data[0] && st.data[0].data) || {};
@@ -321,8 +343,11 @@ function devContract(d) {
 const isBillDev = d => !!d && isPrint(d) && devContract(d) === '計張';
 const billDevsOf = cid => D.devices.filter(d => d.customerId === cid && isBillDev(d))
   .sort((a, b) => String(a.location || '').localeCompare(String(b.location || ''), 'zh-TW') || String(a.model || '').localeCompare(String(b.model || '')));
+// 存過計價設定、但現在已沒有計張設備的客戶（舊收費單與設定都保留）
+const orphanPlans = () => [...PLANS.keys()].map(id => custById(id)).filter(c => c && !D.devices.some(d => d.customerId === c.id && isBillDev(d)));
 const devLabel = d => d ? `${KIND[d.kind] || ''} ${d.brand || ''} ${d.model || ''}`.replace(/\s+/g, ' ').trim() : '（已刪除的設備）';
-const billableCustomers = () => D.customers.filter(c => PLANS.has(c.id) || D.devices.some(d => d.customerId === c.id && isBillDev(d)))
+// v4：只列「至少有 1 台計張設備」的客戶；賣斷、零元機、異味處理設備的客戶不列出
+const billableCustomers = () => D.customers.filter(c => D.devices.some(d => d.customerId === c.id && isBillDev(d)))
   .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'zh-TW'));
 // 有讀數的紀錄（依日期、同日依讀數排序；與保養系統相同）
 function readingsOf(devId) {
@@ -338,6 +363,15 @@ function lastIssuedLine(devId) {
 }
 const lastIssuedInvoice = cid => INVOICES.filter(i => i.customer_id === cid && i.status === 'issued')
   .sort((a, b) => String(a.period_to).localeCompare(String(b.period_to)) || String(a.issued_at).localeCompare(String(b.issued_at))).pop() || null;
+// v4：收費單算哪個月（帳務月份）。舊收費單沒有帳務月份：用開立日的月份（台灣時間）
+const localYm = ts => { const d = new Date(ts); return isNaN(d) ? '' : iso(d).slice(0, 7); };
+const invMonth = i => YM_RE.test(String(i.bm || '')) ? i.bm : i.issued_at ? localYm(i.issued_at) : String(i.period_to || '').slice(0, 7);
+// 一張收費單涵蓋的月份：帳務月份往前推「計費月數」個月（例：10 月開 3 個月 → 8、9、10 月都算已開立）
+const covers = (i, ym) => { const b = invMonth(i); if (!YM_RE.test(b)) return false; const k = ymIdx(ym), e = ymIdx(b); return k <= e && k > e - (Number(i.months) || 1); };
+const issuedFor = (cid, ym) => INVOICES.filter(i => i.customer_id === cid && i.status === 'issued' && covers(i, ym))
+  .sort((a, b) => String(b.issued_at).localeCompare(String(a.issued_at)))[0] || null;
+const firstV4Idx = cid => { const xs = INVOICES.filter(i => i.customer_id === cid && i.status === 'issued' && YM_RE.test(String(i.bm || ''))).map(i => ymIdx(i.bm)); return xs.length ? Math.min(...xs) : Infinity; };
+const lastBmIdx = cid => { const xs = INVOICES.filter(i => i.customer_id === cid && i.status === 'issued').map(invMonth).filter(x => YM_RE.test(x)).map(ymIdx); return xs.length ? Math.max(...xs) : -Infinity; };
 const draftOf = cid => INVOICES.filter(i => i.customer_id === cid && i.status === 'draft')
   .sort((a, b) => String(a.updated_at).localeCompare(String(b.updated_at))).pop() || null;
 
@@ -390,50 +424,165 @@ function custStatus(c) {
   return {c, plan, unassigned, stale, billed, last, next, missing, draft: draftOf(c.id), due,
     code, rank: {due: 0, noplan: 1, unassigned: 2, stale: 2, later: 3}[code]};
 }
-function viewDue() {
-  const list = billableCustomers().map(custStatus).sort((a, b) => a.rank - b.rank || String(a.c.name).localeCompare(String(b.c.name), 'zh-TW'));
-  const shown = dueAll ? list : list.filter(x => x.code !== 'later');
-  const cnt = k => list.filter(x => x.code === k).length;
-  const rows = shown.map(x => {
-    const c = x.c;
-    const st = x.code === 'noplan' ? '<span class="tag t-warn">尚未設定計價</span>'
-      : x.code === 'unassigned' ? `<span class="tag t-warn">${x.unassigned.length} 台計張設備未分組</span>`
-      : x.code === 'stale' ? `<span class="tag t-warn">${x.stale.length} 台已取消計張，請更新計價設定</span>`
-      : x.code === 'due' ? (x.last ? '<span class="tag t-danger">已到期</span>' : '<span class="tag t-info">尚未開過單</span>')
-      : `<span class="tag t-ok">尚未到期</span>`;
-    const miss = x.missing && x.missing.length ? ` <span class="tag t-warn">缺抄表 ${x.missing.length} 台</span>` : '';
-    const dr = x.draft ? ' <span class="tag t-info">有草稿</span>' : '';
-    return `<tr><td><b>${esc(c.name)}</b><div class="muted">${esc(c.contract || '')}${x.plan ? '・' + esc(CYCLES[x.plan.cycle] || '') + '計費' : ''}</div></td>
-      <td>${st}${miss}${dr}</td>
-      <td>${x.last ? `${esc(x.last.no)}<div class="muted">${esc(x.last.period_from)} ～ ${esc(x.last.period_to)}</div>` : '<span class="muted">—</span>'}</td>
-      <td>${x.next ? esc(x.next) : '<span class="muted">—</span>'}</td>
-      <td style="white-space:nowrap">${x.plan ? `<button class="primary" onclick="startBuild('${c.id}')">${x.draft ? '繼續草稿' : '開單'}</button> ` : ''}<button class="ghost" onclick="openPlan('${c.id}')">設定計價</button></td></tr>`;
-  }).join('');
-  return `<div class="card"><div class="split"><h2 style="margin:0">本期待開單</h2>
-      <label style="display:flex;gap:6px;align-items:center;margin:0;color:var(--ink)"><input type="checkbox" ${dueAll ? 'checked' : ''} onchange="dueAll=this.checked;render()"> 也顯示尚未到期的客戶</label></div>
-    <div class="row-actions" style="margin:10px 0">
-      <span class="tag t-danger">已到期 ${list.filter(x => x.code === 'due' && x.last).length}</span>
-      <span class="tag t-info">尚未開過單 ${list.filter(x => x.code === 'due' && !x.last).length}</span>
-      <span class="tag t-warn">尚未設定計價 ${cnt('noplan')}</span>
-      <span class="tag t-warn">需更新計價設定 ${cnt('unassigned') + cnt('stale')}</span>
-      <span class="tag t-ok">尚未到期 ${cnt('later')}</span></div>
-    ${rows ? `<table style="min-width:760px"><thead><tr><th>客戶</th><th>狀態</th><th>上一張收費單</th><th>下次應開單</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
-      : '<div class="empty">目前沒有需要處理的客戶。</div>'}
-    <p class="note">列出有「計張」設備或已設定計價的客戶（設備的合約型態在設備保養系統設定）。下次應開單 ＝ 上一張收費單的迄抄日 ＋ 計費週期。缺抄表 ＝ 該設備在上一張收費單之後還沒有新的讀數。</p></div>`;
+// v4：本月開單名單。逾期 → 本月應開單 → 手動加入；開立後留在名單上標「已開立 ✓」
+let dueMonth = null, addOpen = false, skipFor = null;
+const dueYm = () => YM_RE.test(dueMonth || '') ? dueMonth : curYm();
+function setDueMonth(v) { if (YM_RE.test(String(v))) { dueMonth = v; addOpen = false; skipFor = null; render(); } }
+function shiftDueMonth(k) { setDueMonth(idxYm(ymIdx(dueYm()) + k)); }
+// 下次開單月份（今天以後、上一張帳務月份之後）
+function nextBillYm(c, p) {
+  const start = Math.max(ymIdx(curYm()), lastBmIdx(c.id) + 1);
+  for (let x = start; x < start + 36; x++) { const ym = idxYm(x); const mk = markAt(p, ym); if ((isBillMonth(p, ym) && !(mk && mk.t === 'skip')) || (mk && mk.t === 'add')) return ym; }
+  return null;
 }
+function dueRows(V) {
+  const vi = ymIdx(V), ci = ymIdx(curYm());
+  const rows = [], pend = [], other = [], skipped = [];
+  billableCustomers().forEach(c => {
+    const st = custStatus(c), p = st.plan, n = billDevsOf(c.id).length;
+    const base = {c, st, n, draft: draftOf(c.id), last: st.last};
+    if (!p) { pend.push({...base, why: '尚未設定計價'}); return; }
+    const a = planAnchor(p), mk = markAt(p, V), iss = issuedFor(c.id, V);
+    if (!a && !(mk && mk.t === 'add')) { pend.push({...base, why: '尚未設定開單月份', issNow: iss}); return; }
+    // 逾期：從「設定開單月份的那個月」或上一張帳務月份之後算起，到選定月份（且不晚於本月）的前一個月
+    // 沒有起算月份的舊設定（v3）：從第一張有帳務月份的收費單（v4 開立）之後才開始算逾期；都沒有就不算，不追溯舊月份
+    const li = lastBmIdx(c.id), since = YM_RE.test(p.billSince || '') ? ymIdx(p.billSince) : firstV4Idx(c.id) + 1;
+    const lo = Math.max(since, li + 1, Math.min(vi, ci) - 36), hi = Math.min(vi, ci) - 1, overdue = [];
+    for (let x = lo; x <= hi; x++) { const ym = idxYm(x), m2 = markAt(p, ym); if (isBillMonth(p, ym) && !(m2 && m2.t === 'skip') && !issuedFor(c.id, ym)) overdue.push(ym); }
+    const sched = isBillMonth(p, V), added = !!(mk && mk.t === 'add'), skip = !!(mk && mk.t === 'skip');
+    const row = {...base, p, a, mk, iss, sched, added, skip, overdue, next: nextBillYm(c, p)};
+    if (sched && skip && !iss && !overdue.length) { skipped.push(row); return; }
+    if ((sched && !skip) || added || overdue.length || (iss && invMonth(iss) === V)) rows.push(row);
+    else other.push(row);
+  });
+  const rank = r => r.iss ? 3 : r.overdue.length ? 0 : r.sched && !r.skip ? 1 : 2;
+  rows.sort((x, y) => rank(x) - rank(y) || String(x.c.name).localeCompare(String(y.c.name), 'zh-TW'));
+  return {rows, pend, other, skipped};
+}
+const smallInfo = (r) => `計張 ${r.n} 台${r.p ? `・${esc(CYCLES[r.p.cycle] || '')}計費${r.p.cycle > 1 && planAnchor(r.p) ? `（${esc(anchorText(r.p.cycle, planAnchor(r.p)))}）` : ''}` : ''}`;
+function viewDue() {
+  const V = dueYm(), cur = curYm(), {rows, pend, other, skipped} = dueRows(V);
+  const issuedN = rows.filter(r => r.iss).length, overN = rows.filter(r => !r.iss && r.overdue.length).length;
+  const lastCell = r => r.last ? `${esc(r.last.no)}<div class="muted">${esc(r.last.period_from)} ～ ${esc(r.last.period_to)}</div>` : '<span class="muted">—</span>';
+  const stTags = r => {
+    const t = [];
+    if (r.iss) t.push(`<span class="tag t-ok">已開立 ✓ ${esc(r.iss.no || '')}</span>`);
+    if (r.overdue.length) t.push(`<span class="tag t-danger">逾期：${r.overdue.map(monLabel).join('、')}未開單</span>`);
+    if (!r.iss && r.sched && !r.skip) t.push('<span class="tag t-info">本月應開單</span>');
+    if (r.added) t.push(`<span class="tag t-warn">手動加入</span>${r.mk.reason ? ` <span class="muted">${esc(r.mk.reason)}</span>` : ''}`);
+    const s = r.st;
+    if (s.code === 'unassigned') t.push(`<span class="tag t-warn">${s.unassigned.length} 台計張設備未分組</span>`);
+    if (s.code === 'stale') t.push(`<span class="tag t-warn">${s.stale.length} 台已取消計張，請更新計價設定</span>`);
+    if (s.missing && s.missing.length && !r.iss) t.push(`<span class="tag t-warn">缺抄表 ${s.missing.length} 台</span>`);
+    if (r.draft) t.push('<span class="tag t-info">有草稿</span>');
+    return t.join(' ');
+  };
+  const acts = r => {
+    const b = [];
+    // 只有逾期（本月不用開）時，帳務月份預設為最近一個逾期月份
+    const bm = r.overdue.length && !(r.sched && !r.skip) && !r.added ? r.overdue[r.overdue.length - 1] : V;
+    if (!r.iss || r.overdue.length) b.push(`<button class="primary" onclick="startBuild('${r.c.id}','${bm}')">${r.draft ? '繼續草稿' : '開單'}</button>`);
+    b.push(`<button class="ghost" onclick="openPlan('${r.c.id}')">設定計價</button>`);
+    if (r.added && !r.iss) b.push(`<button class="ghost danger" onclick="removeAdd('${r.c.id}')">移除手動加入</button>`);
+    if (r.sched && !r.skip && !r.added && !r.iss) b.push(`<button class="ghost" onclick="skipFor='${r.c.id}';render()">本月不開</button>`);
+    return b.join(' ') + (skipFor === r.c.id ? `<form class="row-actions" onsubmit="saveSkip(event,'${r.c.id}')" style="margin-top:6px">
+        <input name="reason" maxlength="100" placeholder="本月不開的原因（必填，例如：客戶暫停、改下月合併）" style="max-width:320px">
+        <button class="primary" type="submit">確定本月不開</button><button class="ghost" type="button" onclick="skipFor=null;render()">取消</button></form>` : '');
+  };
+  const tr = r => `<tr data-cid="${esc(r.c.id)}" data-st="${r.iss ? 'issued' : r.overdue.length ? 'overdue' : r.added && !r.sched ? 'added' : 'due'}"${r.iss ? ' style="background:#f0fdf4"' : ''}>
+      <td><b>${esc(r.c.name)}</b><div class="muted">${smallInfo(r)}</div></td>
+      <td>${stTags(r)}</td><td>${lastCell(r)}</td>
+      <td style="white-space:nowrap">${acts(r)}</td></tr>`;
+  const head = '<thead><tr><th>客戶</th><th>狀態</th><th>上一張收費單</th><th></th></tr></thead>';
+  const cand = billableCustomers().filter(c => PLANS.has(c.id) && !rows.some(r => r.c.id === c.id));
+  const addBox = addOpen ? `<form class="card" style="background:#fffbeb;margin:10px 0" onsubmit="saveAdd(event)">
+      <b>手動加入 ${esc(ymLabel(V))} 開單</b>
+      <div class="form-row" style="margin:8px 0 0">
+        <div><label>計張客戶（已設定計價、尚未在名單上）</label><select name="cid"><option value="">請選擇客戶</option>${cand.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></div>
+        <div style="grid-column:span 2"><label>原因（選填，例如：提前結算、撤機、合約到期）</label><input name="reason" maxlength="100"></div>
+        <div><button class="primary" type="submit">加入</button> <button class="ghost" type="button" onclick="addOpen=false;render()">取消</button></div></div>
+      ${cand.length ? '' : '<div class="muted">所有已設定計價的計張客戶都已在名單上。</div>'}</form>` : '';
+  const pendHtml = pend.length ? `<h3>待設定（${pend.length} 位）</h3><p class="note" style="margin-top:0">還沒設定計價或開單月份，系統不知道哪個月要開單。請按「設定計價」完成設定。</p>
+    <table style="min-width:620px"><tbody>${pend.map(r => `<tr data-cid="${esc(r.c.id)}" data-st="pending-setup"><td><b>${esc(r.c.name)}</b><div class="muted">計張 ${r.n} 台</div></td><td><span class="tag t-warn">${esc(r.why)}</span>${r.issNow ? ` <span class="tag t-ok">本月已開立 ✓ ${esc(r.issNow.no || '')}</span>` : ''}</td><td><button class="ghost" onclick="openPlan('${r.c.id}')">設定計價</button></td></tr>`).join('')}</tbody></table>` : '';
+  const skipHtml = skipped.length ? `<h3>本月不開（${skipped.length} 位）</h3>
+    <table style="min-width:620px"><tbody>${skipped.map(r => `<tr data-cid="${esc(r.c.id)}" data-st="skipped"><td><b>${esc(r.c.name)}</b><div class="muted">${smallInfo(r)}</div></td><td><span class="tag t-gray">本月不開</span> <span class="muted">${esc(r.mk.reason || '')}${r.mk.by ? `（${esc(memberName(r.mk.by))}）` : ''}</span></td>
+      <td><button class="ghost" onclick="undoSkip('${r.c.id}')">取消本月不開</button></td></tr>`).join('')}</tbody></table>` : '';
+  const otherHtml = dueAll && other.length ? `<h3>其他計張客戶（${esc(monLabel(V))}不用開單）</h3>
+    <table style="min-width:620px"><tbody>${other.map(r => `<tr data-cid="${esc(r.c.id)}" data-st="other" style="color:var(--muted)"><td><b>${esc(r.c.name)}</b><div class="muted">${smallInfo(r)}</div></td><td>${r.next ? `下次開單：${esc(ymLabel(r.next))}` : '—'}</td><td>${lastCell(r)}</td>
+      <td><button class="ghost" onclick="openPlan('${r.c.id}')">設定計價</button></td></tr>`).join('')}</tbody></table>` : '';
+  return `<div class="card"><div class="split"><h2 style="margin:0">本月開單</h2>
+      <div class="row-actions" style="margin:0"><button class="ghost" onclick="shiftDueMonth(-1)">‹ 上個月</button>
+        <input type="month" value="${esc(V)}" onchange="setDueMonth(this.value)" style="width:auto"><button class="ghost" onclick="shiftDueMonth(1)">下個月 ›</button>
+        ${V !== cur ? '<button class="ghost" onclick="dueMonth=null;render()">回到本月</button>' : ''}</div></div>
+    <div class="row-actions" id="dueStat" style="margin:10px 0">
+      <span class="tag t-info">${esc(monLabel(V))}應開 ${rows.length} 位</span>
+      <span class="tag t-ok">已開立 ${issuedN} 位</span>
+      <span class="tag t-warn">尚待 ${rows.length - issuedN} 位</span>
+      <span class="tag t-danger">逾期 ${overN} 位</span>
+      ${pend.length ? `<span class="tag t-gray">待設定 ${pend.length} 位</span>` : ''}</div>
+    <div class="split"><button class="ghost" onclick="addOpen=!addOpen;render()">＋ 加入 ${esc(monLabel(V))}開單</button>
+      <label style="display:flex;gap:6px;align-items:center;margin:0;color:var(--ink)"><input type="checkbox" ${dueAll ? 'checked' : ''} onchange="dueAll=this.checked;render()"> 顯示全部計張客戶</label></div>
+    ${addBox}
+    ${rows.length ? `<table style="min-width:760px;margin-top:10px">${head}<tbody>${rows.map(tr).join('')}</tbody></table>` : `<div class="empty">${esc(ymLabel(V))}沒有要開單的計張客戶。</div>`}
+    ${skipHtml}${pendHtml}${otherHtml}
+    <p class="note">只列出有「計張」設備的客戶（設備的合約型態在設備保養系統設定）。開單月份在「客戶計價設定」設定：雙月、每季直接選實際月份。逾期 ＝ 之前的開單月份沒有開立收費單（從設定開單月份的那個月起算）。一張收費單算哪個月看「帳務月份」，計費月數 2 個月以上時，涵蓋的月份都算已開立。</p></div>`;
+}
+// 手動加入／本月不開：存在客戶計價設定（只有計價人員讀得到）
+async function saveMarkInner(cid, ym, val) {
+  const pe = PLANS.get(cid);
+  if (!pe) throw new Error('這位客戶尚未設定計價');
+  const data = clone(pe.data), marks = Object.assign({}, marksOf(data));
+  if (val) marks[ym] = {t: val.t, reason: String(val.reason || '').slice(0, 100)}; else delete marks[ym];
+  // 只保留最近 24 個月與未來的標記
+  const lo = ymIdx(curYm()) - 24;
+  Object.keys(marks).forEach(k => { if (!YM_RE.test(k) || ymIdx(k) < lo) delete marks[k]; });
+  data.marks = marks;
+  await call('billing_plan_save', {p_customer_id: cid, p_data: data, p_expected: pe.ts});
+  await reloadBilling();
+  const np = PLANS.get(cid);
+  if (!np || !np.data || !Object.prototype.hasOwnProperty.call(np.data, 'marks')) throw new Error(V4_SQL_MSG);
+  const c = custById(cid);
+  const op = {id: uid(), t: new Date().toISOString(), staffId: MYSTAFF.id, staff: MYSTAFF.name || '',
+    action: val ? (val.t === 'add' ? '加入本月開單' : '本月不開') : '取消開單標記', summary: `${c ? c.name : ''}｜${ym}${val && val.reason ? '｜' + String(val.reason).slice(0, 100) : ''}（計價系統）`};
+  await sb.from('app_records').upsert([{coll: 'oplog', id: op.id, data: op}], {onConflict: 'coll,id'});
+}
+const V4_SQL_MSG = '雲端資料庫尚未更新：請管理者到 Supabase 執行 billing-update-v5.sql，開單月份與開單標記才能儲存。';
+function saveAdd(e) {
+  e.preventDefault();
+  const f = new FormData(e.target), cid = String(f.get('cid') || ''), V = dueYm();
+  if (!ID_RE.test(cid) || !billableCustomers().some(c => c.id === cid)) return toast('請選擇計張客戶');
+  if (!PLANS.has(cid)) return toast('這位客戶尚未設定計價，請先設定');
+  if (dueRows(V).rows.some(r => r.c.id === cid)) return toast('這位客戶已在名單上');
+  run(async () => { await saveMarkInner(cid, V, {t: 'add', reason: String(f.get('reason') || '').trim()}); addOpen = false; toast(`已加入 ${ymLabel(V)} 開單`); }).then(render);
+}
+function removeAdd(cid) {
+  const V = dueYm(), c = custById(cid);
+  if (issuedFor(cid, V)) return toast('已開立收費單，不能移除');
+  if (!confirmTwice(`把「${c ? c.name : ''}」從 ${ymLabel(V)} 開單名單移除？`)) return;
+  run(async () => { await saveMarkInner(cid, V, null); toast('已移除手動加入'); }).then(render);
+}
+function saveSkip(e, cid) {
+  e.preventDefault();
+  const reason = String(new FormData(e.target).get('reason') || '').trim(), V = dueYm();
+  if (reason.length < 2) return toast('請填寫本月不開的原因（至少 2 個字）');
+  if (issuedFor(cid, V)) return toast('已開立收費單，不能設為本月不開');
+  run(async () => { await saveMarkInner(cid, V, {t: 'skip', reason}); skipFor = null; toast(`已設為 ${ymLabel(V)} 不開單（不影響之後的開單月份）`); }).then(render);
+}
+function undoSkip(cid) { const V = dueYm(); run(async () => { await saveMarkInner(cid, V, null); toast('已取消本月不開'); }).then(render); }
 
 /* ===================== 開單 ===================== */
 let B = null;            // 開單中的狀態
 let readFor = null;      // 正在登打抄表的設備
 function blankBuild(cid) {
   const pe = PLANS.get(cid);
-  return {cid, draftId: null, draftTs: null, months: (pe && pe.data.cycle) || 1, monthsReason: '', adj: [], note: '', sel: {}};
+  return {cid, draftId: null, draftTs: null, months: (pe && pe.data.cycle) || 1, monthsReason: '', adj: [], note: '', sel: {}, billMonth: curYm()};
 }
-async function startBuild(cid) {
+async function startBuild(cid, ym) {
   if (!custById(cid)) return toast('找不到此客戶');
   await run(async () => {
     const dr = draftOf(cid);
     B = blankBuild(cid);
+    if (YM_RE.test(String(ym || ''))) B.billMonth = ym;
     if (dr) {
       const {data, error} = await sb.from('billing_invoices').select('snapshot,updated_at').eq('id', dr.id);
       if (error) throw new Error(error.message);
@@ -442,6 +591,7 @@ async function startBuild(cid) {
       Object.assign(B, {draftId: dr.id, draftTs: data[0].updated_at, months: dr.months, monthsReason: snap.monthsReason || '',
         adj: Array.isArray(snap.adjustments) ? snap.adjustments.map(a => ({id: uid(), desc: String(a.desc || ''), amount: Math.round(Number(a.amount) || 0)})) : [],
         note: dr.note || '', sel: inp.sel && typeof inp.sel === 'object' ? inp.sel : {}});
+      if (YM_RE.test(String(snap.billMonth || ''))) B.billMonth = snap.billMonth;
     }
     readFor = null; view = 'build';
   });
@@ -455,6 +605,7 @@ function setSel(devId, which, val) {
   B.sel[devId] = cur; render();
 }
 function setMonths(v) { const n = Number(v); if (!(Number.isInteger(n) && n >= 1 && n <= 12)) { toast('計費月數請填 1～12 的整數'); return render(); } B.months = n; render(); }
+function setBillMonth(v) { if (!B) return; if (!YM_RE.test(String(v))) { toast('請選擇帳務月份'); return render(); } B.billMonth = v; render(); }
 function setB(k, v) { if (!B) return; B[k] = String(v).slice(0, k === 'note' ? 500 : 200); render(); }
 function addAdj() { B.adj.push({id: uid(), desc: '', amount: 0}); render(); }
 function setAdj(id, k, v) {
@@ -531,6 +682,9 @@ function buildModel() {
   if (!m.groups.length) m.errors.push('計價設定中沒有任何設備');
   if (B.months !== plan.cycle && !String(B.monthsReason || '').trim()) m.errors.push(`計費月數（${B.months}）與計費週期（${CYCLES[plan.cycle]}）不同，請填寫原因`);
   B.adj.forEach((a, i) => { if (!String(a.desc).trim() && a.amount) m.errors.push(`第 ${i + 1} 筆其他調整項請填寫說明`); });
+  if (!YM_RE.test(String(B.billMonth || ''))) m.errors.push('請選擇帳務月份');
+  else if (!isBillMonth(plan, B.billMonth) && !(markAt(plan, B.billMonth) && markAt(plan, B.billMonth).t === 'add'))
+    m.warnings.push(`${ymLabel(B.billMonth)}不是這位客戶的開單月份${planAnchor(plan) ? `（${cycleLabel(plan.cycle, planAnchor(plan))}）` : '（尚未設定開單月份）'}，確認無誤再開立`);
   const taxRate = Number(SETTINGS.taxRate ?? 5);
   m.calc = calcInvoice(m.groups.map(gm => ({g: gm.g, rows: gm.devs.filter(x => x.pages).map(x => x.pages)})), B.months, B.adj, taxRate);
   m.taxRate = taxRate;
@@ -540,7 +694,7 @@ function buildModel() {
 function buildSnapshot(m) {
   const c = m.c, p = m.plan;
   return {v: 1, company: clone(SETTINGS), months: B.months, monthsReason: B.months !== p.cycle ? String(B.monthsReason || '').trim() : '',
-    cycle: p.cycle, note: B.note,
+    cycle: p.cycle, billAnchor: planAnchor(p), billMonth: B.billMonth, note: B.note,
     customer: {id: c.id, name: c.name || '', title: p.title || c.name || '', taxId: p.taxId || '', contact: p.contact || '', phone: p.phone || '', email: p.email || '', address: p.address || ''},
     adjustments: B.adj.filter(a => String(a.desc).trim() || a.amount).map(a => ({desc: String(a.desc).trim(), amount: a.amount})),
     groups: m.groups.map((gm, i) => ({id: gm.g.id, name: gm.g.name || `群組 ${i + 1}`,
@@ -575,10 +729,11 @@ function viewBuild() {
   const warns = m.warnings.length ? `<div class="alert"><b>提醒：</b>${m.warnings.map(e => `<div>• ${esc(e)}</div>`).join('')}</div>` : '';
   const snap = buildSnapshot(m);
   return head + `<div class="card"><div class="split"><h2 style="margin:0">${esc(m.c.name)} ${dr}</h2>
-      <span class="muted">計費週期：${esc(CYCLES[m.plan.cycle])}・稅率 ${esc(m.taxRate)}%</span></div>
+      <span class="muted">計費週期：${esc(cycleLabel(m.plan.cycle, planAnchor(m.plan)))}・稅率 ${esc(m.taxRate)}%</span></div>
     <p class="note">起始讀數自動接上一張已開立收費單的結束讀數，不能修改；結束讀數預設為最新的一筆，可改選。客戶傳來讀數時，按「登打抄表」直接輸入。</p>
     ${groupsHtml}
     <div class="form-row" style="margin-top:14px">
+      <div><label>帳務月份（這張收費單算哪個月的單）</label><input type="month" value="${esc(B.billMonth || '')}" onchange="setBillMonth(this.value)"></div>
       <div><label>計費月數（月租、基本張數、保底依此計算）</label><input type="number" min="1" max="12" step="1" value="${esc(B.months)}" onchange="setMonths(this.value)"></div>
       ${B.months !== m.plan.cycle ? `<div style="grid-column:span 2"><label>計費月數與週期不同的原因（會印在收費單）</label><input maxlength="200" value="${esc(B.monthsReason)}" onchange="setB('monthsReason',this.value)" placeholder="例如：首期自 9/15 起算"></div>` : ''}
     </div>
@@ -627,7 +782,7 @@ function readFormHtml(d) {
     ${isLarge(d) ? '<div><label>大尺寸彩色讀數</label><input type="number" name="large" min="0" step="1" required></div>' : ''}
     <div class="wide"><label>備註（例如：客戶 LINE 回報）</label><input name="note" maxlength="200"></div>
     <div><button class="primary" type="submit">儲存抄表</button></div></div>
-    <div class="muted" style="margin-top:6px">儲存後會出現在設備保養系統的服務紀錄（類型「抄表」，不算到府保養），並自動選為結束讀數。</div></form>`;
+    <div class="muted" style="margin-top:6px">儲存後會出現在設備保養系統的服務紀錄（類型「抄表」，該月也算已保養），並自動選為結束讀數。</div></form>`;
 }
 function readingIssues(devId, date, bw, color, large) {
   const vs = readingsOf(devId), out = [];
@@ -754,7 +909,8 @@ function invoiceHtml(s, meta) {
       <div><b>客戶：</b>${esc(cu.title || cu.name || '')}</div><div><b>統一編號：</b>${esc(cu.taxId || '—')}</div>
       <div><b>聯絡人：</b>${esc(cu.contact || '—')}</div><div><b>電話：</b>${esc(cu.phone || '—')}</div>
       <div style="grid-column:1/-1"><b>地址：</b>${esc(cu.address || '—')}${cu.email ? `　<b>Email：</b>${esc(cu.email)}` : ''}</div>
-      <div style="grid-column:1/-1"><b>計張區間：</b>${esc(periodFrom)} ～ ${esc(periodTo)}　<b>計費週期：</b>${esc(CYCLES[s.cycle] || '')}　<b>計費月數：</b>${esc(s.months)} 個月${s.monthsReason ? `（${esc(s.monthsReason)}）` : ''}</div>
+      <div style="grid-column:1/-1"><b>計張區間：</b>${esc(periodFrom)} ～ ${esc(periodTo)}${YM_RE.test(String(s.billMonth || '')) ? `　<b>帳務月份：</b>${esc(ymLabel(s.billMonth))}` : ''}</div>
+      <div style="grid-column:1/-1"><b>計費週期：</b>${esc(cycleLabel(s.cycle, s.billAnchor))}　<b>計費月數：</b>${esc(s.months)} 個月${s.monthsReason ? `（${esc(s.monthsReason)}）` : ''}</div>
     </div>
     <div class="inv-sec">一、抄表明細</div>
     <table><thead><tr><th>機型／地點</th><th>計數器</th><th>起抄日</th><th class="num">起始讀數</th><th>迄抄日</th><th class="num">結束讀數</th><th class="num">張數</th></tr></thead><tbody>${readRows}</tbody></table>
@@ -775,7 +931,7 @@ function printHtml(html) { $('#printArea').innerHTML = html; setTimeout(() => wi
 let LF = {cid: '', status: '', month: ''}, OPEN = null;
 function filteredInvoices() {
   return INVOICES.filter(i => (!LF.cid || i.customer_id === LF.cid) && (!LF.status || i.status === LF.status)
-    && (!LF.month || String(i.period_to || '').slice(0, 7) === LF.month || String(i.issued_at || '').slice(0, 7) === LF.month))
+    && (!LF.month || invMonth(i) === LF.month || String(i.period_to || '').slice(0, 7) === LF.month || String(i.issued_at || '').slice(0, 7) === LF.month))
     .sort((a, b) => String(b.issued_at || b.updated_at).localeCompare(String(a.issued_at || a.updated_at)));
 }
 function setLF(k, v) { LF[k] = v; render(); }
@@ -797,7 +953,7 @@ function viewList() {
   const rows = list.map(i => `<tr class="clickrow ${OPEN && OPEN.id === i.id ? 'sel-row' : ''}" onclick="openInvoice('${i.id}')">
       <td>${i.no ? `<b>${esc(i.no)}</b>` : '<span class="muted">（未開立）</span>'} <span class="tag ${STATUS_CLS[i.status]}">${STATUS[i.status]}</span></td>
       <td>${esc((custById(i.customer_id) || {}).name || '（已刪除的客戶）')}</td>
-      <td style="white-space:nowrap">${esc(i.period_from)} ～ ${esc(i.period_to)}</td><td class="num">${esc(i.months)}</td>
+      <td style="white-space:nowrap">${esc(i.period_from)} ～ ${esc(i.period_to)}<div class="muted">帳務月份 ${esc(invMonth(i))}</div></td><td class="num">${esc(i.months)}</td>
       <td class="num">${money(i.total)}</td>
       <td style="font-size:13px">${i.issued_at ? `${esc(memberName(i.issued_by))}<div class="muted">${esc(String(i.issued_at).slice(0, 10))}</div>` : `<span class="muted">建立：${esc(memberName(i.created_by))}</span>`}${i.status === 'void' ? `<div class="muted">作廢：${esc(i.void_reason || '')}</div>` : ''}</td></tr>`).join('');
   let detail = '';
@@ -817,7 +973,7 @@ function viewList() {
     <div class="form-row" style="margin-top:10px">
       <div><label>客戶</label><select onchange="setLF('cid',this.value)"><option value="">全部客戶</option>${custs.map(c => `<option value="${esc(c.id)}" ${LF.cid === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
       <div><label>狀態</label><select onchange="setLF('status',this.value)"><option value="">全部</option>${Object.keys(STATUS).map(k => `<option value="${k}" ${LF.status === k ? 'selected' : ''}>${STATUS[k]}</option>`).join('')}</select></div>
-      <div><label>月份（迄抄日或開立日）</label><input type="month" value="${esc(LF.month)}" onchange="setLF('month',this.value)"></div></div>
+      <div><label>月份（帳務月份、迄抄日或開立日）</label><input type="month" value="${esc(LF.month)}" onchange="setLF('month',this.value)"></div></div>
     ${rows ? `<table style="min-width:820px"><thead><tr><th>單號</th><th>客戶</th><th>計張區間</th><th class="num">月數</th><th class="num">含稅總計</th><th>開立</th></tr></thead><tbody>${rows}</tbody></table>`
       : '<div class="empty">沒有符合條件的收費單。</div>'}
     <p class="note">點任一列查看內容、列印或作廢。已開立的收費單不能修改；開錯請作廢後重開，作廢紀錄會保留。</p></div>${detail}`;
@@ -837,8 +993,8 @@ function voidInvoice(e, id) {
 const CSV_RISKY = /^[=+\-@\t\r]/;
 const csvCell = x => { let s = x == null ? '' : String(x); if (CSV_RISKY.test(s)) s = "'" + s; return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 function exportCsv() {
-  const head = ['單號', '狀態', '客戶', '計張起日', '計張迄日', '計費月數', '未稅合計', '營業稅', '含稅總計', '開立人', '開立日', '作廢原因'];
-  const rows = filteredInvoices().map(i => [i.no || '', STATUS[i.status], (custById(i.customer_id) || {}).name || '', i.period_from, i.period_to, i.months,
+  const head = ['單號', '狀態', '客戶', '帳務月份', '計張起日', '計張迄日', '計費月數', '未稅合計', '營業稅', '含稅總計', '開立人', '開立日', '作廢原因'];
+  const rows = filteredInvoices().map(i => [i.no || '', STATUS[i.status], (custById(i.customer_id) || {}).name || '', invMonth(i), i.period_from, i.period_to, i.months,
     i.subtotal, i.tax, i.total, i.issued_by ? memberName(i.issued_by) : '', i.issued_at ? String(i.issued_at).slice(0, 10) : '', i.void_reason || '']);
   const text = '﻿' + [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type: 'text/csv'}));
@@ -863,6 +1019,12 @@ function openPlan(cid) {
   PE = {cid, data: pe ? clone(pe.data) : defaultPlan(c), ts: pe ? pe.ts : null, dirty: false, custom: false};
   PE.data.groups = Array.isArray(PE.data.groups) ? PE.data.groups : [];
   PE.data.excluded = [];
+  // v4：舊設定（v3）沒有開單月份：雙月、每季客戶有開過單的，依最後一張收費單的月份帶入建議值（存檔前可改）
+  PE.suggest = null;
+  if (PE.data.cycle > 1 && !planAnchor(PE.data)) {
+    const li = lastBmIdx(cid);
+    if (li > -Infinity) { const m = li % 12 + 1; PE.data.billAnchor = ((m - 1) % PE.data.cycle) + 1; PE.suggest = idxYm(li); PE.dirty = true; }
+  }
   // 只有一台計張設備、尚未分組：直接建立一組，不必再選分組方式
   const devs = billDevsOf(cid);
   if (!PE.data.groups.length && devs.length === 1) { PE.data.groups = [{...newGroup(devName(devs[0])), devices: [devs[0].id]}]; PE.dirty = true; }
@@ -872,7 +1034,12 @@ function closePlan() {
   if (PE && PE.dirty && !confirmTwice('目前的計價設定尚未儲存，確定要回到客戶清單嗎？')) return;
   PE = null; render(); window.scrollTo(0, 0);
 }
-function pf(k, v) { PE.data[k] = k === 'cycle' ? Number(v) : String(v); PE.dirty = true; render(); }
+function pf(k, v) {
+  if (k === 'cycle') { PE.data.cycle = [1, 2, 3].includes(Number(v)) ? Number(v) : 1; PE.data.billAnchor = 0; PE.suggest = null; }   // 切換週期：開單月份要重選
+  else if (k === 'billAnchor') { const a = Number(v); PE.data.billAnchor = (ANCHOR_OPTS[PE.data.cycle] || []).includes(a) ? a : 0; PE.suggest = null; }
+  else PE.data[k] = String(v);
+  PE.dirty = true; render();
+}
 function numIn(v, label, max) {
   const s = String(v).trim(), n = s === '' ? 0 : Number(s);
   if (!Number.isFinite(n) || n < 0 || n > max) { toast(`「${label}」請填 0～${max.toLocaleString()} 的數字`); return null; }
@@ -945,11 +1112,19 @@ function savePlan() {
   data.excluded = [];
   if (data.groups.some(g => !String(g.name || '').trim())) return toast('每個群組都要有名稱');
   if (data.groups.some(g => g.largeMode === 'as_color' && !(g.largeFactor > 0))) return toast('選擇「折算一般彩色」時，折算張數必須大於 0');
+  if (data.cycle > 1 && !planAnchor(data)) return toast('請選擇開單月份（雙月、每季要選實際開單的月份）');
+  if (data.cycle === 1) data.billAnchor = 0;
+  // 開單月份第一次設定或有變更：逾期從這個月開始算
+  const old = PLANS.get(PE.cid), od = old && old.data;
+  if (!od || !YM_RE.test(od.billSince || '') || od.cycle !== data.cycle || planAnchor(od) !== planAnchor(data)) data.billSince = curYm();
+  else data.billSince = od.billSince;
+  data.marks = marksOf(od || data);
   const un = devs.filter(d => !data.groups.some(g => g.devices.includes(d.id)));
   run(async () => {
     const r = await call('billing_plan_save', {p_customer_id: PE.cid, p_data: data, p_expected: PE.ts});
     await reloadBilling();
     const pe = PLANS.get(PE.cid);
+    if (!pe || !Object.prototype.hasOwnProperty.call(pe.data, 'marks')) { PE.ts = r.updated_at; throw new Error(V4_SQL_MSG); }
     PE = {cid: PE.cid, data: clone(pe.data), ts: r.updated_at, dirty: false, custom: PE.custom};
     toast(un.length ? `已儲存。還有 ${un.length} 台計張設備沒有分組，這位客戶暫時不能開單` : '已儲存計價設定');
   }).then(render);
@@ -977,7 +1152,7 @@ function planListBody() {
       : '<span class="tag t-ok">已設定</span>';
     const mode = st.plan ? ({all: '全部合併', each: '每台各自計價', custom: `自訂 ${st.plan.groups.length} 組`})[groupMode(st.plan, billDevsOf(c.id))] || '—' : '—';
     return `<tr class="clickrow" data-cid="${esc(c.id)}" onclick="openPlan(this.dataset.cid)"><td><b>${esc(c.name)}</b>${c.contact || c.phone ? `<div class="muted">${esc([c.contact, c.phone].filter(Boolean).join('・'))}</div>` : ''}</td>
-      <td class="num">${n}</td><td>${tag}</td><td>${st.plan ? esc(CYCLES[st.plan.cycle] || '') : '—'}</td><td>${esc(mode)}</td></tr>`;
+      <td class="num">${n}</td><td>${tag}${st.plan && st.plan.cycle > 1 && !planAnchor(st.plan) ? ' <span class="tag t-warn">尚未設定開單月份</span>' : ''}</td><td>${st.plan ? esc(cycleLabel(st.plan.cycle, planAnchor(st.plan))) : '—'}</td><td>${esc(mode)}</td></tr>`;
   }).join('');
 }
 function filterPlanList(v) { planQ = String(v || '').slice(0, 100); const tb = document.getElementById('planListBody'); if (tb) tb.innerHTML = planListBody(); }
@@ -985,6 +1160,8 @@ function planListHtml() {
   return `<div class="card"><h2>客戶計價設定</h2>
     <label for="planSearch">搜尋客戶</label>
     <input type="search" id="planSearch" value="${esc(planQ)}" placeholder="客戶名稱、聯絡人、電話、統編、設備型號" oninput="filterPlanList(this.value)">
+    ${orphanPlans().length ? `<div class="alert" style="margin-top:10px" id="orphanBox"><b>以下客戶已沒有計張設備</b>（不會出現在本月開單；舊收費單與計價設定都保留）：
+      ${orphanPlans().map(c => `<button class="ghost" style="margin:4px 4px 0 0" onclick="openPlan('${c.id}')">${esc(c.name)}</button>`).join('')}</div>` : ''}
     <table style="min-width:620px;margin-top:10px"><thead><tr><th>客戶</th><th class="num">計張設備</th><th>計價設定</th><th>計費週期</th><th>分組方式</th></tr></thead>
       <tbody id="planListBody">${planListBody()}</tbody></table>
     <p class="note">只列出有「計張」設備的客戶。設備的合約型態在設備保養系統設定：設備資料總覽 → 編輯設備 → 合約型態選「計張」。點任一位客戶進入設定。</p></div>`;
@@ -1054,6 +1231,10 @@ function viewPlans() {
     <h3>請款資訊（印在收費單上）</h3>
     <div class="form-row">${fld('title', '請款抬頭', c.name)}${fld('taxId', '統一編號', '', 20)}${fld('contact', '請款聯絡人', '', 40)}${fld('phone', '電話', '', 40)}${fld('email', 'Email', '', 120)}
       <div><label>計費週期</label><select onchange="pf('cycle',this.value)">${[1, 2, 3].map(n => `<option value="${n}" ${p.cycle === n ? 'selected' : ''}>${CYCLES[n]}</option>`).join('')}</select></div>
+      <div><label>開單月份${p.cycle > 1 ? '（必選）' : ''}</label>${p.cycle > 1
+        ? `<select id="billAnchor" onchange="pf('billAnchor',this.value)"><option value="">請選擇開單月份</option>${ANCHOR_OPTS[p.cycle].map(a => `<option value="${a}" ${planAnchor(p) === a ? 'selected' : ''}>${anchorText(p.cycle, a)}</option>`).join('')}</select>`
+        : '<div class="lock">每個月都開單</div>'}
+        ${PE.suggest ? `<div class="muted" style="margin-top:4px">依最後一張收費單（${esc(ymLabel(PE.suggest))}）帶入建議值，請確認後儲存</div>` : ''}</div>
       <div class="wide"><label>請款地址</label><input maxlength="120" value="${esc(p.address || '')}" onchange="pf('address',this.value)"></div>
       <div class="wide"><label>備註（內部用，不印在收費單）</label><input maxlength="300" value="${esc(p.note || '')}" onchange="pf('note',this.value)"></div></div>
     ${modes}
@@ -1065,7 +1246,12 @@ function viewPlans() {
 
 /* ===================== 人員與設定 ===================== */
 let memEdit = null;
+// V62：保養系統中在職、身份為管理者／會計部／行政人員的同仁，自動可以進入計價系統（由資料庫判斷）
+const staffRole = s => s.admin ? '管理者' : (['工程部', '會計部', '行政人員'].includes(s.role) ? s.role : '工程部');
+const autoMembers = () => D.staff.filter(s => s.active && String(s.email || '').includes('@') && ['管理者', '會計部', '行政人員'].includes(staffRole(s)))
+  .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'zh-TW'));
 function viewAdmin() {
+  const arows = autoMembers().map(s => `<tr><td>${esc(String(s.email).toLowerCase())}</td><td>${esc(s.name || '—')}</td><td>${esc(staffRole(s))}</td><td><span class="tag t-ok">自動</span></td></tr>`).join('');
   const mrows = MEMBERS.map(m => `<tr><td>${esc(m.email)}</td><td>${esc(m.name || '—')}</td><td>${esc(m.role)}</td>
       <td>${m.active ? '<span class="tag t-ok">啟用</span>' : '<span class="tag t-gray">停用</span>'}</td>
       <td><button class="ghost" data-email="${esc(m.email)}" onclick="memEdit=this.dataset.email;render()">編輯</button></td></tr>`).join('');
@@ -1087,7 +1273,10 @@ function viewAdmin() {
       <div class="wide"><label>收費單頁尾備註（選填）</label><textarea name="footer" rows="2" maxlength="500">${esc(s.footer || '')}</textarea></div>
       <div><button class="primary" type="submit">儲存公司設定</button></div></form>`;
   return `<div class="card"><h2>計價人員</h2>
-      <p class="note">名單內、已啟用的人才能進入計張計價系統；管理者、會計、業務助理權限相同。也必須是設備保養系統已核准的同仁。至少要保留一位啟用中的人員。</p>
+      <p class="note">可以進入計張計價系統的人有兩種，權限都相同：<br>① <b>自動</b>：設備保養系統中在職、身份為<b>管理者、會計部、行政人員</b>的同仁（身份在保養系統「設定 → 人員」由管理者設定；工程部不能進入）。<br>② <b>額外加入</b>：下方名單內、已啟用的人（例如外部會計）。也必須是設備保養系統已核准的同仁。</p>
+      <h3>自動（來自保養系統的身份）</h3>
+      ${arows ? `<table style="min-width:620px" id="autoMembers"><thead><tr><th>Google 信箱</th><th>姓名</th><th>身份</th><th></th></tr></thead><tbody>${arows}</tbody></table>` : '<div class="muted">目前沒有。</div>'}
+      <h3>額外加入</h3>
       <table style="min-width:620px"><thead><tr><th>Google 信箱</th><th>姓名</th><th>角色</th><th>狀態</th><th></th></tr></thead><tbody>${mrows}</tbody></table>${mform}</div>
     <div class="card"><h2>公司設定（收費單抬頭與匯款資訊）</h2>${s.bank ? '' : '<div class="alert">尚未填寫匯款資訊，收費單頁尾不會顯示匯款資料。</div>'}${sform}</div>
     ${migrateHtml()}`;

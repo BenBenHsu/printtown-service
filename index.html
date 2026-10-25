@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 設備保養系統 v67</title>
+<title>普印通 設備保養系統 v71</title>
 <style>
 :root{--yellow:#ca8a04;--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -42,6 +42,7 @@ button.primary{background:var(--brand);color:#fff;border:0;padding:8px 14px;bord
 button.ghost{background:#fff;border:1px solid #cbd5e1;padding:4px 10px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px;white-space:nowrap}
 button.ghost:hover:not(:disabled){border-color:var(--brand);color:var(--brand)}
 button.ghost:disabled{opacity:.45;cursor:default}
+button.primary:disabled{opacity:.45;cursor:default}   /* V69：停用的藍色主按鈕也要看得出來是灰的（之前停用時仍是亮藍色，容易誤以為可以按） */
 .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
 .t-danger{background:#fee2e2;color:var(--danger)}
 .t-warn{background:#fef3c7;color:var(--warn)}
@@ -170,6 +171,45 @@ details.tag-editor>summary{cursor:pointer;font-weight:600}
   .due-tbl tr.due-det>td{display:block}
 }
 .cons-act button{padding:3px 8px;font-size:12px}
+/* V66：設備 QR（落地頁、標籤列印） */
+.qr-land{border:2px solid #1f5fbf;background:#f3f8ff;padding:14px 14px 12px}
+.qr-land h2{margin:4px 0 4px;font-size:22px;line-height:1.3}
+.qr-land .qr-sub{font-size:16px;margin:2px 0}
+.qr-chip{display:inline-block;background:#dbeafe;color:#1e3a8a;border-radius:999px;padding:2px 12px;font-size:13px;font-weight:600}
+.qr-big{display:block;width:100%;font-size:20px;font-weight:700;padding:16px 18px;margin-top:12px;border-radius:12px}
+.qr-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.qr-row button{flex:1 1 150px}
+.qr-ok{border-left-color:#16a34a;background:#ecfdf5}
+.qr-warn{border-left-color:#d97706;background:#fffbeb}
+.qr-ck{display:inline-flex;align-items:center;gap:4px;margin:2px 14px 2px 0;cursor:pointer}
+.qr-list{max-height:340px;overflow:auto;border:1px solid #cbd5e1;border-radius:8px;background:#fff}
+.qr-item{display:flex;gap:8px;align-items:flex-start;padding:7px 10px;border-bottom:1px solid #eef2f7;cursor:pointer;margin:0}
+.qr-item:last-child{border-bottom:0}
+.qr-item span{min-width:0}
+.qr-prev{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0;overflow-x:auto}
+.qr-label{position:relative;box-sizing:border-box;flex:none;background:#fff;color:#000;border:1px solid #94a3b8;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.qr-label .qr-tx{position:absolute;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+.qr-label.h .qr-tx{text-align:left}
+.qr-label.v .qr-tx{text-align:center}
+.qr-label svg{display:block}
+.qr-label.qr-tape img{display:block;image-rendering:crisp-edges;image-rendering:pixelated}
+.qr-prevtape{align-items:flex-start}
+.qr-prevtape .qr-label{max-width:100%}
+.qr-prevtape .qr-label img{max-width:100%;height:auto}
+.qr-help{border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;padding:6px 12px;margin:8px 0}
+.qr-help summary{cursor:pointer;font-weight:600}
+.qr-help p{margin:6px 0}
+#qrPrintArea{display:none}
+@media print{
+  body.qr-printing header,body.qr-printing main,body.qr-printing #toast{display:none !important}
+  body.qr-printing{margin:0;padding:0;background:#fff}
+  body.qr-printing #qrPrintArea{display:block !important;position:static}
+  body.qr-printing #qrPrintArea,body.qr-printing #qrPrintArea *{visibility:visible}
+  body.qr-printing .qr-label{border:0;margin:0;break-after:page;page-break-after:always;break-inside:avoid}
+  body.qr-printing .qr-label:last-child{break-after:auto;page-break-after:auto}
+  body.qr-printing.qr-sheet #qrPrintArea{display:flex !important;flex-wrap:wrap;gap:2mm;align-content:flex-start}
+  body.qr-printing.qr-sheet .qr-label{break-after:auto;page-break-after:auto;outline:.2mm dashed #94a3b8}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="config.js"></script>
@@ -177,7 +217,7 @@ details.tag-editor>summary{cursor:pointer;font-weight:600}
 </head>
 <body>
 <header>
-  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v67</span></h1>
+  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v71</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="dash" class="active" onclick="go('dash')">儀表板</button>
     <button data-v="plan" onclick="go('plan')">保養客戶一覽</button>
@@ -191,6 +231,7 @@ details.tag-editor>summary{cursor:pointer;font-weight:600}
 </header>
 <main id="main"></main>
 <div id="toast"></div>
+<div id="qrPrintArea" aria-hidden="true"></div>
 
 <script>
 /* ================= 常數 ================= */
@@ -1019,8 +1060,9 @@ function savePending() {
   if (!sb || !AUTH_EMAIL || !cloudReady) return;
   try {
     const ups = {}, dels = [];
-    snapshotMap().forEach((v, k) => { const js = JSON.stringify(v.data); if (synced.get(k) !== js) ups[k] = js; });
-    synced.forEach((js, k) => { if (!k.startsWith('oplog|') && !snapshotMap().has(k)) dels.push(k); });
+    const cur = snapshotMap();   // V66：只建一次（原本在迴圈裡重建，資料多時儲存會卡數十秒）
+    cur.forEach((v, k) => { const js = JSON.stringify(v.data); if (synced.get(k) !== js) ups[k] = js; });
+    synced.forEach((js, k) => { if (!k.startsWith('oplog|') && !cur.has(k)) dels.push(k); });
     if (Object.keys(ups).length || dels.length) localStorage.setItem(pendingKey(), JSON.stringify({ups, dels}));
     else localStorage.removeItem(pendingKey());
   } catch (e) { toast('無法暫存未送出的變更，請確認網路後再試'); }
@@ -1299,6 +1341,7 @@ async function loadCloudData() {
     if (!window.__ptPoll) window.__ptPoll = setInterval(refreshFromCloud, 60000);
     if (isAdmin()) loadAccessReqs();
     checkBilling();
+    qrConsume();                              // V66：掃 QR 進來的話，登入後直接打開那台設備
   } catch (e) {
     console.error(e);
     cloudErr = e.message || String(e); cloudPhase = 'error'; cloudReady = false;
@@ -1365,10 +1408,14 @@ function cloudLoginHtml() {
     <p class="note">已收到您的登入申請（${esc(AUTH_EMAIL)}）。管理者核准後，系統會自動開放使用，您不需要重新申請。</p>
     <p class="note">目前您看不到任何資料，這是正常的。</p>
     <button class="ghost" onclick="logout()">登出</button>`);
-  return box(`<h2>登入</h2><p class="note">請使用公司核准的 Google 帳號登入。</p>
+  const qrNote = qrPending || qrStashed() ? '<div class="alert-box qr-ok" id="qrLoginNote">您剛掃描了設備上的 QR 標籤。登入後會直接打開那台設備的頁面。</div>' : '';
+  const inApp = qrInApp();
+  const inAppNote = inApp ? `<div class="alert-box qr-warn" id="qrInApp"><b>您現在是在 ${esc(inApp)} 裡面開啟的。</b>Google 不允許在這種內建瀏覽器登入。請點右上角「⋯」或分享圖示，選「用 Safari 開啟」或「用 Chrome 開啟」，再登入。（直接用手機相機掃 QR 就不會有這個問題）</div>` : '';
+  return box(`<h2>登入</h2>${qrNote}${inAppNote}<p class="note">請使用公司核准的 Google 帳號登入。</p>
     <button class="primary" style="width:100%;padding:12px" onclick="cloudSignIn()">使用 Google 帳號登入</button>`);
 }
 async function boot() {
+  qrCaptureUrl();   // V66：先把網址上的設備代碼記起來（登入要跳到 Google 再回來，網址會被洗掉）
   if (!CLOUD_ON) {
     if (HOSTED) { setCloudSt('未設定雲端'); render(); return; }   // 放在網路上時，沒有雲端設定就不開放本機資料
     setCloudSt('本機模式'); importEngineers(); save(); render(); return;
@@ -1810,9 +1857,808 @@ const leftTxt = s => s.daysLeft < 0
   : `約 ${Math.round(s.daysLeft)} 天（${(s.daysLeft / 7).toFixed(1)} 週）`;
 
 
+/* ================= V66：設備 QR =================
+   掃設備上的 QR 標籤 → 開啟本系統 →（需要時先登入一次）→ 直接進入「那一台設備」的頁面 → 按「新增保養紀錄」。
+   QR 的內容只有「網址＋設備代碼」：<網址>#d=<設備代碼>，沒有任何客戶資料；沒登入的人掃了只會看到登入畫面。 */
+const QR_LIB = (function () {
+// Copyright (c) 2009 Kazuhiko Arase
+// Licensed under the MIT license:
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1})},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(o*r,n*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}(function(){return qrcode});
+if (qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']) qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+return qrcode;
+})();
+const QR_STASH_KEY = 'printtown-qr-target', QR_STASH_MS = 30 * 60e3, QR_PREF_KEY = 'printtown-qr-lab';
+const QR_MAX_LABELS = 500, QR_QUIET = 3, QR_LIST_MAX = 200, QR_MIN_MOD = 0.3, QR_SHARE_MAX = 20;
+const QR_DPIS = [180, 203, 300, 360, 600];
+const QR_COL = new Intl.Collator('zh-TW');
+let qrPending = null;      // 掃 QR 進來、等著登入後開啟的設備代碼
+let qrMiss = null;         // V70：掃 QR 進來但沒能打開那台設備時，留在畫面上的說明 {id, why: 'none'|'perm'}（按「知道了」或換頁才消失）
+let qrFocus = null;        // 目前停在「掃描落地頁」的設備
+let qrSaved = null;        // 剛在落地頁儲存的紀錄 {dev, date}
+let qrPrinted = null;      // 剛送出列印、等著確認「有印出來」{ids}
+let qrScrollTop = false;
+const QR_SIZES = [
+  {k: 't9auto', tape: 9, auto: true, h: 9, w: 40, t: '9 mm 標籤帶 × 自動長度（依文字長短）'},
+  {k: 't9x30', tape: 9, w: 30, h: 9, t: '9 mm 標籤帶 × 30 mm'},
+  {k: 't9x40', tape: 9, w: 40, h: 9, t: '9 mm 標籤帶 × 40 mm'},
+  {k: 't9x50', tape: 9, w: 50, h: 9, t: '9 mm 標籤帶 × 50 mm'},
+  {k: 't9x60', tape: 9, w: 60, h: 9, t: '9 mm 標籤帶 × 60 mm'},
+  {k: 't12auto', tape: 12, auto: true, h: 12, w: 40, t: '12 mm 標籤帶 × 自動長度'},
+  {k: 't12x40', tape: 12, w: 40, h: 12, t: '12 mm 標籤帶 × 40 mm'},
+  {k: '50x24', w: 50, h: 24, t: '50 × 24 mm（橫式，24 mm 寬標籤帶，最常用）'},
+  {k: '40x18', w: 40, h: 18, t: '40 × 18 mm（18 mm 寬標籤帶）'},
+  {k: '30x12', w: 30, h: 12, t: '30 × 12 mm（12 mm 寬標籤帶，QR 很小）'},
+  {k: '24x50', w: 24, h: 50, t: '24 × 50 mm（直式）'},
+  {k: '62x29', w: 62, h: 29, t: '62 × 29 mm（Brother 常見 62 mm 標籤紙）'},
+  {k: '40x40', w: 40, h: 40, t: '40 × 40 mm（正方形）'},
+  {k: 'custom', t: '自訂尺寸'}];
+const qrLab = {open: false, inited: false, sel: new Set(), cat: 'all', cust: '', q: '', fresh: false,
+  size: 't9auto', w: 40, h: 9, layout: 'auto', paper: 'label', showCust: true, showLoc: true, showModel: false, showCode: false,
+  dpi: 203, band: null, feed: 2, rot: false};
+
+/* ---- 掃描進來：記住目標 → 登入後開啟 ---- */
+const qrIdOk = id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(id);
+function qrParseHash(h) { const m = /^#?d=([A-Za-z0-9_-]{1,64})(?:&|$)/.exec(String(h || '')); return m ? m[1] : null; }
+function qrStash(id) { try { localStorage.setItem(QR_STASH_KEY, JSON.stringify({id, t: Date.now()})); } catch (e) {} }
+function qrStashed() {   // 登入要先跳到 Google 再回來，網址上的設備代碼會不見，所以先記在瀏覽器裡（30 分鐘內有效）
+  try {
+    const o = JSON.parse(localStorage.getItem(QR_STASH_KEY) || 'null'), age = o ? Date.now() - o.t : -1;
+    if (o && qrIdOk(o.id) && age >= 0 && age < QR_STASH_MS) return o.id;
+  } catch (e) {}
+  return null;
+}
+function qrStashClear() { try { localStorage.removeItem(QR_STASH_KEY); } catch (e) {} }
+// LINE、Facebook 等 App 的「內建瀏覽器」：Google 不讓在裡面登入——先在登入畫面提醒改用 Safari／Chrome
+function qrInApp(ua) {
+  ua = ua === undefined ? String(navigator.userAgent || '') : String(ua || '');
+  if (/\bLine\//i.test(ua)) return 'LINE';
+  if (/FBAN|FBAV|FB_IAB/.test(ua)) return 'Facebook';
+  if (/Instagram/i.test(ua)) return 'Instagram';
+  if (/MicroMessenger/i.test(ua)) return '微信';
+  if (/KAKAOTALK/i.test(ua)) return 'KakaoTalk';
+  if (/; wv\)/.test(ua)) return 'App 內建瀏覽器';
+  if (/iPhone|iPad|iPod/.test(ua) && !/Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua)) {
+    let st = false; try { st = !!navigator.standalone; } catch (e) {}
+    if (!st) return 'App 內建瀏覽器';
+  }
+  return '';
+}
+function qrCaptureUrl() {
+  if (!CLOUD_ON) return false;
+  const id = qrParseHash(location.hash);
+  if (!id) return false;
+  qrPending = id; qrStash(id);
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  return true;
+}
+window.addEventListener('hashchange', () => { if (qrCaptureUrl()) qrConsume(); });
+function qrConsume() {
+  const id = qrPending || qrStashed();
+  if (!id || !cloudReady || !curStaff()) return false;
+  qrPending = null; qrStashClear();
+  return qrOpen(id);
+}
+function qrOpen(id) {
+  const dev = S.devices.find(d => d.id === id), c = dev ? custOf(dev) : null;
+  if (!dev || !c) { qrMiss = {id, why: 'none'}; toast('找不到這台設備：可能已被刪除或換機。請到「設備資料總覽」搜尋客戶。'); render(); return false; }
+  if (!devVisible(dev) || !custVisible(c)) { qrMiss = {id, why: 'perm'}; toast('您的身分沒有權限查看這台設備'); render(); return false; }
+  qrMiss = null; qrFocus = dev.id; qrSaved = null; qrPrinted = null; qrLab.open = false;
+  selDev = dev.id; devPanel = null; quickDev = null; editDevId = null; chartIdx = null;
+  if (typeof remReset === 'function') remReset();
+  view = 'manage'; qrScrollTop = true; render();
+  return true;
+}
+
+function qrMissClose() { qrMiss = null; render(); }
+function qrMissHtml() {   // 掃了 QR 卻沒打開設備頁：把原因留在畫面上（原本只有幾秒鐘就消失的小提示，很容易沒看到，只看到儀表板）
+  if (!qrMiss) return '';
+  const id = esc(qrMiss.id);
+  const body = qrMiss.why === 'perm'
+    ? `設備代碼「<b>${id}</b>」那台設備，您目前登入的身分（${esc(roleOf(curStaff()))}）沒有權限查看。請改用有權限的帳號登入，或請管理者協助。`
+    : `設備代碼「<b>${id}</b>」在公司雲端的資料裡找不到。<br>常見原因：① 這張標籤是用「下載的檔案（本機模式）」或舊資料印的，那裡的設備代碼和公司雲端不一樣；② 這台設備或它所屬的客戶已被刪除、換機。<br>請到「設備資料總覽」搜尋這個客戶確認；需要的話，請管理者用正式網址登入後，重印這張標籤。`;
+  return `<div class="alert-box qr-warn" id="qrMiss"><b>您掃描的設備 QR 標籤沒有打開設備頁。</b>${body}<div class="qr-row" style="margin-top:6px"><button class="primary" type="button" onclick="qrMissClose()">知道了</button></div></div>`;
+}
+
+/* ---- 落地頁 ---- */
+function qrNew(id) { qrSaved = null; quickLog(id); }
+function qrExit() { qrFocus = null; qrSaved = null; devPanel = null; quickDev = null; qrScrollTop = true; go('manage'); }
+function qrToCust(cid) {
+  qrFocus = null; qrSaved = null; devPanel = null; quickDev = null;
+  if (typeof openCustSet !== 'undefined') openCustSet.add(cid);
+  qrScrollTop = true; render();
+}
+function qrPageHtml(dev) {
+  const c = custOf(dev) || {};
+  const phones = [c.phone ? '☎ ' + c.phone : '', c.phone2 ? '備用 ☎ ' + c.phone2 : ''].filter(Boolean).join('　');
+  const sub = [c.contact, phones, c.address].filter(Boolean).join('　');
+  const id = esc(dev.id);
+  const saved = qrSaved && qrSaved.dev === dev.id ? `<div class="alert-box qr-ok" id="qrSaved">已儲存「${esc(qrSaved.date)}」的保養紀錄。
+      <div class="qr-row"><button class="primary" type="button" onclick="qrNew('${id}')">再新增一筆</button><button class="ghost" type="button" onclick="qrExit()">回設備資料總覽</button></div></div>` : '';
+  const head = `<div class="card qr-land" id="qrLand" data-dev="${id}">
+    <span class="qr-chip">已由設備 QR 標籤開啟</span>
+    <h2>${esc(c.name || '')}</h2>
+    <div class="qr-sub"><b>${esc(KIND[dev.kind] || '')}</b>｜${esc(dev.brand || '')} ${esc(dev.model || '')}${dev.location ? '｜' + esc(dev.location) : ''}</div>
+    ${sub ? `<div class="muted" style="font-size:14px">${esc(sub)}</div>` : ''}
+    <div class="muted" style="font-size:13px;margin-top:4px">請先核對：上面的客戶、機型、地點要和眼前這台設備一樣，再新增紀錄。</div>
+    ${saved}${qrPrintedHtml()}
+    <button class="primary qr-big" type="button" onclick="qrNew('${id}')">新增保養紀錄</button>
+    <div class="qr-row"><button class="ghost" type="button" onclick="qrToCust('${esc(c.id)}')">看此客戶的其他設備</button>
+      <button class="ghost" type="button" onclick="qrExit()">回設備資料總覽</button>
+      <button class="ghost" type="button" onclick="qrLabOpen(['${id}'])">列印這台的 QR 標籤</button></div></div>`;
+  return head + `<div id="qrPanel" data-dev="${id}">${deviceHtml(dev)}${remindHtml(dev)}${serviceHtml(dev)}${consHtml(dev)}${customerInfoCard()}</div>`;
+}
+
+/* ---- QR 產生（qrcode-generator，MIT；容錯 M） ---- */
+function qrLoc() { return location; }   // 取得目前網址（獨立成函式，方便測試時模擬「用檔案打開」「用內部網址打開」）
+const QR_OFFICIAL = 'https://benbenhsu.github.io/printtown-service/';   // 本系統的正式網址（只當 QR 的預設指向，不是連線對象）：用電腦裡的檔案、localhost 等手機打不開的方式開啟系統時，QR 自動指向這裡
+const qrLocBase = () => { const l = qrLoc(); return (l.origin + l.pathname).replace(/index\.html$/, ''); };
+const qrLocOk = () => { try { return qrBaseOk(qrLocBase()); } catch (e) { return false; } };   // 現在使用的網址，手機打不打得開
+const qrDefaultBase = () => qrLocOk() ? qrLocBase() : QR_OFFICIAL;
+function qrLocKind() { const l = qrLoc(), b = qrLocBase(); return l.protocol === 'file:' || /^file:/i.test(b) ? '電腦裡的檔案（file://）' : /^https?:\/\/(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(b) ? '這台電腦或內部網路的位址' : /^http:/i.test(b) ? '沒有加密的 http:// 網址' : '不是正式網站的網址'; }
+function qrLocNoteHtml(id, short) {   // 不是用正式網址打開系統時的提醒（QR 已自動指向正式網站，照常可以預覽與列印）
+  if (qrLocOk()) return '';
+  const base = qrBaseUrl(), own = !!(S.ui && typeof S.ui.qrBase === 'string' && qrBaseOk(S.ui.qrBase.trim()));   // own＝管理者在「設定」填了自訂網址
+  const local = CLOUD_ON ? '' : '你現在看到的是這台電腦上的「本機模式」資料，不一定和正式網站（公司雲端）上的設備一樣；';
+  return short
+    ? `<div class="alert-box qr-warn" id="${id}"><b>提醒：</b>你現在不是用正式網址打開系統，${own ? `QR 指向你在「設定」填的網址（${esc(base)}）` : `QR 已自動指向正式網站（${esc(base)}）`}。${local}標籤上的設備代碼如果在正式網站找不到，手機掃了會顯示「找不到這台設備」。大量印之前，請改用正式網址登入後再印。</div>`
+    : `<div class="alert-box qr-warn" id="${id}"><b>你現在不是用正式網址打開系統</b>（目前是「${esc(qrLocKind())}」：${esc(qrLocBase())}）。手機打不開這種網址，所以 ${own ? `<b>QR 指向你在「設定」填的網址：${esc(base)}</b>` : `<b>QR 已自動改成指向：${esc(base)}</b>`}，預覽與列印照常可以用。<br>請注意：${local}標籤上的設備代碼如果在正式網站找不到，手機掃了會顯示「找不到這台設備」。要大量印標籤，請改用正式網址（https:// 開頭、登入後的畫面）再印。</div>`;
+}
+function qrHostOk(h) {   // 手機要打得開：必須是公開的網域名稱（不能是 localhost、內部網路位址、IP、沒有點的名稱）
+  h = String(h || '').toLowerCase().replace(/\.$/, '');
+  if (!h || h.indexOf('.') < 0 || h.indexOf(':') >= 0 || h[0] === '[') return false;
+  if (/^[0-9.]+$/.test(h)) return false;
+  if (h === 'localhost' || /\.(localhost|local|localdomain|internal|lan|home|intranet|corp)$/.test(h)) return false;
+  return /^[a-z0-9.-]+$/.test(h) && !/(^|\.)\.|\.\.|^-|-$/.test(h);
+}
+const qrBaseOk = u => typeof u === 'string' && /^https:\/\/[A-Za-z0-9._~:\/%@!$&()*+,;=-]+$/.test(u) && u.length <= 200 && (() => { try { return qrHostOk(new URL(u).hostname); } catch (e) { return false; } })();   // 只接受半形英數與符號（中文網域請貼 punycode 形式）
+function qrBaseUrl() { const b = S.ui && typeof S.ui.qrBase === 'string' ? S.ui.qrBase.trim() : ''; return b && qrBaseOk(b) ? b : qrDefaultBase(); }
+const qrDevUrl = d => qrBaseUrl() + '#d=' + d.id;
+function qrBaseBad() {   // QR 要指向的網址手機打不開時，回傳說明（空字串＝沒問題）。這種情況手機相機會顯示「找不到可用的資料」
+  const b = qrBaseUrl();
+  if (qrBaseOk(b)) return '';
+  const shown = /^file:/i.test(b) ? '電腦裡的檔案（file://）' : /^https?:\/\/(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(b) ? '這台電腦或內部網路的位址' : /^http:/i.test(b) ? '沒有加密的 http:// 網址' : '不是正式網站的網址';
+  return `目前這個畫面不是用正式網址打開的（QR 會指向「${b}」，是${shown}），手機掃了打不開，相機會顯示「找不到可用的資料」。所以現在不能預覽、列印或下載標籤。請改用你平常登入系統的正式網址（https:// 開頭的那個）重新打開系統再來印；或請管理者到「設定」→「設備 QR 標籤」的「自訂網址」填入正式網址。`;
+}
+const qrMemo = new Map();
+function qrMake(text, e) { const q = QR_LIB(0, e); q.addData(text); q.make(); return q; }
+const QR_CAP = {   // QR 規格表：版本 1～20 在各容錯等級的資料碼字數；位元組模式可放的字元數 = 碼字數 − 2（版本 1～9）或 − 3（版本 10 以上）
+  L: [19, 34, 55, 80, 108, 136, 156, 194, 232, 274, 324, 370, 428, 461, 523, 589, 647, 721, 795, 861],
+  M: [16, 28, 44, 64, 86, 108, 124, 154, 182, 216, 254, 290, 334, 365, 415, 453, 507, 563, 627, 669],
+  Q: [13, 22, 34, 48, 62, 76, 88, 110, 132, 154, 180, 206, 244, 261, 295, 325, 367, 397, 445, 485]};
+const qrFits = (n, e, v) => n <= QR_CAP[e][v - 1] - (v < 10 ? 2 : 3);
+function qrAutoPick(text) {   // 直接算出「最小版本（以 L 計）＋同版本最高容錯」，只需要產生一次 QR（比逐一試快 3 倍）
+  const n = new TextEncoder().encode(text).length;
+  for (let v = 1; v <= 20; v++) if (qrFits(n, 'L', v)) return {v, e: qrFits(n, 'Q', v) ? 'Q' : qrFits(n, 'M', v) ? 'M' : 'L'};
+  return null;
+}
+function qrMatrix(text, ecc) {
+  ecc = ecc || 'M';
+  const key = ecc + '|' + text;
+  let r = qrMemo.get(key); if (r) return r;
+  let q, e = ecc;
+  if (ecc === 'auto') {   // 窄標籤帶用：先找最小的版本（以容錯 L 計），再在同一版本裡用最高的容錯（最高到 Q）
+    const pick = qrAutoPick(text); q = null;
+    if (pick) { try { q = QR_LIB(pick.v, pick.e); q.addData(text); q.make(); e = pick.e; if (q.getModuleCount() !== 17 + 4 * pick.v) q = null; } catch (x) { q = null; } }
+    if (!q) {   // 查表沒有結果（網址超長）或與函式庫不一致時，用函式庫自己試出來（較慢但一定對）
+      const nL = qrMake(text, 'L').getModuleCount();
+      e = 'L'; q = null;
+      for (const c of ['Q', 'M']) { const t = qrMake(text, c); if (t.getModuleCount() === nL) { e = c; q = t; break; } }
+      if (!q) q = qrMake(text, 'L');
+    }
+  } else q = qrMake(text, ecc);
+  const n = q.getModuleCount(), rows = [];
+  for (let y = 0; y < n; y++) { let s = ''; for (let x = 0; x < n; x++) s += q.isDark(y, x) ? '1' : '0'; rows.push(s); }
+  r = {n, rows, ecc: e, ver: (n - 17) / 4}; if (qrMemo.size > 3000) qrMemo.clear(); qrMemo.set(key, r); return r;
+}
+function qrPath(m, q) {
+  q = q == null ? QR_QUIET : q; let p = '';
+  m.rows.forEach((s, y) => { let x = 0; while (x < m.n) { if (s[x] === '1') { let e = x; while (e < m.n && s[e] === '1') e++; p += `M${x + q} ${y + q}h${e - x}v1h-${e - x}z`; x = e; } else x++; } });
+  return p;
+}
+function qrSvg(text, mm) {
+  const m = qrMatrix(text), t = m.n + 2 * QR_QUIET;
+  return `<svg viewBox="0 0 ${t} ${t}" width="${(+mm).toFixed(2)}mm" height="${(+mm).toFixed(2)}mm" shape-rendering="crispEdges" role="img" aria-label="設備 QR"><rect width="${t}" height="${t}" fill="#fff"/><path d="${qrPath(m)}" fill="#000"/></svg>`;
+}
+
+/* ---- 標籤版面（螢幕預覽、列印、PNG 共用同一套計算） ---- */
+function qrBigSvg(text) {   // 給手機掃描測試用的大 QR：每一格是整數像素、四周留 4 格空白（QR 標準），黑白分明
+  const m = qrMatrix(text), q = 4, t = m.n + 2 * q, px = Math.max(4, Math.floor(320 / t)), side = t * px;
+  return `<svg viewBox="0 0 ${t} ${t}" width="${side}" height="${side}" shape-rendering="crispEdges" role="img" aria-label="手機掃描測試 QR" style="max-width:100%;height:auto;background:#fff;display:block"><rect width="${t}" height="${t}" fill="#fff"/><path d="${qrPath(m, q)}" fill="#000"/></svg>`;
+}
+function qrScanTestHtml(d) {
+  const u = qrDevUrl(d);
+  return `<div id="qrScanTest" style="margin:10px 0;padding:10px;border:1px solid var(--line,#ccd);border-radius:8px">
+    <div style="font-weight:700">手機掃描測試（${esc(custName(d))}｜${esc(d.location || d.model || d.id)}）</div>
+    <div style="margin:8px 0;padding:6px;background:#fff;display:inline-block;max-width:100%">${qrBigSvg(u)}</div>
+    <div style="font-size:13px">用手機的相機對著上面這張掃（螢幕亮度調高、距離約 20～30 公分）。手機會跳出「打開 ${esc(new URL(u).host)}」之類的提示，點下去就是這台設備的頁面。這張的網址和標籤上的 QR 完全相同。</div>
+    <div class="muted" style="font-size:13px;margin-top:4px">這張 QR 裝的網址：<b id="qrScanUrl" style="word-break:break-all">${esc(u)}</b>　<a id="qrScanLink" href="${esc(u)}" target="_blank" rel="noopener noreferrer">在這台電腦上打開</a></div>
+    <div class="muted" style="font-size:13px">掃了沒反應，或顯示「找不到可用的資料」：請看上面這行網址是不是 https:// 開頭的網站網址。<br>掃了只看到儀表板、沒有跳到設備頁：①先看手機上那個網頁左上角的版本，要 v66 以上才有「掃了開設備頁」的功能（沒有的話，請先把新版 index.html 上傳到 GitHub）；②再看畫面最上面有沒有「您掃描的設備 QR 標籤沒有打開設備頁」的說明（會寫出原因）。</div></div>`;
+}
+function qrEm(t) {   // 估算文字寬度（單位：字高）
+  let w = 0;
+  for (const ch of String(t)) { const c = ch.codePointAt(0); w += c > 0x2E7F ? 1 : c === 32 ? 0.32 : /[A-Z0-9]/.test(ch) ? 0.64 : /[a-z]/.test(ch) ? 0.56 : 0.62; }
+  return Math.max(w * 1.04, 0.01);
+}
+function qrTexts(d, o) {
+  const c = custOf(d) || {}, out = [];
+  if (o.showCust && c.name) out.push({t: c.name, b: 1});
+  if (o.showLoc && d.location) out.push({t: d.location});
+  if (o.showModel) { const m = [d.brand, d.model].filter(Boolean).join(' '); if (m) out.push({t: m}); }
+  if (o.showCode) out.push({t: '代碼 ' + d.id, s: 0.8});
+  return out;
+}
+function qrLayout(d, o) {
+  const W = +o.w, H = +o.h, pad = Math.max(0.8, Math.min(1.8, Math.min(W, H) * 0.06)), gap = pad;
+  const tx0 = qrTexts(d, o), horiz = o.layout === 'h' || (o.layout !== 'v' && W >= H * 1.3);
+  let qr, qx, qy, tx, ty, tw, th;
+  if (horiz) {
+    qr = Math.max(4, Math.min(H - 2 * pad, tx0.length ? W * 0.62 : W - 2 * pad));
+    qy = (H - qr) / 2; ty = pad; th = H - 2 * pad;
+    if (tx0.length) { qx = pad; tx = qx + qr + gap; tw = W - tx - pad; } else { qx = (W - qr) / 2; tx = 0; tw = 0; }
+  } else {
+    qr = Math.max(4, tx0.length ? Math.min(W - 2 * pad, H * 0.68 - pad) : Math.min(W - 2 * pad, H - 2 * pad));
+    qx = (W - qr) / 2; qy = tx0.length ? pad : (H - qr) / 2;
+    tx = pad; ty = qy + qr + gap * 0.6; tw = W - 2 * pad; th = H - ty - pad;
+  }
+  th = Math.max(th, 0); tw = Math.max(tw, 0);
+  const n = qrMatrix(qrDevUrl(d)).n, mod = qr / (n + 2 * QR_QUIET);
+  const base = tx0.length ? Math.min(3.4, th / (tx0.length * 1.22)) : 0;
+  const fs0 = tx0.map(x => base * (x.b ? 1.12 : 1) * (x.s || 1));
+  const need = fs0.reduce((a, f) => a + f * 1.22, 0), sc = need > th && need > 0 ? th / need : 1;
+  let clipped = false, minFs = Infinity;
+  const lines = tx0.map((x, i) => {
+    let f = fs0[i] * sc; const fit = tw / qrEm(x.t);
+    if (fit < f) f = fit;
+    if (f < 1.4) { f = 1.4; clipped = true; }
+    minFs = Math.min(minFs, f);
+    return {t: x.t, b: x.b, fs: f};
+  });
+  return {W, H, horiz, pad, qr, qx, qy, tx, ty, tw, th, n, mod, lines, clipped, minFs: lines.length ? minFs : null};
+}
+function qrLabelHtml(d, o) {
+  const L = qrLayout(d, o), mm = x => (+x).toFixed(2) + 'mm';
+  const tx = L.lines.length ? `<div class="qr-tx" style="left:${mm(L.tx)};top:${mm(L.ty)};width:${mm(L.tw)};height:${mm(L.th)}">${L.lines.map(l =>
+    `<div style="font-size:${mm(l.fs)};${l.b ? 'font-weight:700;' : ''}line-height:1.22;white-space:nowrap;overflow:hidden">${esc(l.t)}</div>`).join('')}</div>` : '';
+  return `<div class="qr-label ${L.horiz ? 'h' : 'v'}" data-dev="${esc(d.id)}" style="width:${mm(L.W)};height:${mm(L.H)}">`
+    + `<div style="position:absolute;left:${mm(L.qx)};top:${mm(L.qy)};width:${mm(L.qr)};height:${mm(L.qr)}">${qrSvg(qrDevUrl(d), L.qr)}</div>${tx}</div>`;
+}
+function qrSizeErr(o) {
+  const bb = qrBaseBad(); if (bb) return bb;
+  if (qrIsTape(o)) return '';
+  const w = +o.w, h = +o.h;
+  if (!(w >= 15 && w <= 200 && h >= 10 && h <= 200)) return '標籤尺寸要在 寬 15～200 mm、高 10～200 mm 之間';
+  if (o.paper === 'sheet' && (w > 190 || h > 277)) return '印在 A4 紙上時，單張標籤不能超過 190 × 277 mm';
+  return '';
+}
+function qrWarns(devs, o) {
+  if (qrIsTape(o)) return qrTapeWarns(devs, o);
+  const w = [], Ls = devs.map(d => qrLayout(d, o));
+  const qmin = Math.min(...Ls.map(l => l.qr)), mmin = Math.min(...Ls.map(l => l.mod));
+  if (mmin < QR_MIN_MOD) w.push(`QR 只有約 ${qmin.toFixed(1)} mm 見方（每一格約 ${mmin.toFixed(2)} mm），手機可能不好掃。建議 QR 至少 12 mm 以上：請改用較大的標籤，或關掉部分文字讓 QR 變大。`);
+  const nclip = Ls.filter(l => l.clipped).length;
+  if (nclip) w.push(`有 ${nclip} 張標籤的文字太長，被截斷了（QR 不受影響，掃描後頁面會顯示完整客戶與機型）。`);
+  else {
+    const fmin = Math.min(...Ls.map(l => l.minFs == null ? 99 : l.minFs));
+    if (fmin < 2) w.push(`標籤上的文字最小約 ${(fmin * 2.835).toFixed(1)} pt，偏小。可以關掉部分文字項目（例如設備代碼）。`);
+  }
+  return w;
+}
+
+
+/* ---- 窄標籤帶（9 mm、12 mm）：整張標籤直接產生「點陣圖」，每一個點都由我們決定，不讓列印軟體重新縮放 ---- */
+const qrTapeOf = o => QR_SIZES.find(x => x.k === o.size && x.tape) || null;
+const qrIsTape = o => !!qrTapeOf(o);
+let qrMctxV = null;
+const qrFontOf = (b, px) => `${b ? 700 : 600} ${px}px "Noto Sans TC","Microsoft JhengHei","PingFang TC","Heiti TC",sans-serif`;
+function qrMeasure(t, b, px) { if (!qrMctxV) qrMctxV = document.createElement('canvas').getContext('2d'); qrMctxV.font = qrFontOf(b, px); return qrMctxV.measureText(t).width; }
+function qrTapeCfg(o) {
+  const s = qrTapeOf(o), dpi = QR_DPIS.includes(+o.dpi) ? +o.dpi : 203, d = mm => Math.round(mm * dpi / 25.4);
+  const band = Math.max(4, Math.min(s.tape, +o.band > 0 ? +o.band : s.tape - 2));
+  const Hd = d(s.tape), bandD = Math.min(Hd, d(band));
+  const feed = +o.feed >= 0 && +o.feed <= 10 ? +o.feed : 2;
+  return {s, tape: s.tape, dpi, d, band, Hd, bandD, y0: Math.floor((Hd - bandD) / 2), pad: d(feed), gap: Math.max(2, d(1.2)), auto: !!s.auto, lenD: s.w ? d(s.w) : 0, minLen: d(25), maxLen: d(60)};
+}
+function qrTapeQr(d, cfg) {   // QR 的點陣：可印高度內放到最大；每格不到 3 點時不取整數，改成整條填滿（每格 1～2 點交錯），比縮小更好掃
+  const m = qrMatrix(qrDevUrl(d), 'auto'), q = 1, tot = m.n + 2 * q, s = cfg.bandD / tot, snap = s >= 3;
+  const qrD = snap ? tot * Math.floor(s) : cfg.bandD;
+  return {m, q, tot, snap, qrD, dpm: qrD / tot, modMM: qrD / tot * 25.4 / cfg.dpi};
+}
+function qrTapeLayout(d, o, cfg, forceW) {
+  const Q = qrTapeQr(d, cfg), qx = cfg.pad, qy = cfg.y0 + Math.floor((cfg.bandD - Q.qrD) / 2), tx = qx + Q.qrD + cfg.gap;
+  const texts = qrTexts(d, o), n = texts.length, basePx = n ? Math.max(6, Math.min(Math.floor(cfg.bandD / (n * 1.2)), cfg.d(3.4))) : 0;
+  const lines = texts.map(x => { const px0 = Math.max(6, Math.floor(basePx * (x.s || 1))); return {t: x.t, b: !!x.b, px0, w0: qrMeasure(x.t, !!x.b, px0)}; });
+  const need = lines.reduce((a, l) => Math.max(a, l.w0), 0);
+  const Wd = forceW || (cfg.auto ? Math.max(cfg.minLen, Math.min(cfg.maxLen, Math.ceil(tx + need + cfg.pad))) : cfg.lenD);
+  const tw = Math.max(0, Wd - tx - cfg.pad), minPx = cfg.d(1.6);
+  let clipped = false, minLinePx = Infinity;
+  lines.forEach(l => {   // 太長：先縮小字（最多縮到 85%）→ 再把字壓扁（最多壓到 72%）→ 還是放不下就截斷並加「…」
+    let px = l.px0, sx = 1, t = l.t, w = l.w0;
+    if (w > tw && px > minPx) { px = Math.max(minPx, Math.floor(px * 0.85)); w = qrMeasure(t, l.b, px); }
+    if (w > tw && tw > 0) { sx = Math.max(0.72, tw / w); w *= sx; }
+    if (w > tw) { const ch = Array.from(t); while (ch.length > 1 && qrMeasure(ch.join('') + '…', l.b, px) * sx > tw) ch.pop(); t = ch.join('') + '…'; w = qrMeasure(t, l.b, px) * sx; clipped = true; }
+    l.px = px; l.sx = sx; l.txt = t; l.w = w; minLinePx = Math.min(minLinePx, px);
+  });
+  const total = lines.reduce((a, l) => a + l.px * 1.2, 0);
+  let y = cfg.y0 + Math.max(0, (cfg.bandD - total) / 2);
+  lines.forEach(l => { l.y = Math.round(y + l.px * 0.6); y += l.px * 1.2; });
+  return {Q, qx, qy, tx, tw, Wd, Hd: cfg.Hd, lines, clipped, minLinePx: lines.length ? minLinePx : null, need};
+}
+function qrTapeCanvas(d, o, cfg, forceW) {
+  const L = qrTapeLayout(d, o, cfg, forceW), cv = document.createElement('canvas'); cv.width = L.Wd; cv.height = L.Hd;
+  const g = cv.getContext('2d', {willReadFrequently: true}); if (!g) throw new Error('瀏覽器不讓網頁使用「畫布（canvas）」功能');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, L.Wd, L.Hd);
+  const {m, q, tot, qrD} = L.Q, edge = i => Math.ceil(i * qrD / tot);   // 第 i 格從第幾個點開始
+  g.fillStyle = '#000';
+  m.rows.forEach((s, y) => {
+    const y0 = L.qy + edge(y + q), y1 = L.qy + edge(y + q + 1); let x = 0;
+    while (x < m.n) { if (s[x] === '1') { let e = x; while (e < m.n && s[e] === '1') e++; g.fillRect(L.qx + edge(x + q), y0, edge(e + q) - edge(x + q), y1 - y0); x = e; } else x++; }
+  });
+  g.textBaseline = 'middle';
+  L.lines.forEach(l => { g.save(); g.font = qrFontOf(l.b, l.px); g.translate(L.tx, l.y); g.scale(l.sx, 1); g.fillText(l.txt, 0, 0); g.restore(); });
+  const im = g.getImageData(0, 0, L.Wd, L.Hd), a = im.data;   // 轉成純黑白（熱感式標籤機只有「印」與「不印」）
+  if (!(a.length >= 4 && a[3] === 255)) throw new Error('畫布讀回的圖片資料被瀏覽器限制（常見於防追蹤、防指紋設定或擴充功能）');
+  let dark = 0;
+  for (let i = 0; i < a.length; i += 4) { const v = a[i] * 0.3 + a[i + 1] * 0.59 + a[i + 2] * 0.11 < 150 ? 0 : 255; if (!v) dark++; a[i] = a[i + 1] = a[i + 2] = v; a[i + 3] = 255; }
+  if (!dark || dark > a.length / 4 * 0.9) throw new Error('畫布讀回的圖片資料不正常（沒有 QR 或整張全黑）');
+  g.putImageData(im, 0, 0);
+  if (!o.rot) return {cv, L, dpi: cfg.dpi};
+  const r = document.createElement('canvas'); r.width = L.Hd; r.height = L.Wd;
+  const h = r.getContext('2d'); h.imageSmoothingEnabled = false; h.translate(L.Hd, 0); h.rotate(Math.PI / 2); h.drawImage(cv, 0, 0);
+  return {cv: r, L, dpi: cfg.dpi};
+}
+function qrTapeW(devs, o, cfg) { return cfg.auto ? Math.max(cfg.minLen, ...devs.map(d => qrTapeLayout(d, o, cfg).Wd)) : cfg.lenD; }
+function qrTapeLabelHtml(d, o, cfg, W, zoom) {   // zoom 有值＝螢幕預覽：每一個點用 2～4 個整數螢幕像素顯示（不會糊、格子大小一致）；沒有值＝列印用，大小是實際毫米
+  const r = qrTapeCanvas(d, o, cfg, W), px = zoom ? Math.max(2, Math.min(4, Math.floor(720 / r.cv.width))) : 0, mm = x => px ? (x * px) + 'px' : (x * 25.4 / cfg.dpi).toFixed(3) + 'mm';
+  const url = r.cv.toDataURL('image/png'); if (!/^data:image\/png;base64,[A-Za-z0-9+\/=]{150,}$/.test(url)) throw new Error('畫布輸出的圖片是空白的（瀏覽器限制了畫布）');
+  return `<div class="qr-label qr-tape" data-dev="${esc(d.id)}" style="width:${mm(r.cv.width)};height:${mm(r.cv.height)}"><img alt="" src="${url}" style="width:${mm(r.cv.width)};height:${mm(r.cv.height)}"></div>`;
+}
+function qrTapeWarns(devs, o) {
+  const cfg = qrTapeCfg(o), w = [], Ls = devs.map(d => qrTapeLayout(d, o, cfg));
+  const mm = Math.min(...Ls.map(l => l.Q.modMM)), dpm = Math.min(...Ls.map(l => l.Q.dpm)), qmm = Math.min(...Ls.map(l => l.Q.qrD * 25.4 / cfg.dpi));
+  if (mm < 0.22) w.push(`QR 很小：約 ${qmm.toFixed(1)} mm 見方，每一格只有 ${mm.toFixed(2)} mm（約 ${dpm.toFixed(1)} 個點）。手機要貼近（約 5～10 公分）、光線充足才掃得到，有些手機可能掃不到。請先印 3 張實際用手機掃看看。改善方法：①縮短 QR 網址（到「設定」→「設備 QR 標籤」看說明）②改用 12 mm 以上的標籤帶 ③標籤機解析度越高越清楚。`);
+  else if (mm < 0.30) w.push(`QR 偏小：約 ${qmm.toFixed(1)} mm 見方，每一格約 ${mm.toFixed(2)} mm。手機要靠近一點（約 10 公分內）、光線足夠才好掃。請先印 3 張實際掃看看。`);
+  const nclip = Ls.filter(l => l.clipped).length;
+  if (nclip) w.push(`有 ${nclip} 張標籤的文字太長，被截斷了（QR 不受影響，掃描後頁面會顯示完整客戶與機型）。可以把標籤長度改長，或選「自動長度」。`);
+  else {
+    const fmin = Math.min(...Ls.map(l => l.minLinePx == null ? 1e9 : l.minLinePx));
+    if (fmin < cfg.d(2.0)) w.push(`標籤上的文字最小約 ${(fmin * 25.4 / cfg.dpi).toFixed(1)} mm 高，偏小。可以關掉一項文字（例如品牌型號）讓字變大。`);
+  }
+  return w;
+}
+function qrTapeSpec(devs, o) {
+  const cfg = qrTapeCfg(o), W = qrTapeW(devs, o, cfg), Q = qrTapeQr(devs[0], cfg), ex = Math.round(W * 25.4 / cfg.dpi * 10) / 10;
+  const vs = new Set(devs.map(d => qrMatrix(qrDevUrl(d), 'auto').n)), n = Q.m.n;
+  return `標籤帶 ${cfg.tape} mm、長 ${ex} mm、可印高度 ${(cfg.bandD * 25.4 / cfg.dpi).toFixed(1)} mm、${cfg.dpi} dpi（${W} × ${cfg.Hd} 點）｜QR 版本 ${Q.m.ver}（${n}×${n} 格，容錯 ${Q.m.ecc}${vs.size > 1 ? '；各台格數不完全相同' : ''}），${Q.snap ? '每格 ' + Math.floor(Q.dpm) + ' 點' : '整條填滿（每格約 ' + Q.dpm.toFixed(1) + ' 點）'}，每格約 ${Q.modMM.toFixed(2)} mm`;
+}
+
+/* ---- PNG 內嵌解析度、ZIP（不壓縮）、分享 ---- */
+const QR_CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function qrCrc(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = QR_CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function qrPngPhys(bytes, dpi) {   // 在 PNG 的 IHDR 後面加上「每公尺幾點」(pHYs)，圖片軟體才知道實際大小
+  const sig = [137, 80, 78, 71, 13, 10, 26, 10];
+  if (bytes.length < 41 || sig.some((v, i) => bytes[i] !== v) || bytes[12] !== 73 || bytes[13] !== 72 || bytes[14] !== 68 || bytes[15] !== 82) return bytes;
+  const c = new Uint8Array(21), v = new DataView(c.buffer), ppm = Math.round(dpi / 0.0254);
+  v.setUint32(0, 9); c.set([0x70, 0x48, 0x59, 0x73], 4); v.setUint32(8, ppm); v.setUint32(12, ppm); c[16] = 1; v.setUint32(17, qrCrc(c.subarray(4, 17)));
+  const out = new Uint8Array(bytes.length + 21); out.set(bytes.subarray(0, 33), 0); out.set(c, 33); out.set(bytes.subarray(33), 54); return out;
+}
+function qrZip(files) {   // files: [{name: ASCII 檔名, data: Uint8Array}]；不壓縮（PNG 本來就壓縮過）
+  const enc = new TextEncoder(), now = new Date(), dt = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1), dd = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  const parts = [], cen = []; let off = 0;
+  files.forEach(f => {
+    const nm = enc.encode(f.name), crc = qrCrc(f.data), sz = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true); lh.setUint16(10, dt, true); lh.setUint16(12, dd, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, sz, true); lh.setUint32(22, sz, true); lh.setUint16(26, nm.length, true); lh.setUint16(28, 0, true);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true); ch.setUint16(12, dt, true); ch.setUint16(14, dd, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, sz, true); ch.setUint32(24, sz, true); ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
+    parts.push(new Uint8Array(lh.buffer), nm, f.data); cen.push(new Uint8Array(ch.buffer), nm);
+    off += 30 + nm.length + sz;
+  });
+  const cl = cen.reduce((a, p) => a + p.length, 0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, cl, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...cen, new Uint8Array(end.buffer)], {type: 'application/zip'});
+}
+
+/* ---- 標籤列印中心 ---- */
+function qrLabInit() {
+  if (qrLab.inited) return; qrLab.inited = true;
+  try {
+    const o = JSON.parse(localStorage.getItem(QR_PREF_KEY) || 'null'); if (!o || typeof o !== 'object') return;
+    if (QR_SIZES.some(s => s.k === o.size)) qrLab.size = o.size;
+    if (+o.w >= 15 && +o.w <= 200) qrLab.w = +o.w;
+    if (+o.h >= 10 && +o.h <= 200) qrLab.h = +o.h;
+    if (['auto', 'h', 'v'].includes(o.layout)) qrLab.layout = o.layout;
+    if (['label', 'sheet'].includes(o.paper)) qrLab.paper = o.paper;
+    ['showCust', 'showLoc', 'showModel', 'showCode'].forEach(k => { if (typeof o[k] === 'boolean') qrLab[k] = o[k]; });
+    if (QR_DPIS.includes(+o.dpi)) qrLab.dpi = +o.dpi;
+    if (o.band === null || (+o.band >= 4 && +o.band <= 24)) qrLab.band = o.band === null ? null : +o.band;
+    if (+o.feed >= 0 && +o.feed <= 10) qrLab.feed = +o.feed;
+    if (typeof o.rot === 'boolean') qrLab.rot = o.rot;
+  } catch (e) {}
+}
+function qrLabSave() {
+  try { const {size, w, h, layout, paper, showCust, showLoc, showModel, showCode, dpi, band, feed, rot} = qrLab; localStorage.setItem(QR_PREF_KEY, JSON.stringify({size, w, h, layout, paper, showCust, showLoc, showModel, showCode, dpi, band, feed, rot})); } catch (e) {}
+}
+function qrLabOpen(ids) {
+  qrLabInit();
+  view = 'manage';   // 標籤列印中心顯示在「設備資料總覽」這一頁
+  qrLab.open = true; qrLab.cat = 'all'; qrLab.cust = ''; qrLab.q = ''; qrLab.fresh = false;
+  qrLab.sel = new Set((ids || []).filter(qrIdOk).slice(0, QR_MAX_LABELS));
+  qrScrollTop = true; render();
+}
+function qrLabForCust(cid) {
+  qrLabOpen([]); qrLab.cust = cid;
+  qrLabDevs().forEach(d => { if (qrLab.sel.size < QR_MAX_LABELS) qrLab.sel.add(d.id); });
+  render();
+}
+function qrLabClose() { qrLab.open = false; qrScrollTop = true; render(); }
+function qrLabDevs() {
+  const words = qrLab.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return S.devices.filter(d => {
+    const c = custOf(d); if (!c || !custVisible(c) || !devVisible(d) || !qrIdOk(d.id)) return false;
+    if (qrLab.cat !== 'all' && catOfKind(d.kind) !== qrLab.cat) return false;
+    if (qrLab.cust && d.customerId !== qrLab.cust) return false;
+    if (qrLab.fresh && d.qrAt) return false;
+    if (words.length) { const hay = [c.name, c.contact, c.address, d.location, d.brand, d.model, KIND[d.kind]].join(' ').toLowerCase(); if (!words.every(w => hay.includes(w))) return false; }
+    return true;
+  }).sort((a, b) => QR_COL.compare((custOf(a) || {}).name || '', (custOf(b) || {}).name || '') || QR_COL.compare(a.location || '', b.location || '') || QR_COL.compare(a.model || '', b.model || ''));
+}
+function qrSelDevs() {
+  return S.devices.filter(d => qrLab.sel.has(d.id) && qrIdOk(d.id) && custOf(d) && custVisible(custOf(d)) && devVisible(d))
+    .sort((a, b) => QR_COL.compare((custOf(a) || {}).name || '', (custOf(b) || {}).name || '') || QR_COL.compare(a.location || '', b.location || '') || QR_COL.compare(a.model || '', b.model || ''));
+}
+function qrLabRefresh(w) {
+  const set = (id, h) => { const e = document.getElementById(id); if (e) e.innerHTML = h; };
+  if (w === 'pick') set('qrLabPick', qrPickHtml());
+  if (w === 'opts') set('qrLabOpts', qrOptsHtml());
+  set('qrLabOut', qrOutHtml());
+  const c = document.getElementById('qrSelN'); if (c) c.textContent = qrSelDevs().length;
+}
+function qrSetCat(v) { qrLab.cat = v; qrLabRefresh('pick'); }
+function qrSetCust(v) { qrLab.cust = v; qrLabRefresh('pick'); }
+function qrSetQ(v) { qrLab.q = String(v || ''); qrLabRefresh('pick'); }
+function qrSetFresh(on) { qrLab.fresh = !!on; qrLabRefresh('pick'); }
+function qrTog(id, on) {
+  if (on) { if (qrLab.sel.size >= QR_MAX_LABELS) { toast(`一次最多印 ${QR_MAX_LABELS} 張，請分批`); qrLabRefresh('pick'); return; } qrLab.sel.add(id); } else qrLab.sel.delete(id);
+  qrLabRefresh('out');
+}
+function qrSelAll() {
+  let cut = false;
+  qrLabDevs().forEach(d => { if (qrLab.sel.has(d.id)) return; if (qrLab.sel.size >= QR_MAX_LABELS) { cut = true; return; } qrLab.sel.add(d.id); });
+  if (cut) toast(`已選到上限 ${QR_MAX_LABELS} 張，其餘請分批列印`);
+  qrLabRefresh('pick');
+}
+function qrSelNone() { qrLab.sel.clear(); qrLabRefresh('pick'); }
+function qrSetSize(k) {
+  const s = QR_SIZES.find(x => x.k === k); if (!s) return;
+  const was = qrIsTape(qrLab);
+  qrLab.size = k; if (s.w) { qrLab.w = s.w; qrLab.h = s.h; }
+  if (s.tape) { qrLab.h = s.tape; qrLab.paper = 'label'; qrLab.layout = 'auto'; if (!was) qrLab.showModel = false; } else if (was) qrLab.showModel = true;
+  if (qrLab.band != null && s.tape && qrLab.band > s.tape) qrLab.band = null;
+  qrLabSave(); qrLabRefresh('opts');
+}
+function qrSetTape(k, v) {
+  if (k === 'dpi') { v = +v; if (!QR_DPIS.includes(v)) return; qrLab.dpi = v; }
+  else if (k === 'band') { if (v === '' || v == null) qrLab.band = null; else { v = Math.round(+v * 10) / 10; const t = (qrTapeOf(qrLab) || {tape: 24}).tape; if (!isFinite(v) || v < 4 || v > t) return toast(`可印高度要在 4～${t} mm 之間`); qrLab.band = v; } }
+  else if (k === 'feed') { v = Math.round(+v * 2) / 2; if (!isFinite(v) || v < 0 || v > 10) return toast('前後留白要在 0～10 mm 之間'); qrLab.feed = v; }
+  else if (k === 'rot') qrLab.rot = !!v;
+  else return;
+  qrLabSave(); qrLabRefresh('opts');
+}
+function qrSetWH(k, v) {
+  const n = Math.round(+v * 2) / 2; if (!isFinite(n) || (k !== 'w' && k !== 'h')) return;
+  qrLab[k] = Math.max(5, Math.min(300, n)); qrLabSave(); qrLabRefresh('out');
+}
+function qrSetOpt(k, v) {
+  if (k === 'layout' && !['auto', 'h', 'v'].includes(v)) return;
+  if (k === 'paper' && (!['label', 'sheet'].includes(v) || qrIsTape(qrLab))) return;
+  if (['showCust', 'showLoc', 'showModel', 'showCode'].includes(k)) v = !!v;
+  else if (k !== 'layout' && k !== 'paper') return;
+  qrLab[k] = v; qrLabSave(); qrLabRefresh('out');
+}
+function qrBadIdN() { return S.devices.filter(d => !qrIdOk(d.id) && custOf(d) && custVisible(custOf(d)) && devVisible(d)).length; }
+function qrPickHtml() {
+  const all = qrLabDevs(), shown = all.slice(0, QR_LIST_MAX), bad = qrBadIdN();
+  const rows = shown.map(d => { const c = custOf(d) || {};
+    return `<label class="qr-item"><input type="checkbox" data-id="${esc(d.id)}" ${qrLab.sel.has(d.id) ? 'checked' : ''} onchange="qrTog(this.dataset.id, this.checked)">
+      <span><b>${esc(c.name || '')}</b>｜${esc(KIND[d.kind] || '')} ${esc(d.model || '')}${d.location ? '｜' + esc(d.location) : ''} <span class="muted">${d.qrAt ? '（標籤已印 ' + esc(d.qrAt) + '）' : '（尚未印）'}</span></span></label>`; }).join('');
+  return `<div class="muted" style="margin:6px 0">符合條件 <b>${all.length}</b> 台${all.length > shown.length ? `（下方只列前 ${shown.length} 台，請用搜尋縮小範圍；按「全選符合的」會選到全部符合的設備，一次最多 ${QR_MAX_LABELS} 張）` : ''}　已勾選 <b id="qrSelN">${qrSelDevs().length}</b> 台</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px"><button class="ghost" type="button" onclick="qrSelAll()">全選符合的 ${all.length} 台</button><button class="ghost" type="button" onclick="qrSelNone()">取消全部勾選</button></div>
+    ${bad ? `<div class="alert-box qr-warn" id="qrBadId">有 ${bad} 台設備的代碼含有特殊字元，無法製作 QR（掃描後找不到），已自動略過。請通知管理者處理。</div>` : ''}
+    <div class="qr-list">${rows || '<div class="empty" style="padding:12px">沒有符合的設備。</div>'}</div>`;
+}
+function qrOptsHtml() {
+  const tape = qrIsTape(qrLab), so = s => `<option value="${s.k}" ${qrLab.size === s.k ? 'selected' : ''}>${esc(s.t)}</option>`;
+  const sz = `<optgroup label="窄標籤帶（9 mm、12 mm 標籤機）">${QR_SIZES.filter(s => s.tape).map(so).join('')}</optgroup><optgroup label="一般標籤紙">${QR_SIZES.filter(s => !s.tape).map(so).join('')}</optgroup>`;
+  const chk = (k, t) => `<label class="qr-ck"><input type="checkbox" ${qrLab[k] ? 'checked' : ''} onchange="qrSetOpt('${k}', this.checked)"> ${t}</label>`;
+  const opt = (v, cur, t) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${t}</option>`;
+  return `<div class="form-row" style="margin:0">
+      <div><label>標籤尺寸（標籤紙實際大小）</label><select id="qrSize" onchange="qrSetSize(this.value)">${sz}</select></div>
+      ${qrLab.size === 'custom' ? `<div><label>寬（mm）</label><input id="qrW" type="number" min="15" max="200" step="0.5" value="${qrLab.w}" onchange="qrSetWH('w', this.value)"></div>
+      <div><label>高（mm）</label><input id="qrH" type="number" min="10" max="200" step="0.5" value="${qrLab.h}" onchange="qrSetWH('h', this.value)"></div>` : ''}
+      ${tape ? `<div><label>標籤機解析度（dpi）</label><select id="qrDpi" onchange="qrSetTape('dpi', this.value)">${QR_DPIS.map(v => `<option value="${v}" ${qrLab.dpi === v ? 'selected' : ''}>${v} dpi${v === 203 ? '（不確定就選這個）' : ''}</option>`).join('')}</select></div>
+      <div><label>可印高度（mm）</label><input id="qrBand" type="number" min="4" max="${qrTapeOf(qrLab).tape}" step="0.1" value="${qrLab.band == null ? '' : qrLab.band}" placeholder="${qrTapeOf(qrLab).tape - 2}（預設）" onchange="qrSetTape('band', this.value)"></div>
+      <div><label>前後留白（mm）</label><input id="qrFeed" type="number" min="0" max="10" step="0.5" value="${qrLab.feed}" onchange="qrSetTape('feed', this.value)"></div>
+      <div><label>圖片方向</label><select id="qrRot" onchange="qrSetTape('rot', this.value === '1')">${opt('0', qrLab.rot ? '1' : '0', '橫放（預設）')}${opt('1', qrLab.rot ? '1' : '0', '旋轉 90°（印出來橫躺時選這個）')}</select></div>`
+      : `<div><label>版面</label><select id="qrLayout" onchange="qrSetOpt('layout', this.value)">${opt('auto', qrLab.layout, '自動（依標籤長寬）')}${opt('h', qrLab.layout, 'QR 在左、文字在右')}${opt('v', qrLab.layout, 'QR 在上、文字在下')}</select></div>
+      <div><label>輸出到</label><select id="qrPaper" onchange="qrSetOpt('paper', this.value)">${opt('label', qrLab.paper, '標籤機（一張標籤一頁）')}${opt('sheet', qrLab.paper, 'A4 紙（排滿一頁，印在貼紙紙上或剪下貼）')}</select></div>`}</div>
+    ${tape ? `<details class="qr-help" id="qrTapeHelp"><summary>9 mm 標籤機怎麼印？（先看這裡）</summary>
+      <p><b>可印高度</b>：9 mm 的標籤帶，標籤機實際能印的高度通常只有約 6～7 mm（上下各有空白）。預設 7 mm；如果印出來上下被切到，把這個數字調小。</p>
+      <p><b>三種印法</b>：①手機：按「分享到標籤機 App」，在分享選單選標籤機的 App，匯入圖片後用「原始大小」列印。②電腦：按「列印」，印表機選標籤機，紙張選 ${qrTapeOf(qrLab).tape} mm 標籤帶，邊界選「無」、縮放 100%。③按「全部下載（ZIP）」，解壓縮後把圖片逐張匯入標籤機軟體。</p>
+      <p><b>第一次請只印 3 張</b>，用手機相機實際掃看看，沒問題再大量印。</p></details>` : ''}
+    <div style="margin-top:8px">標籤上要印的文字：${chk('showCust', '客戶名稱')}${chk('showLoc', '安裝地點')}${chk('showModel', '品牌型號')}${chk('showCode', '設備代碼（小字）')}</div>`;
+}
+function qrBadPointer(bad) {   // 網址不是手機打得開的正式網址時，在「預覽與輸出」這一區也直接說明（最上面的紅色框在手機上往下捲就看不到了）
+  return bad ? `<div class="alert-box" id="qrBaseBadOut"><b>沒有產生 QR：</b>目前這個畫面不是用正式網址打開的（QR 會指向「${esc(qrBaseUrl())}」），手機掃了會打不開，所以系統不預覽、不列印。請改用你平常登入系統的正式網址（https:// 開頭的那個）重新打開系統；詳細說明在這一頁最上面的紅色框。</div>` : '';
+}
+function qrPickFirst() {   // 「先選第 1 台來看看」：還沒勾選任何設備時，一鍵勾選清單裡的第 1 台
+  const d = qrLabDevs()[0]; if (!d) return toast('沒有符合的設備，請先調整上面的篩選條件');
+  qrLab.sel.add(d.id); qrLabRefresh('pick');
+}
+function qrOutFail(e, devs) {   // 預覽產生失敗（常見原因：瀏覽器或擴充功能不讓網頁使用畫布）：明確說明原因，而且照樣顯示可以用手機掃的測試 QR，不要讓畫面空白
+  let scan = ''; try { if (devs.length && !qrBaseBad()) scan = qrScanTestHtml(devs[0]); } catch (x) {}
+  const msg = String((e && e.message) || e || '未知錯誤').slice(0, 200), tape = qrIsTape(qrLab);
+  return `${qrLocNoteHtml('qrLocNoteOut', true)}<div class="alert-box" id="qrOutFail"><b>這個瀏覽器沒辦法產生${tape ? ' 9 mm／12 mm 窄標籤' : '標籤'}的預覽圖。</b>原因：${esc(msg)}。<br>${tape ? '窄標籤是用瀏覽器的「畫布」功能畫出來的；瀏覽器的防追蹤、防指紋設定或擴充功能有時會擋掉它。請改用電腦版 Chrome 或 Edge 開啟系統；或把上面「標籤尺寸」改選「一般標籤紙」那一組（那一組不需要畫布）。' : '請改用電腦版 Chrome 或 Edge 開啟系統。'}如果換了瀏覽器還是這樣，請把這段說明的畫面拍給我。</div>${scan}
+    <div class="qr-row"><button class="primary" type="button" id="qrPrintBtn" disabled>列印 ${devs.length} 張標籤</button>
+      <button class="ghost" type="button" id="qrCsvBtn" ${qrBaseBad() ? 'disabled' : ''} onclick="qrDoCsv()">下載清單（CSV）</button>
+      <button class="ghost" type="button" id="qrPngBtn" disabled>下載 PNG 圖檔（限 1 台）</button>
+      <button class="ghost" type="button" id="qrZipBtn" disabled>全部下載（ZIP，${devs.length} 張圖）</button></div>`;
+}
+function qrOutHtml() {
+  let devs = []; try { devs = qrSelDevs(); } catch (e) {}
+  try { return qrOutHtml0(); } catch (e) { return qrOutFail(e, devs); }
+}
+function qrOutHtml0() {
+  const devs = qrSelDevs();
+  if (!devs.length) return `${qrLocNoteHtml('qrLocNoteOut', true)}${qrBadPointer(qrBaseBad())}<div class="alert-box qr-warn" id="qrNoSel"><b>請先在上面勾選要印的設備。</b>還沒有勾選設備，所以這裡還沒有 QR。請到上面「① 選要印的設備」，在設備前面的方框打勾（或按「全選符合的…台」）；勾好之後，這裡就會出現標籤預覽、手機掃描測試用的大 QR 和列印按鈕。
+    <div class="qr-row" style="margin-top:6px"><button class="primary" type="button" id="qrPickFirst" onclick="qrPickFirst()">先選第 1 台來看看</button></div></div>`;
+  const bad = qrBaseBad(), err = bad || (devs.length > QR_MAX_LABELS ? `一次最多印 ${QR_MAX_LABELS} 張，請減少勾選` : qrSizeErr(qrLab));
+  const warns = err ? [] : qrWarns(devs, qrLab), bu = qrBaseUrl();
+  let hostDiff = false; try { hostDiff = new URL(bu).host !== qrLoc().host; } catch (e) { hostDiff = true; }
+  if (hostDiff && qrLocOk()) warns.unshift(`QR 指向的網站（${bu}）和您現在使用的網站（${qrLoc().host || '這台電腦上的檔案'}）不一樣。如果不是刻意設定的，請先不要印，並請管理者到「設定」檢查「設備 QR 標籤」的網址。`);
+  const tape = qrIsTape(qrLab);
+  let prev;
+  if (tape && !err) {
+    const cfg = qrTapeCfg(qrLab), W = qrTapeW(devs, qrLab, cfg);
+    prev = `<div class="qr-prev qr-prevtape">${devs.slice(0, 12).map(d => qrTapeLabelHtml(d, qrLab, cfg, W, 3)).join('')}</div>
+      <div class="muted" style="font-size:13px" id="qrTapeSpec">${esc(qrTapeSpec(devs, qrLab))}</div>
+      <div class="muted" style="font-size:13px">${devs.length > 12 ? `預覽前 12 張（共 ${devs.length} 張）。` : ''}預覽是放大的（每一個點用 2～4 個螢幕像素顯示）；印出來是實際尺寸。要確認 QR 裡的網址對不對，請掃下面的「手機掃描測試」大圖；標籤印出來之後，也請先印 1 張用手機掃過，再大量印。</div>`;
+  } else prev = err ? '' : `<div class="qr-prev">${devs.slice(0, 12).map(d => qrLabelHtml(d, qrLab)).join('')}</div>
+    <div class="muted" style="font-size:13px">${devs.length > 12 ? `預覽前 12 張（共 ${devs.length} 張）。` : ''}預覽是實際尺寸，但螢幕上的毫米會有誤差，以印出來的紙張為準。預覽圖的 QR 很小、螢幕也會讓它變糊，不適合拿來掃；要用手機驗證，請掃下面的「手機掃描測試」大圖。</div>`;
+  return `${qrLocNoteHtml('qrLocNoteOut', true)}${qrBadPointer(bad)}${err && !bad ? `<div class="alert-box">${esc(err)}</div>` : ''}${warns.map(w => `<div class="alert-box qr-warn">${esc(w)}</div>`).join('')}
+    <div class="muted" style="font-size:13px" id="qrBaseLine">掃描後會打開：<b>${esc(bu)}</b>#d=設備代碼</div>${prev}${err ? '' : qrScanTestHtml(devs[0])}
+    <div class="qr-row"><button class="primary" type="button" id="qrPrintBtn" ${err ? 'disabled' : ''} onclick="qrDoPrint()">列印 ${devs.length} 張標籤</button>
+      <button class="ghost" type="button" id="qrCsvBtn" ${bad ? 'disabled' : ''} onclick="qrDoCsv()">下載清單（CSV）</button>
+      <button class="ghost" type="button" id="qrPngBtn" ${devs.length === 1 && !err ? '' : 'disabled'} title="PNG 一次只能下載一張；多張請用「全部下載（ZIP）」" onclick="qrDoPng()">下載 PNG 圖檔（限 1 台）</button>
+      <button class="ghost" type="button" id="qrZipBtn" ${err ? 'disabled' : ''} onclick="qrDoZip()">全部下載（ZIP，${devs.length} 張圖）</button>
+      ${typeof navigator.canShare === 'function' && typeof navigator.share === 'function' ? `<button class="ghost" type="button" id="qrShareBtn" ${err || devs.length > QR_SHARE_MAX ? 'disabled' : ''} title="一次最多分享 ${QR_SHARE_MAX} 張" onclick="qrDoShare()">分享到標籤機 App${devs.length > QR_SHARE_MAX ? `（最多 ${QR_SHARE_MAX} 張）` : ''}</button>` : ''}</div>`;
+}
+function qrPrintedHtml() {
+  if (!qrPrinted) return '';
+  return `<div class="alert-box qr-warn" id="qrPrinted">${qrPrinted.how === 'file' ? `剛剛下載／分享了 ${qrPrinted.ids.length} 張 QR 標籤圖。` : `剛剛送出列印 ${qrPrinted.ids.length} 張 QR 標籤。`}有真的印出來的話，請按「標記為已印」（之後勾「只列還沒印過的」就不會重複印）。
+    <div class="qr-row"><button class="primary" type="button" onclick="qrMarkPrinted()">標記為已印</button><button class="ghost" type="button" onclick="qrPrinted = null; render()">沒有印／不要標記</button></div></div>`;
+}
+function qrLabHtml() {
+  qrLabInit();
+  const catOpts = '<option value="all">全部設備類別</option>' + visCats().map(c => `<option value="${esc(c.k)}" ${qrLab.cat === c.k ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
+  const custOpts = '<option value="">全部客戶</option>' + visCusts().map(c => `<option value="${esc(c.id)}" ${qrLab.cust === c.id ? 'selected' : ''}>${esc(c.name)}${c.address ? '｜' + esc(c.address) : ''}</option>`).join('');
+  return `<div class="card sec-set" id="qrLab">
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0">設備 QR 標籤列印</h2>
+      <button class="ghost" type="button" onclick="qrLabClose()">← 返回</button></div>
+    <p class="note">每台設備一張 QR 標籤，貼在設備上。服務人員用手機的相機掃描，就會打開這台設備的頁面，直接按「新增保養紀錄」。QR 裡面只有網址和設備代碼，沒有客戶資料。</p>
+    ${qrLocNoteHtml('qrLocNote')}${qrBaseBad() ? `<div class="alert-box" id="qrBaseBad">${esc(qrBaseBad())}</div>` : ''}${qrPrintedHtml()}
+    <h3 style="margin:14px 0 6px">① 選要印的設備</h3>
+    <div class="form-row" style="margin:0">
+      <div><label>設備類別</label><select id="qrCat" onchange="qrSetCat(this.value)">${catOpts}</select></div>
+      <div><label>客戶</label><select id="qrCust" onchange="qrSetCust(this.value)">${custOpts}</select></div>
+      <div><label>搜尋</label><input id="qrQ" type="search" value="${esc(qrLab.q)}" placeholder="客戶、地點、機型" oninput="qrSetQ(this.value)"></div></div>
+    <label class="qr-ck" style="margin-top:8px"><input id="qrFresh" type="checkbox" ${qrLab.fresh ? 'checked' : ''} onchange="qrSetFresh(this.checked)"> 只列還沒印過標籤的設備</label>
+    <div id="qrLabPick">${qrPickHtml()}</div>
+    <h3 style="margin:14px 0 6px">② 標籤尺寸與內容</h3>
+    <div id="qrLabOpts">${qrOptsHtml()}</div>
+    <h3 style="margin:14px 0 6px">③ 預覽與輸出</h3>
+    <div id="qrLabOut">${qrOutHtml()}</div></div>`;
+}
+
+/* ---- 輸出：列印／CSV／PNG ---- */
+function qrDoPrint() {
+  const devs = qrSelDevs(), o = qrLab;
+  if (!devs.length) return toast('請先勾選要印的設備');
+  if (devs.length > QR_MAX_LABELS) return toast(`一次最多印 ${QR_MAX_LABELS} 張，請分批`);
+  const err = qrSizeErr(o); if (err) return toast(err);
+  const area = document.getElementById('qrPrintArea'); if (!area) return;
+  let pw = +o.w, ph = +o.h, sheet = o.paper === 'sheet';
+  try {
+    if (qrIsTape(o)) {   // 窄標籤帶：每張標籤是一張點陣圖，紙張大小就是圖片的實際大小
+      const cfg = qrTapeCfg(o), W = qrTapeW(devs, o, cfg);
+      area.innerHTML = devs.map(d => qrTapeLabelHtml(d, o, cfg, W)).join('');
+      const a = area.querySelector('.qr-label'); pw = parseFloat(a.style.width); ph = parseFloat(a.style.height); sheet = false;
+    } else area.innerHTML = devs.map(d => qrLabelHtml(d, o)).join('');
+  } catch (e) { area.innerHTML = ''; return toast('無法產生標籤圖：' + String((e && e.message) || e).slice(0, 80) + '。請改用電腦版 Chrome 或 Edge，或改選「一般標籤紙」尺寸。'); }
+  let st = document.getElementById('qrPageStyle');
+  if (!st) { st = document.createElement('style'); st.id = 'qrPageStyle'; document.head.appendChild(st); }
+  st.textContent = sheet ? '@media print{@page{size:A4 portrait;margin:10mm}}' : `@media print{@page{size:${pw}mm ${ph}mm;margin:0}}`;
+  document.body.classList.toggle('qr-sheet', sheet);
+  document.body.classList.add('qr-printing');
+  qrPrinted = {ids: devs.map(d => d.id)};
+  window.addEventListener('afterprint', qrPrintDone, {once: true});
+  clearTimeout(qrPrintDone._t); qrPrintDone._t = setTimeout(qrPrintDone, 180000);
+  render();   // 先顯示「有印出來請標記」的提示
+  qrWhenImgs(area, () => window.print());
+}
+function qrWhenImgs(area, go) {   // 標籤圖（內嵌圖片）都載入完才開始列印：有些瀏覽器（Safari、Firefox）圖片還沒載入就跳出列印預覽，標籤會是空白的
+  const imgs = Array.from(area.querySelectorAll('img')).filter(i => !(i.complete && i.naturalWidth > 0));
+  if (!imgs.length) return go();
+  let left = imgs.length, done = false;
+  const fin = () => { if (!done) { done = true; go(); } };
+  imgs.forEach(i => { const h = () => { if (--left <= 0) fin(); }; i.addEventListener('load', h, {once: true}); i.addEventListener('error', h, {once: true}); });
+  setTimeout(fin, 2000);
+}
+function qrPrintDone() {
+  clearTimeout(qrPrintDone._t);
+  document.body.classList.remove('qr-printing', 'qr-sheet');
+  const area = document.getElementById('qrPrintArea'); if (area) area.innerHTML = '';
+  const st = document.getElementById('qrPageStyle'); if (st) st.textContent = '';   // 紙張大小只在印標籤時有效，印完要還原（否則會影響之後印「保養行程表」）
+}
+function qrMarkPrinted() {
+  if (!qrPrinted) return;
+  const ids = new Set(qrPrinted.ids), ds = S.devices.filter(d => ids.has(d.id) && devVisible(d));
+  qrPrinted = null; qrPrintDone();
+  if (!ds.length) { render(); return; }
+  const day = iso(today());
+  ds.forEach(d => { d.qrAt = day; });
+  logOp('列印QR標籤', `${ds.length} 張：${ds.slice(0, 3).map(d => custName(d) + '｜' + (d.model || '')).join('、')}${ds.length > 3 ? ' 等' : ''}`);
+  save(); toast(`已標記 ${ds.length} 台設備的 QR 標籤為已印（${day}）`); render();
+}
+function qrDoCsv() {
+  const devs = qrSelDevs(); if (!devs.length) return toast('請先勾選要印的設備');
+  const bb = qrBaseBad(); if (bb) return toast(bb);
+  const rows = [['客戶', '安裝地點', '設備類別', '品牌', '型號', '設備代碼', 'QR 網址', '標籤上次印製日']];
+  devs.forEach(d => rows.push([(custOf(d) || {}).name || '', d.location || '', KIND[d.kind] || '', d.brand || '', d.model || '', d.id, qrDevUrl(d), d.qrAt || '']));
+  download(`設備QR標籤清單_${iso(today())}.csv`, toCsv(rows), 'text/csv;charset=utf-8', true);
+  toast(`已產生清單（${devs.length} 台）`);
+}
+function qrGenericCanvas(d, o) {
+  const L = qrLayout(d, o), k = 300 / 25.4;
+  const cv = document.createElement('canvas'); cv.width = Math.round(L.W * k); cv.height = Math.round(L.H * k);
+  const g = cv.getContext('2d'); if (!g) return null;
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+  const m = qrMatrix(qrDevUrl(d)), tot = m.n + 2 * QR_QUIET, mp = Math.max(1, Math.floor(L.qr * k / tot));
+  const ox = Math.round(L.qx * k + (L.qr * k - tot * mp) / 2), oy = Math.round(L.qy * k + (L.qr * k - tot * mp) / 2);
+  g.fillStyle = '#000';
+  m.rows.forEach((s, y) => { for (let x = 0; x < m.n; x++) if (s[x] === '1') g.fillRect(ox + (x + QR_QUIET) * mp, oy + (y + QR_QUIET) * mp, mp, mp); });
+  if (L.lines.length) {
+    g.save(); g.beginPath(); g.rect(L.tx * k, L.ty * k, L.tw * k, L.th * k); g.clip();
+    g.textBaseline = 'middle'; g.fillStyle = '#000';
+    const tot2 = L.lines.reduce((a, l) => a + l.fs * 1.22, 0);
+    let y = L.ty + (L.th - tot2) / 2;
+    L.lines.forEach(l => {
+      let px = l.fs * k;
+      const font = p => `${l.b ? '700 ' : ''}${p}px "Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif`;
+      g.font = font(px);
+      const w = g.measureText(l.t).width; if (w > L.tw * k && L.tw > 0) { px = Math.max(l.fs * 0.5 * k, px * (L.tw * k) / w); g.font = font(px); }
+      g.textAlign = L.horiz ? 'left' : 'center';
+      g.fillText(l.t, L.horiz ? L.tx * k : (L.tx + L.tw / 2) * k, (y + l.fs * 0.61) * k);
+      y += l.fs * 1.22;
+    });
+    g.restore();
+  }
+  return {cv, dpi: 300};
+}
+function qrCanvasBytes(r) {
+  return new Promise((res, rej) => r.cv.toBlob(b => b ? b.arrayBuffer().then(ab => res(qrPngPhys(new Uint8Array(ab), r.dpi)), rej) : rej(new Error('png')), 'image/png'));
+}
+async function qrBuildFiles(devs, o) {
+  const tape = qrIsTape(o), cfg = tape ? qrTapeCfg(o) : null, W = tape ? qrTapeW(devs, o, cfg) : 0, out = [];
+  for (let i = 0; i < devs.length; i++) {
+    const r = tape ? qrTapeCanvas(devs[i], o, cfg, W) : qrGenericCanvas(devs[i], o);
+    if (!r) throw new Error('canvas');
+    out.push({name: `qr_${String(i + 1).padStart(3, '0')}_${devs[i].id.replace(/[^A-Za-z0-9_-]/g, '_')}.png`, data: await qrCanvasBytes(r)});
+  }
+  return out;
+}
+function qrSaveBlob(blob, name) {
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 500);
+}
+async function qrDoPng() {
+  const devs = qrSelDevs(), o = qrLab;
+  if (devs.length !== 1) return toast('PNG 一次只能下載一張：請只勾選 1 台設備（多張請用「全部下載（ZIP）」）');
+  const err = qrSizeErr(o); if (err) return toast(err);
+  try {
+    const f = (await qrBuildFiles(devs, o))[0], d = devs[0];
+    const nm = Array.from(String((custOf(d) || {}).name || '')).slice(0, 24).join('');   // 檔名只取客戶名稱前 24 字，並拿掉路徑符號、空白、控制字元、零寬與左右方向控制字元
+    qrSaveBlob(new Blob([f.data], {type: 'image/png'}), `設備QR_${nm}_${d.id}.png`.replace(/[\\/:*?"<>|\s\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]+/g, '_'));
+    toast('已產生 PNG 圖檔');
+  } catch (e) { toast('無法產生圖檔，請改用其他瀏覽器'); }
+}
+async function qrDoZip() {
+  const devs = qrSelDevs(), o = qrLab;
+  if (!devs.length) return toast('請先勾選要印的設備');
+  if (devs.length > QR_MAX_LABELS) return toast(`一次最多 ${QR_MAX_LABELS} 張，請分批`);
+  const err = qrSizeErr(o); if (err) return toast(err);
+  try {
+    const files = await qrBuildFiles(devs, o);
+    qrSaveBlob(qrZip(files), `設備QR標籤_${iso(today())}.zip`);
+    qrPrinted = {ids: devs.map(d => d.id), how: 'file'};
+    toast(`已下載 ${files.length} 張標籤圖（ZIP）`); render();
+  } catch (e) { toast('無法產生圖檔，請改用其他瀏覽器'); }
+}
+async function qrDoShare() {
+  const devs = qrSelDevs(), o = qrLab;
+  if (!devs.length) return toast('請先勾選要印的設備');
+  if (devs.length > QR_SHARE_MAX) return toast(`一次最多分享 ${QR_SHARE_MAX} 張，請分批，或改用「全部下載（ZIP）」`);
+  const err = qrSizeErr(o); if (err) return toast(err);
+  let files;
+  try { files = (await qrBuildFiles(devs, o)).map(f => new File([f.data], f.name, {type: 'image/png'})); } catch (e) { return toast('無法產生圖檔，請改用其他瀏覽器'); }
+  if (typeof navigator.canShare !== 'function' || typeof navigator.share !== 'function' || !navigator.canShare({files})) {
+    qrSaveBlob(qrZip(await Promise.all(files.map(async f => ({name: f.name, data: new Uint8Array(await f.arrayBuffer())})))), `設備QR標籤_${iso(today())}.zip`);
+    return toast('這個瀏覽器無法直接分享圖檔，已改為下載（ZIP）');
+  }
+  try { await navigator.share({files, title: '設備 QR 標籤'}); qrPrinted = {ids: devs.map(d => d.id), how: 'file'}; render(); }
+  catch (e) { if (e && e.name === 'AbortError') return; toast('分享沒有成功，請再按一次，或改用「全部下載（ZIP）」'); }
+}
+
+/* ---- 設定頁（管理者）：QR 指向的網址 ---- */
+function qrCfgHtml() {
+  if (!isAdmin()) return '';
+  const cur = qrBaseUrl(), printed = S.devices.filter(d => d.qrAt).length, own = S.ui && typeof S.ui.qrBase === 'string' && S.ui.qrBase.trim();
+  return `<div class="card sec-set" id="qrCfg"><h2>設備 QR 標籤</h2>
+    <p class="note">貼在設備上的 QR 會打開下面這個網址。<b>已經貼出去的標籤沒辦法改網址</b>：如果日後系統換了網址，舊標籤就掃不到，要重印。所以平常請不要改；真的要換網站時，請先確認舊網址會自動轉到新網址。</p>
+    ${qrLocNoteHtml('qrCfgLoc')}${qrBaseBad() ? `<div class="alert-box" id="qrCfgBad">${esc(qrBaseBad())}</div>` : ''}
+    <div>目前 QR 指向：<b id="qrCurBase">${esc(cur)}</b>${own ? '（管理者自訂）' : qrLocOk() ? '（目前使用的網站網址）' : '（預設的正式網站網址）'}</div>
+    <div class="muted" style="font-size:13px;margin:4px 0">範例：${esc(cur)}#d=設備代碼　｜　已印過標籤的設備：${printed} 台</div>
+    ${qrCfgSizeHtml(cur)}
+    <form onsubmit="saveQrBase(event)" class="form-row" style="margin-top:8px"><div style="grid-column:span 2"><label>自訂網址（留空＝使用目前網站網址；若不是用正式網址打開，就用正式網站網址；必須 https:// 開頭）</label>
+      <input name="qrBase" maxlength="200" value="${esc(own ? S.ui.qrBase : '')}" placeholder="${esc(qrDefaultBase())}"></div>
+      <div><button class="primary" type="submit">儲存網址</button></div></form>
+    <div style="margin-top:8px"><button class="ghost" type="button" onclick="qrLabOpen([])">開啟 QR 標籤列印</button></div></div>`;
+}
+function qrCfgSizeHtml(cur) {
+  const devs = S.devices.filter(x => qrIdOk(x.id) && devVisible(x) && custOf(x)), lid = devs.reduce((a, x) => x.id.length > a.length ? x.id : a, devs.length ? devs[0].id : 'test1234');
+  const link = cur + '#d=' + (devs.length ? devs[0].id : 'test1234'), url = cur + '#d=' + lid, m = qrMatrix(url, 'auto');   // 大小以「最長的設備代碼」計（最壞情況）
+  const root = qrRootBase(), short = root && root !== cur ? qrMatrix(root + '#d=' + lid, 'auto') : null;
+  return `<div class="muted" style="font-size:13px;margin:4px 0" id="qrSizeNote">QR 網址長度 ${url.length} 字元（以最長的設備代碼計）→ QR 版本 ${m.ver}（${m.n}×${m.n} 格）。格數越少，同樣大小的標籤上每一格越大、越好掃（窄標籤帶特別明顯）。</div>
+    <div style="margin:6px 0"><a id="qrTestLink" href="${esc(link)}" target="_blank" rel="noopener noreferrer">用目前的網址打開一台設備（測試連結）</a></div>
+    ${short && short.n < m.n ? `<details class="qr-help" id="qrShortHelp"><summary>想讓 9 mm 標籤的 QR 更好掃：縮短網址（選擇性，要在大量印標籤之前決定）</summary>
+      <p>目前 QR 網址是 ${url.length} 字元（${m.n}×${m.n} 格）。改成「${esc(root)}」開頭，網址只有 ${(root + '#d=' + lid).length} 字元（${short.n}×${short.n} 格），每一格大約大 ${Math.round((m.n + 2) / (short.n + 2) * 100 - 100)}%。做法：</p>
+      <ol><li>到 GitHub 建立一個名稱剛好是 <b>${esc(location.host)}</b> 的新儲存庫（Public）。</li>
+      <li>在裡面新增一個檔案 <b>index.html</b>，內容貼下面這一段（或按「下載轉址頁」，把下載的檔案上傳）。</li>
+      <li>等 1～2 分鐘，按下面的「縮短網址測試連結」，確認會<b>自動跳到系統並打開那台設備</b>。沒有跳轉，就是轉址頁還沒做對：先不要改網址、不要印標籤。</li>
+      <li>確認沒問題，再把上面「自訂網址」改成 <b>${esc(root)}</b> 並儲存，然後才開始印標籤。</li></ol>
+      <div style="margin:6px 0"><a id="qrShortTestLink" href="${esc(root + '#d=' + (devs.length ? devs[0].id : 'test1234'))}" target="_blank" rel="noopener noreferrer">縮短網址測試連結：${esc(root)}#d=設備代碼（建好轉址頁之後才打得開）</a></div>
+      <textarea readonly rows="6" id="qrRedirCode" style="width:100%;font-family:monospace;font-size:12px" onfocus="this.select()">${esc(qrRedirectHtml())}</textarea>
+      <div class="qr-row"><button class="ghost" type="button" id="qrRedirBtn" onclick="download('index.html', qrRedirectHtml(), 'text/html;charset=utf-8')">下載轉址頁（index.html）</button></div>
+      <p class="muted" style="font-size:13px">這一頁只做一件事：把「${esc(root)}#d=…」轉到「${esc(location.origin + qrBasePath())}#d=…」。不影響現有的系統與登入。已經印出去的標籤是印當時的網址，所以務必在印之前決定。</p></details>` : ''}`;
+}
+function qrBasePath() { const p = location.pathname.replace(/[^/]*$/, ''); return /^\/[A-Za-z0-9._~\/-]*\/$/.test(p) ? p : '/'; }
+function qrRootBase() { try { return qrBasePath() !== '/' && /^https:$/.test(location.protocol) ? location.origin + '/' : ''; } catch (e) { return ''; } }
+function qrRedirectHtml() {
+  const p = qrBasePath();
+  return '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>普印通 設備保養系統</title><meta name="robots" content="noindex"></head>'
+    + '<body><p>正在前往設備保養系統… <a href="' + p + '">如果沒有自動跳轉，請按這裡</a></p>'
+    + '<' + 'script>location.replace(' + JSON.stringify(p) + ' + location.hash);<' + '/script></body></html>';
+}
+function saveQrBase(e) {
+  e.preventDefault();
+  if (!guardAdmin('僅管理者可以修改 QR 網址')) return;
+  const v = String(new FormData(e.target).get('qrBase') || '').trim(), old = qrBaseUrl();
+  if (v && !qrBaseOk(v)) return toast('網址必須是 https:// 開頭的正式網站網址：只能用半形英文字母、數字與符號（不能有中文、空白、? 或 #），也不能是 localhost、內部網路位址或 IP');
+  const next = v || qrDefaultBase();
+  if (next === old && (v ? S.ui.qrBase === v : !S.ui.qrBase)) return toast('網址沒有變');
+  const printed = S.devices.filter(d => d.qrAt).length;
+  if (next !== old && printed && !confirmTwice(`已經印過 ${printed} 台設備的標籤。改了網址之後，舊標籤會掃不到（除非舊網址會轉到新網址）。確定要改嗎？`)) return;
+  if (v) S.ui.qrBase = v; else delete S.ui.qrBase;
+  qrMemo.clear();
+  logOp('修改QR網址', `${old} → ${next}`);
+  save(); toast('已儲存 QR 網址'); render();
+}
+
 /* ================= 共用 UI ================= */
 let view = 'dash';
 function go(v) {
+  qrMiss = null; qrFocus = null; qrSaved = null; qrPrinted = null; qrLab.open = false; qrPrintDone();   // V66：換頁就離開 QR 落地頁／標籤列印，並還原列印設定
   if (v !== view) { if (v === 'plan' && typeof planOpen !== 'undefined') { planOpen.clear(); if (typeof dueDevOpen !== 'undefined') { dueDevOpen.clear(); editDevId = null; } if (typeof remReset === 'function') remReset(); } if (v === 'manage' && typeof openCustSet !== 'undefined') { openCustSet.clear(); devPanel = null; quickDev = null; editDevId = null; if (typeof remReset === 'function') remReset(); } }
   view = v;
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
@@ -1823,7 +2669,8 @@ function render() {
   if (!curStaff()) { $('#main').innerHTML = loginHtml(); $('#nav').style.display = 'none'; $('#roleBox').style.display = 'none'; return; }
   if (view === 'ops' && !isAdmin()) view = 'dash';
   const fn = {dash:viewDash, plan:viewPlan, manage:viewManage, settings:viewSettings, me:viewMe, ops:viewOps}[view] || viewDash;
-  $('#main').innerHTML = fn();
+  $('#main').innerHTML = qrMissHtml() + fn();
+  if (qrScrollTop) { qrScrollTop = false; window.scrollTo(0, 0); }
   if (pendingScroll) {
     pendingScroll = false;
     const el = document.getElementById('serviceForm');
@@ -2314,7 +3161,7 @@ function viewSettings() {
           <span class="muted" style="font-size:13px">${used ? `目前有 ${used} 台設備使用，刪除時會一併移除這些設備的此耗材與其更換事件（需二次確認）。` : '未被使用，可直接刪除（需二次確認）。'}</span></div>` : ''}
       </details></td></tr>`;
   }).join('');
-  return (CLOUD_ON ? accessHtml() : '') + dataCheckHtml() + asgCfgHtml() + odorItemsHtml() + consCardHtml() + staffHtml() + exportPanelHtml() + backupPanelHtml() + clearPanelHtml() + restorePanelHtml() + importPanelHtml() + `<div class="card sec-set"><h2>耗材目錄</h2>
+  return (CLOUD_ON ? accessHtml() : '') + dataCheckHtml() + asgCfgHtml() + qrCfgHtml() + odorItemsHtml() + consCardHtml() + staffHtml() + exportPanelHtml() + backupPanelHtml() + clearPanelHtml() + restorePanelHtml() + importPanelHtml() + `<div class="card sec-set"><h2>耗材目錄</h2>
     <p class="note">在此設定耗材名稱、壽命與成本。修改後會同步套用到所有使用此項目的設備。更換依據決定用黑色、彩色或總計張數計算壽命，建立後不可更改。新增設備耗材時，請依此依據填寫「更換當下」的黑色、彩色、總計張數。</p>
     <form onsubmit="addCatalog(event)" class="form-row" style="margin-top:10px">${fields(null)}
       <div><button class="primary" type="submit">新增耗材項目</button></div></form>
@@ -3087,7 +3934,8 @@ function devRowHtml(d) {
     <td>${svTxt}</td>
     <td class="num">${n ? `<button type="button" class="tag t-warn rem-btn" aria-expanded="${remOpen.has(d.id) ? 'true' : 'false'}" title="點一下直接展開提醒項目" onclick="toggleRem('${esc(d.id)}')">${n} ${remOpen.has(d.id) ? '▾' : '▸'}</button>` : '0'}</td>
     <td style="white-space:nowrap"><button class="primary" onclick="quickLog('${d.id}')">快速紀錄</button>
-      <button class="ghost" onclick="startEditDev('${d.id}')">編輯設備</button>${delDevBtnHtml(d)}</td></tr>${remRowHtml(d)}${kindDraftRowHtml(d)}`;
+      <button class="ghost" onclick="startEditDev('${d.id}')">編輯設備</button>
+      <button class="ghost" title="列印這台設備的 QR 標籤" onclick="qrLabOpen(['${d.id}'])">QR</button>${delDevBtnHtml(d)}</td></tr>${remRowHtml(d)}${kindDraftRowHtml(d)}`;
 }
 // 客戶優先：每位客戶為一區塊，底下列出其設備，並可直接在該客戶下新增設備
 // 設備頁（v29）：以客戶為單位收合，底下列出該客戶的所有設備，並可直接在該客戶下新增設備
@@ -3153,7 +4001,7 @@ function devListHtmlInner(slot) {
         ${sub ? `<div class="muted" style="margin-bottom:8px;font-size:13px">${sub}</div>` : ''}
         ${devTableHtml(devs, all)}${panelHere ? (placed = true, panelOut()) : ''}
         <details style="margin-top:10px" ${all.length ? '' : 'open'}><summary style="cursor:pointer;font-weight:600">＋ 在「${esc(c.name)}」新增設備</summary>${devNewFormHtml(c)}</details>
-        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="primary" onclick="openPlanFromCust('${c.id}')">新增保養紀錄</button><button class="ghost" onclick="startEditCust('${c.id}')">編輯客戶資料</button></div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="primary" onclick="openPlanFromCust('${c.id}')">新增保養紀錄</button><button class="ghost" onclick="startEditCust('${c.id}')">編輯客戶資料</button><button class="ghost" onclick="qrLabForCust('${c.id}')">列印此客戶 QR 標籤</button></div>
       </div>` : ''}</div>`;
   }).join('');
   const lead = pd && !placed ? `<div class="muted" style="margin:4px 0">此設備所屬客戶目前未列在下方（被搜尋或篩選條件隱藏），設備紀錄先顯示於此。</div>${panelOut()}` : '';
@@ -3218,7 +4066,7 @@ function overviewHtml() {
   return `<div class="card"><h2>設備資料總覽</h2>
     <p class="note" style="margin-top:0">以客戶為主：先列出客戶，點客戶那一行展開該客戶的設備，可在該客戶下新增設備。保養完成後按「快速紀錄」，紀錄區會直接展開在該客戶的設備下方。</p>
     <div id="devTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${tabs}</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><button class="ghost" type="button" onclick="setAllCustOpen(true)">全部展開</button><button class="ghost" type="button" onclick="setAllCustOpen(false)">全部收合</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><button class="ghost" type="button" onclick="setAllCustOpen(true)">全部展開</button><button class="ghost" type="button" onclick="setAllCustOpen(false)">全部收合</button><button class="ghost" type="button" onclick="qrLabOpen([])">設備 QR 標籤列印</button>
       <span class="muted" style="font-size:13px">預設只顯示客戶；點客戶那一行展開設備。設備類別可直接在清單上選擇修改（需按兩下「確認修改」）。搜尋時符合的客戶會自動展開。</span></div>
     <div class="form-row" style="margin:0">
       <div style="grid-column:span 2"><label>搜尋設備或客戶</label>
@@ -3300,6 +4148,12 @@ function customerFormHtml() {
 
 function viewManage() {
   ensureSel();
+  if (qrLab.open) return qrLabHtml();   // V66：QR 標籤列印
+  if (qrFocus) {   // V66：掃 QR 進來——直接顯示這台設備
+    const qd = S.devices.find(d => d.id === qrFocus && devVisible(d));
+    if (qd && custOf(qd)) { selDev = qd.id; selCust = qd.customerId; return qrPageHtml(qd); }
+    qrFocus = null;
+  }
   const dev = S.devices.find(d => d.id === selDev) || null;
   const top = customerFormHtml() + overviewHtml();
   if (!S.customers.length) return top + '<div class="card"><div class="empty">尚無客戶。請先在最上方新增客戶。</div></div>' + manageHtml();
@@ -3762,6 +4616,7 @@ function addLog(e) {
   logOp('新增服務紀錄', `${custName(dev)}｜${dev.model}｜${od ? od.svcItems.join('、') : txt('type')}`);
   if (txt('engineer')) S.ui.lastEngineer = txt('engineer');
   save();
+  if (qrFocus === dev.id) { qrSaved = {dev: dev.id, date: txt('date')}; qrScrollTop = true; }   // V66
   lastStockAlert = {devId: dev.id, html: stockAlertHtml(dev)};
   if (!isP) { toast(`已記錄（${txt('date')}）。${custName(dev)}｜${dev.location || ''}`); return render(); }
   const b = avgOf(dev.id, 'bw'), c = dev.hasColor ? avgOf(dev.id, 'color') : null;
@@ -4411,6 +5266,7 @@ function createAdmin(e) {
   enterAs(n);
 }
 function logout() {
+  qrPending = null; qrMiss = null; qrStashClear();   // V66：登出時不留下上一位的掃描目標
   if (CLOUD_ON && sb) {
     logOp('登出', '登出系統'); save();
     flushCloud().then(async () => {

@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 設備保養系統 v71</title>
+<title>普印通 設備保養系統 v73</title>
 <style>
 :root{--yellow:#ca8a04;--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -217,7 +217,7 @@ details.tag-editor>summary{cursor:pointer;font-weight:600}
 </head>
 <body>
 <header>
-  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v71</span></h1>
+  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v73</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="dash" class="active" onclick="go('dash')">儀表板</button>
     <button data-v="plan" onclick="go('plan')">保養客戶一覽</button>
@@ -951,6 +951,43 @@ function histEditHtml(dev, l, k) {
       buttons: '<button class="primary" type="submit">儲存修改</button><button class="ghost" type="button" onclick="cancelHistEdit()">取消修改</button>'})}</div>`;
 }
 // V52／V53：單次服務紀錄詳細內容（可切換上一次／下一次；可編輯、刪除）。ctx：'hist' 歷史服務紀錄、'plan' 保養紀錄
+/* ---- V72：保養紀錄照片（計數器張數佐證；自動壓縮＋日期浮水印） ---- */
+function logPhotoHtml(v) {
+  if (!CLOUD_ON) return `<div style="margin-top:12px"><div class="muted" style="font-size:12px">保養照片</div><div class="muted">需啟用雲端同步後才能上傳與查看。</div></div>`;
+  const ph = v.photos || [];
+  const thumbs = ph.map(p => `<a href="#" data-path="${esc(p.path)}" onclick="openPhoto(this.dataset.path);return false" style="display:inline-block;margin:4px;width:120px">
+      <img data-path="${esc(p.thumb || p.path)}" alt="${esc(p.name || '保養照片')}" style="width:120px;height:90px;object-fit:cover;border-radius:6px;background:#eee;border:1px solid #ddd;display:block">
+      <div class="muted" style="font-size:11px;overflow:hidden;white-space:nowrap">${esc(p.at || '')}${p.by ? '・' + esc(p.by) : ''}</div></a>`).join('');
+  return `<div style="margin-top:12px"><div class="muted" style="font-size:12px">保養照片（${ph.length} 張）</div>
+    <div>${thumbs || '<span class="muted">尚無照片</span>'}</div>
+    <form onsubmit="uploadLogPhoto(event,'${esc(v.id)}')" class="form-row" style="margin:6px 0 0">
+      <div><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" required></div>
+      <div><button class="ghost" type="submit">上傳保養照片</button></div></form>
+    <div class="muted" style="font-size:12px;margin-top:4px">上傳後自動壓縮成長邊 ${PHOTO_MAX}px、JPEG ${Math.round(PHOTO_Q * 100)}%（約 150–200KB），右下角自動加上拍攝日期時間。<b>請靠近拍計數器，讓數字至少占畫面寬度的三分之一；不要開閃光燈（面板會反光）。</b></div></div>`;
+}
+async function uploadLogPhoto(e, logId) {
+  e.preventDefault();
+  const inp = e.target.querySelector('input[type=file]'), file = inp && inp.files && inp.files[0];
+  if (!file) return toast('請先選擇照片');
+  if (!cloudReady) return toast('雲端尚未連線，無法上傳照片');
+  if (!(await isImageBytes(file))) return toast('檔案內容不是有效的照片，已取消上傳');
+  if (file.size > 25 * 1024 * 1024) return toast('照片檔案過大（上限 25MB）');
+  const l = S.logs.find(x => x.id === logId); if (!l) return toast('找不到此服務紀錄');
+  const dev = S.devices.find(x => x.id === l.deviceId);
+  toast('照片處理中…');
+  const sh = await shrinkPhoto(file);
+  const base = `devices/${l.deviceId}/logs/${logId}/${uid()}`;   // V73：第一層必須是 devices（儲存桶上傳規則）
+  const path = sh ? base + '.jpg' : `${base}-${file.name.replace(/[^\w.\-]/g, '_').slice(0, 70)}`;
+  toast('照片上傳中…');
+  const {error} = await sb.storage.from('photos').upload(path, sh ? sh.main : file, {contentType: sh ? 'image/jpeg' : file.type});
+  if (error) return toast('照片上傳失敗：' + error.message);
+  let tpath = '';
+  if (sh && sh.thumb) { const r2 = await sb.storage.from('photos').upload(base + '-t.jpg', sh.thumb, {contentType: 'image/jpeg'}); if (!r2.error) tpath = base + '-t.jpg'; }
+  l.photos = l.photos || [];
+  l.photos.push({path, thumb: tpath, name: file.name, at: photoStampText(), by: curStaff() ? curStaff().name : ''});
+  logOp('上傳保養照片', `${dev ? custName(dev) : ''}｜${dev ? (dev.model || '') : ''}｜${l.date}`);
+  save(); toast('已上傳保養照片'); render();
+}
 function histDetailHtml(dev, vs, k, mm, ctx) {
   const isH = ctx !== 'plan';
   const v = vs[k], n = vs.length, pr = isPrint(dev), lg = isLarge(dev);
@@ -986,6 +1023,7 @@ function histDetailHtml(dev, vs, k, mm, ctx) {
     <div style="margin-top:10px"><div class="muted" style="font-size:12px">本次更換耗材</div>${evs}</div>
     ${tx('服務紀錄', v.serviceRecord)}${tx('客戶交代事宜', v.customerInstruction)}${tx('耗材庫存', v.consumableStock)}
     ${tx('採購信號', v.purchaseSignal, 1)}${tx('備註', v.note, 1)}${tx('主訴（客戶反映）', v.complaint, 1)}${tx('處置與建議', v.treatment, 1)}${tx('主管意見', v.supOpinion, 1)}
+    ${logPhotoHtml(v)}
     <div class="act-bar">
       <div class="act-l"><button class="primary" type="button" onclick="${isH ? `startHistEdit('${v.id}')` : `startLogEdit('${v.id}')`}">編輯此次紀錄</button>
         <button class="ghost" type="button" onclick="openDevVisit('${dev.id}', ${k})">到設備資料總覽開啟</button></div>
@@ -1437,7 +1475,7 @@ function photoRowHtml(d) {
   const ph = d.photos || [];
   if (!CLOUD_ON) return `<tr><td colspan="4"><div class="muted">設備照片需啟用雲端同步後才能上傳與查看。</div></td></tr>`;
   const thumbs = ph.map(p => `<a href="#" data-path="${esc(p.path)}" onclick="openPhoto(this.dataset.path);return false" style="display:inline-block;margin:4px;width:110px">
-      <img data-path="${esc(p.path)}" alt="${esc(p.name)}" style="width:110px;height:82px;object-fit:cover;border-radius:6px;background:#eee;border:1px solid #ddd;display:block">
+      <img data-path="${esc(p.thumb || p.path)}" alt="${esc(p.name)}" style="width:110px;height:82px;object-fit:cover;border-radius:6px;background:#eee;border:1px solid #ddd;display:block">
       <div class="muted" style="font-size:11px;overflow:hidden;white-space:nowrap">${esc(p.name)}</div></a>`).join('');
   return `<tr><td colspan="4"><div style="font-size:13px;margin:6px 0"><b>設備照片</b>（${ph.length} 張）</div>
     <div>${thumbs || '<span class="muted">尚無照片</span>'}</div>
@@ -1473,6 +1511,49 @@ async function isImageBytes(file) {
   if (ascii(4, 8) === 'ftyp' && /^(heic|heix|hevc|hevx|heim|heis|mif1|msf1)$/.test(ascii(8, 12))) return true;  // HEIC／HEIF
   return false;
 }
+/* ---- V72：照片自動壓縮（長邊 1280、JPEG 72%、右下角日期時間浮水印）＋ 200px 縮圖 ---- */
+const PHOTO_MAX = 1280, PHOTO_Q = 0.72, PHOTO_THUMB = 200;
+function photoStampText() {
+  const d = new Date(), p2 = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+}
+function loadImageEl(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => { URL.revokeObjectURL(url); res(im); };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('無法讀取照片')); };
+    im.src = url;
+  });
+}
+function drawPhotoBlob(im, maxEdge, q, stamp) {
+  const long = Math.max(im.naturalWidth || im.width, im.naturalHeight || im.height) || 1;
+  const r = Math.min(1, maxEdge / long);
+  const w = Math.max(1, Math.round((im.naturalWidth || im.width) * r)), h = Math.max(1, Math.round((im.naturalHeight || im.height) * r));
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const cx = cv.getContext('2d');
+  if (!cx) return Promise.resolve(null);
+  cx.fillStyle = '#fff'; cx.fillRect(0, 0, w, h);
+  cx.drawImage(im, 0, 0, w, h);
+  if (stamp) {
+    const fs = Math.max(12, Math.round(h * 0.035));
+    cx.font = `bold ${fs}px system-ui,"Microsoft JhengHei",sans-serif`;
+    cx.textAlign = 'right'; cx.textBaseline = 'bottom';
+    cx.lineWidth = Math.max(2, Math.round(fs / 5)); cx.strokeStyle = 'rgba(0,0,0,.85)'; cx.fillStyle = '#fff';
+    const x = w - Math.round(fs * 0.6), y = h - Math.round(fs * 0.5);
+    cx.strokeText(stamp, x, y); cx.fillText(stamp, x, y);
+  }
+  return new Promise(res => { try { cv.toBlob(b => res(b), 'image/jpeg', q); } catch (e) { res(null); } });
+}
+// 回傳 {main, thumb}；瀏覽器無法解碼（例如部分 HEIC）時回傳 null，呼叫端改為上傳原檔
+async function shrinkPhoto(file) {
+  try {
+    const im = await loadImageEl(file);
+    const main = await drawPhotoBlob(im, PHOTO_MAX, PHOTO_Q, photoStampText());
+    if (!main) return null;
+    const thumb = await drawPhotoBlob(im, PHOTO_THUMB, 0.7, '');
+    return {main, thumb};
+  } catch (e) { return null; }
+}
 async function uploadPhoto(e, devId) {
   e.preventDefault();
   const inp = e.target.querySelector('input[type=file]'), file = inp && inp.files && inp.files[0];
@@ -1482,12 +1563,17 @@ async function uploadPhoto(e, devId) {
   if (!(await isImageBytes(file))) return toast('檔案內容不是有效的照片，已取消上傳');
   if (file.size > 15 * 1024 * 1024) return toast('照片檔案過大（上限 15MB）');
   const d = S.devices.find(x => x.id === devId); if (!d) return toast('找不到此設備');
-  const path = `devices/${devId}/${uid()}-${file.name.replace(/[^\w.\-]/g, '_').slice(0, 80)}`;
+  toast('照片處理中…');
+  const sh = await shrinkPhoto(file);
+  const base = `devices/${devId}/${uid()}`;
+  const path = sh ? base + '.jpg' : `${base}-${file.name.replace(/[^\w.\-]/g, '_').slice(0, 70)}`;
   toast('照片上傳中…');
-  const {error} = await sb.storage.from('photos').upload(path, file, {contentType: file.type});
+  const {error} = await sb.storage.from('photos').upload(path, sh ? sh.main : file, {contentType: sh ? 'image/jpeg' : file.type});
   if (error) return toast('照片上傳失敗：' + error.message);
+  let tpath = '';
+  if (sh && sh.thumb) { const r2 = await sb.storage.from('photos').upload(base + '-t.jpg', sh.thumb, {contentType: 'image/jpeg'}); if (!r2.error) tpath = base + '-t.jpg'; }
   d.photos = d.photos || [];
-  d.photos.push({path, name: file.name, at: iso(today()), by: curStaff() ? curStaff().name : ''});
+  d.photos.push({path, thumb: tpath, name: file.name, at: iso(today()), by: curStaff() ? curStaff().name : ''});
   logOp('上傳照片', `${custName(d)}｜${d.model}｜${file.name}`);
   save(); toast('已上傳照片'); render();
 }
@@ -1870,6 +1956,7 @@ return qrcode;
 const QR_STASH_KEY = 'printtown-qr-target', QR_STASH_MS = 30 * 60e3, QR_PREF_KEY = 'printtown-qr-lab';
 const QR_MAX_LABELS = 500, QR_QUIET = 3, QR_LIST_MAX = 200, QR_MIN_MOD = 0.3, QR_SHARE_MAX = 20;
 const QR_DPIS = [180, 203, 300, 360, 600];
+const QR_PRINTERS = [{k: 'lw1000p', t: 'EPSON LW-1000P（360 dpi）', dpi: 360}, {k: 'other', t: '其他標籤機（自己選解析度）'}];   // V73：LW-1000P 的解析度是 360 dpi（Epson 官方規格）
 const QR_COL = new Intl.Collator('zh-TW');
 let qrPending = null;      // 掃 QR 進來、等著登入後開啟的設備代碼
 let qrMiss = null;         // V70：掃 QR 進來但沒能打開那台設備時，留在畫面上的說明 {id, why: 'none'|'perm'}（按「知道了」或換頁才消失）
@@ -1884,7 +1971,16 @@ const QR_SIZES = [
   {k: 't9x50', tape: 9, w: 50, h: 9, t: '9 mm 標籤帶 × 50 mm'},
   {k: 't9x60', tape: 9, w: 60, h: 9, t: '9 mm 標籤帶 × 60 mm'},
   {k: 't12auto', tape: 12, auto: true, h: 12, w: 40, t: '12 mm 標籤帶 × 自動長度'},
+  {k: 't12x30', tape: 12, w: 30, h: 12, t: '12 mm 標籤帶 × 30 mm'},
   {k: 't12x40', tape: 12, w: 40, h: 12, t: '12 mm 標籤帶 × 40 mm'},
+  {k: 't12x50', tape: 12, w: 50, h: 12, t: '12 mm 標籤帶 × 50 mm'},
+  {k: 't12x60', tape: 12, w: 60, h: 12, t: '12 mm 標籤帶 × 60 mm'},
+  {k: 't18auto', tape: 18, auto: true, h: 18, w: 40, t: '18 mm 標籤帶 × 自動長度'},
+  {k: 't18x30', tape: 18, w: 30, h: 18, t: '18 mm 標籤帶 × 30 mm'},
+  {k: 't18x40', tape: 18, w: 40, h: 18, t: '18 mm 標籤帶 × 40 mm'},
+  {k: 't18x50', tape: 18, w: 50, h: 18, t: '18 mm 標籤帶 × 50 mm'},
+  {k: 't18x60', tape: 18, w: 60, h: 18, t: '18 mm 標籤帶 × 60 mm'},
+  {k: 't18x80', tape: 18, w: 80, h: 18, t: '18 mm 標籤帶 × 80 mm'},
   {k: '50x24', w: 50, h: 24, t: '50 × 24 mm（橫式，24 mm 寬標籤帶，最常用）'},
   {k: '40x18', w: 40, h: 18, t: '40 × 18 mm（18 mm 寬標籤帶）'},
   {k: '30x12', w: 30, h: 12, t: '30 × 12 mm（12 mm 寬標籤帶，QR 很小）'},
@@ -1894,7 +1990,7 @@ const QR_SIZES = [
   {k: 'custom', t: '自訂尺寸'}];
 const qrLab = {open: false, inited: false, sel: new Set(), cat: 'all', cust: '', q: '', fresh: false,
   size: 't9auto', w: 40, h: 9, layout: 'auto', paper: 'label', showCust: true, showLoc: true, showModel: false, showCode: false,
-  dpi: 203, band: null, feed: 2, rot: false};
+  dpi: 360, printer: 'lw1000p', band: null, feed: 2, rot: false};
 
 /* ---- 掃描進來：記住目標 → 登入後開啟 ---- */
 const qrIdOk = id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(id);
@@ -2145,7 +2241,7 @@ function qrWarns(devs, o) {
 }
 
 
-/* ---- 窄標籤帶（9 mm、12 mm）：整張標籤直接產生「點陣圖」，每一個點都由我們決定，不讓列印軟體重新縮放 ---- */
+/* ---- 標籤帶（9、12、18 mm）：整張標籤直接產生「點陣圖」，每一個點都由我們決定，不讓列印軟體重新縮放 ---- */
 const qrTapeOf = o => QR_SIZES.find(x => x.k === o.size && x.tape) || null;
 const qrIsTape = o => !!qrTapeOf(o);
 let qrMctxV = null;
@@ -2175,7 +2271,7 @@ function qrTapeLayout(d, o, cfg, forceW) {
     let px = l.px0, sx = 1, t = l.t, w = l.w0;
     if (w > tw && px > minPx) { px = Math.max(minPx, Math.floor(px * 0.85)); w = qrMeasure(t, l.b, px); }
     if (w > tw && tw > 0) { sx = Math.max(0.72, tw / w); w *= sx; }
-    if (w > tw) { const ch = Array.from(t); while (ch.length > 1 && qrMeasure(ch.join('') + '…', l.b, px) * sx > tw) ch.pop(); t = ch.join('') + '…'; w = qrMeasure(t, l.b, px) * sx; clipped = true; }
+    if (w > tw) { const ch = Array.from(t); while (ch.length > 1 && qrMeasure(ch.join('') + '…', l.b, px) * sx > tw) ch.pop(); t = ch.join('') + '…'; w = qrMeasure(t, l.b, px) * sx; if (w > tw) { t = ''; w = 0; } clipped = true; }   // V73：連「…」都放不下就不畫字，不侵入後面的留白
     l.px = px; l.sx = sx; l.txt = t; l.w = w; minLinePx = Math.min(minLinePx, px);
   });
   const total = lines.reduce((a, l) => a + l.px * 1.2, 0);
@@ -2272,13 +2368,15 @@ function qrLabInit() {
     if (['label', 'sheet'].includes(o.paper)) qrLab.paper = o.paper;
     ['showCust', 'showLoc', 'showModel', 'showCode'].forEach(k => { if (typeof o[k] === 'boolean') qrLab[k] = o[k]; });
     if (QR_DPIS.includes(+o.dpi)) qrLab.dpi = +o.dpi;
+    qrLab.printer = QR_PRINTERS.some(p => p.k === o.printer) ? o.printer : 'lw1000p';   // V73：沒存過標籤機（V72 以前存的設定）＝ LW-1000P
+    if (qrLab.printer === 'lw1000p') qrLab.dpi = 360;
     if (o.band === null || (+o.band >= 4 && +o.band <= 24)) qrLab.band = o.band === null ? null : +o.band;
     if (+o.feed >= 0 && +o.feed <= 10) qrLab.feed = +o.feed;
     if (typeof o.rot === 'boolean') qrLab.rot = o.rot;
   } catch (e) {}
 }
 function qrLabSave() {
-  try { const {size, w, h, layout, paper, showCust, showLoc, showModel, showCode, dpi, band, feed, rot} = qrLab; localStorage.setItem(QR_PREF_KEY, JSON.stringify({size, w, h, layout, paper, showCust, showLoc, showModel, showCode, dpi, band, feed, rot})); } catch (e) {}
+  try { const {size, w, h, layout, paper, showCust, showLoc, showModel, showCode, dpi, printer, band, feed, rot} = qrLab; localStorage.setItem(QR_PREF_KEY, JSON.stringify({size, w, h, layout, paper, showCust, showLoc, showModel, showCode, dpi, printer, band, feed, rot})); } catch (e) {}
 }
 function qrLabOpen(ids) {
   qrLabInit();
@@ -2338,8 +2436,13 @@ function qrSetSize(k) {
   if (qrLab.band != null && s.tape && qrLab.band > s.tape) qrLab.band = null;
   qrLabSave(); qrLabRefresh('opts');
 }
+function qrSetPrinter(k) {   // V73：選標籤機型號；LW-1000P 固定 360 dpi
+  const p = QR_PRINTERS.find(x => x.k === k); if (!p) return;
+  qrLab.printer = p.k; if (p.dpi) qrLab.dpi = p.dpi;
+  qrLabSave(); qrLabRefresh('opts');
+}
 function qrSetTape(k, v) {
-  if (k === 'dpi') { v = +v; if (!QR_DPIS.includes(v)) return; qrLab.dpi = v; }
+  if (k === 'dpi') { v = +v; if (!QR_DPIS.includes(v) || qrLab.printer === 'lw1000p') return; qrLab.dpi = v; }
   else if (k === 'band') { if (v === '' || v == null) qrLab.band = null; else { v = Math.round(+v * 10) / 10; const t = (qrTapeOf(qrLab) || {tape: 24}).tape; if (!isFinite(v) || v < 4 || v > t) return toast(`可印高度要在 4～${t} mm 之間`); qrLab.band = v; } }
   else if (k === 'feed') { v = Math.round(+v * 2) / 2; if (!isFinite(v) || v < 0 || v > 10) return toast('前後留白要在 0～10 mm 之間'); qrLab.feed = v; }
   else if (k === 'rot') qrLab.rot = !!v;
@@ -2370,22 +2473,23 @@ function qrPickHtml() {
 }
 function qrOptsHtml() {
   const tape = qrIsTape(qrLab), so = s => `<option value="${s.k}" ${qrLab.size === s.k ? 'selected' : ''}>${esc(s.t)}</option>`;
-  const sz = `<optgroup label="窄標籤帶（9 mm、12 mm 標籤機）">${QR_SIZES.filter(s => s.tape).map(so).join('')}</optgroup><optgroup label="一般標籤紙">${QR_SIZES.filter(s => !s.tape).map(so).join('')}</optgroup>`;
+  const sz = `<optgroup label="標籤帶（9／12／18 mm，例如 EPSON LW-1000P）">${QR_SIZES.filter(s => s.tape).map(so).join('')}</optgroup><optgroup label="一般標籤紙">${QR_SIZES.filter(s => !s.tape).map(so).join('')}</optgroup>`;
   const chk = (k, t) => `<label class="qr-ck"><input type="checkbox" ${qrLab[k] ? 'checked' : ''} onchange="qrSetOpt('${k}', this.checked)"> ${t}</label>`;
   const opt = (v, cur, t) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${t}</option>`;
   return `<div class="form-row" style="margin:0">
       <div><label>標籤尺寸（標籤紙實際大小）</label><select id="qrSize" onchange="qrSetSize(this.value)">${sz}</select></div>
       ${qrLab.size === 'custom' ? `<div><label>寬（mm）</label><input id="qrW" type="number" min="15" max="200" step="0.5" value="${qrLab.w}" onchange="qrSetWH('w', this.value)"></div>
       <div><label>高（mm）</label><input id="qrH" type="number" min="10" max="200" step="0.5" value="${qrLab.h}" onchange="qrSetWH('h', this.value)"></div>` : ''}
-      ${tape ? `<div><label>標籤機解析度（dpi）</label><select id="qrDpi" onchange="qrSetTape('dpi', this.value)">${QR_DPIS.map(v => `<option value="${v}" ${qrLab.dpi === v ? 'selected' : ''}>${v} dpi${v === 203 ? '（不確定就選這個）' : ''}</option>`).join('')}</select></div>
+      ${tape ? `<div><label>標籤機</label><select id="qrPrinter" onchange="qrSetPrinter(this.value)">${QR_PRINTERS.map(p => `<option value="${p.k}" ${qrLab.printer === p.k ? 'selected' : ''}>${esc(p.t)}</option>`).join('')}</select></div>
+      ${qrLab.printer === 'lw1000p' ? '' : `<div><label>標籤機解析度（dpi）</label><select id="qrDpi" onchange="qrSetTape('dpi', this.value)">${QR_DPIS.map(v => `<option value="${v}" ${qrLab.dpi === v ? 'selected' : ''}>${v} dpi${v === 203 ? '（不確定就選這個）' : ''}</option>`).join('')}</select></div>`}
       <div><label>可印高度（mm）</label><input id="qrBand" type="number" min="4" max="${qrTapeOf(qrLab).tape}" step="0.1" value="${qrLab.band == null ? '' : qrLab.band}" placeholder="${qrTapeOf(qrLab).tape - 2}（預設）" onchange="qrSetTape('band', this.value)"></div>
       <div><label>前後留白（mm）</label><input id="qrFeed" type="number" min="0" max="10" step="0.5" value="${qrLab.feed}" onchange="qrSetTape('feed', this.value)"></div>
       <div><label>圖片方向</label><select id="qrRot" onchange="qrSetTape('rot', this.value === '1')">${opt('0', qrLab.rot ? '1' : '0', '橫放（預設）')}${opt('1', qrLab.rot ? '1' : '0', '旋轉 90°（印出來橫躺時選這個）')}</select></div>`
       : `<div><label>版面</label><select id="qrLayout" onchange="qrSetOpt('layout', this.value)">${opt('auto', qrLab.layout, '自動（依標籤長寬）')}${opt('h', qrLab.layout, 'QR 在左、文字在右')}${opt('v', qrLab.layout, 'QR 在上、文字在下')}</select></div>
       <div><label>輸出到</label><select id="qrPaper" onchange="qrSetOpt('paper', this.value)">${opt('label', qrLab.paper, '標籤機（一張標籤一頁）')}${opt('sheet', qrLab.paper, 'A4 紙（排滿一頁，印在貼紙紙上或剪下貼）')}</select></div>`}</div>
-    ${tape ? `<details class="qr-help" id="qrTapeHelp"><summary>9 mm 標籤機怎麼印？（先看這裡）</summary>
-      <p><b>可印高度</b>：9 mm 的標籤帶，標籤機實際能印的高度通常只有約 6～7 mm（上下各有空白）。預設 7 mm；如果印出來上下被切到，把這個數字調小。</p>
-      <p><b>三種印法</b>：①手機：按「分享到標籤機 App」，在分享選單選標籤機的 App，匯入圖片後用「原始大小」列印。②電腦：按「列印」，印表機選標籤機，紙張選 ${qrTapeOf(qrLab).tape} mm 標籤帶，邊界選「無」、縮放 100%。③按「全部下載（ZIP）」，解壓縮後把圖片逐張匯入標籤機軟體。</p>
+    ${tape ? `<details class="qr-help" id="qrTapeHelp"><summary>${qrTapeOf(qrLab).tape} mm 標籤帶怎麼印？（先看這裡）</summary>
+      <p><b>可印高度</b>：標籤機實際能印的高度，比標籤帶的寬度小（上下各有空白）。${qrLab.printer === 'lw1000p' ? 'EPSON LW-1000P 的印字頭最大可印高度是 27.1 mm（那是 36 mm 寬標籤帶的數字），Epson 沒有公開 9、12、18 mm 標籤帶各自實際能印多高，' : ''}所以預設是「標籤帶寬度減 2 mm」＝ ${qrTapeOf(qrLab).tape - 2} mm；第一張印出來如果上下被切到，把「可印高度」調小 0.5 mm 再印；印出來上下空白太多，就調大 0.5 mm。</p>
+      <p><b>三種印法</b>：①手機：按「分享到標籤機 App」，在分享選單選${qrLab.printer === 'lw1000p' ? ' Epson iLabel' : '標籤機的 App'}，匯入圖片後用「原始大小」列印。②電腦：${qrLab.printer === 'lw1000p' ? '開 Epson Label Editor，標籤帶寬度設成 ' + qrTapeOf(qrLab).tape + ' mm，插入「全部下載（ZIP）」解壓縮出來的圖片，圖片大小維持「原始大小」，不要拉大縮小；或按「列印」，印表機選 LW-1000P，' : '按「列印」，印表機選標籤機，'}紙張選 ${qrTapeOf(qrLab).tape} mm 標籤帶，邊界選「無」、縮放 100%。③按「全部下載（ZIP）」，解壓縮後把圖片逐張匯入標籤機軟體。</p>
       <p><b>第一次請只印 3 張</b>，用手機相機實際掃看看，沒問題再大量印。</p></details>` : ''}
     <div style="margin-top:8px">標籤上要印的文字：${chk('showCust', '客戶名稱')}${chk('showLoc', '安裝地點')}${chk('showModel', '品牌型號')}${chk('showCode', '設備代碼（小字）')}</div>`;
 }
@@ -2399,7 +2503,7 @@ function qrPickFirst() {   // 「先選第 1 台來看看」：還沒勾選任�
 function qrOutFail(e, devs) {   // 預覽產生失敗（常見原因：瀏覽器或擴充功能不讓網頁使用畫布）：明確說明原因，而且照樣顯示可以用手機掃的測試 QR，不要讓畫面空白
   let scan = ''; try { if (devs.length && !qrBaseBad()) scan = qrScanTestHtml(devs[0]); } catch (x) {}
   const msg = String((e && e.message) || e || '未知錯誤').slice(0, 200), tape = qrIsTape(qrLab);
-  return `${qrLocNoteHtml('qrLocNoteOut', true)}<div class="alert-box" id="qrOutFail"><b>這個瀏覽器沒辦法產生${tape ? ' 9 mm／12 mm 窄標籤' : '標籤'}的預覽圖。</b>原因：${esc(msg)}。<br>${tape ? '窄標籤是用瀏覽器的「畫布」功能畫出來的；瀏覽器的防追蹤、防指紋設定或擴充功能有時會擋掉它。請改用電腦版 Chrome 或 Edge 開啟系統；或把上面「標籤尺寸」改選「一般標籤紙」那一組（那一組不需要畫布）。' : '請改用電腦版 Chrome 或 Edge 開啟系統。'}如果換了瀏覽器還是這樣，請把這段說明的畫面拍給我。</div>${scan}
+  return `${qrLocNoteHtml('qrLocNoteOut', true)}<div class="alert-box" id="qrOutFail"><b>這個瀏覽器沒辦法產生${tape ? ' 9／12／18 mm 標籤帶的' : '標籤'}預覽圖。</b>原因：${esc(msg)}。<br>${tape ? '窄標籤是用瀏覽器的「畫布」功能畫出來的；瀏覽器的防追蹤、防指紋設定或擴充功能有時會擋掉它。請改用電腦版 Chrome 或 Edge 開啟系統；或把上面「標籤尺寸」改選「一般標籤紙」那一組（那一組不需要畫布）。' : '請改用電腦版 Chrome 或 Edge 開啟系統。'}如果換了瀏覽器還是這樣，請把這段說明的畫面拍給我。</div>${scan}
     <div class="qr-row"><button class="primary" type="button" id="qrPrintBtn" disabled>列印 ${devs.length} 張標籤</button>
       <button class="ghost" type="button" id="qrCsvBtn" ${qrBaseBad() ? 'disabled' : ''} onclick="qrDoCsv()">下載清單（CSV）</button>
       <button class="ghost" type="button" id="qrPngBtn" disabled>下載 PNG 圖檔（限 1 台）</button>
@@ -2933,7 +3037,7 @@ function planTog(key, open) { if (open) planOpen.add(key); else planOpen.delete(
 // 搜尋時只更新清單，輸入框不會失去焦點
 function filterPlan(v) {
   planQ = String(v || '').slice(0, 100);
-  [['planGrid', planGridHtml], ['planDue', planDueHtml], ['planTabs', planTabsHtml]].forEach(([id, fn]) => { const el = document.getElementById(id); if (el) el.innerHTML = fn(); });
+  [['planGrid', planGridHtml], ['planDue', planDueHtml], ['planTabs', planTabsHtml], ['planSkipWrap', planSkipCardHtml]].forEach(([id, fn]) => { const el = document.getElementById(id); if (el) el.innerHTML = fn(); });
 }
 // 本月應保養（與「月保養名單」相同定義與用詞）：逾期未保養、本月應保養、首次保養、本月已保養
 function planMonthStatus() { const t = today(); return new Map(rosterRows(new Date(t.getFullYear(), t.getMonth(), 1)).map(r => [r.d.id, r])); }
@@ -2954,7 +3058,7 @@ function planDueCount(k) {
   return [...planMonthStatus().values()].filter(r => catOfKind(r.d.kind) === k && r.c && custVisible(r.c) && custMatch(r.c, planQ)).length;
 }
 function planTabsHtml() {
-  return visCats().map(c => `<button class="${planKind === c.k ? 'primary' : 'ghost'}" onclick="togglePlanKind('${c.k}')">${esc(c.label)} ${planDueCount(c.k)} 台</button>`).join('');
+  return visCats().map(c => `<button class="${planKind === c.k ? 'primary' : 'ghost'}" onclick="togglePlanKind('${c.k}')">${esc(c.label)} ${planDueCount(c.k)} 台 / 本月應保養</button>`).join('');
 }
 function planFilterHtml() {
   const t = today(), ym = `${t.getFullYear()} 年 ${t.getMonth() + 1} 月`;
@@ -2965,6 +3069,52 @@ function planFilterHtml() {
     <p class="note" style="margin:8px 0 0">${planKind === 'all'
       ? `分類按鈕上的數字是<b>本月（${ym}）應保養的設備台數</b>（台，含已保養）。點設備分類，下方「本月應保養」與「保養行程表」只算該分類的設備；再點一次取消。`
       : `目前只顯示：<b>${esc(kindCatLabel(planKind))}</b>。再點一次「${esc(kindCatLabel(planKind))}」取消篩選。`}</p></div>`;
+}
+/* ---- V72：本月不需保養一覽（只列事務設備與商用空氣清淨機；所有角色都看得到） ---- */
+const SKIP_CATS = ['office', 'purifier'];
+let planSkipOpen = false;
+function togglePlanSkip() { planSkipOpen = !planSkipOpen; render(); }
+// 本月不需保養＝本月不在保養行程內（rosterRowOf 回傳 null）：已有上次保養紀錄，而且下次應保養月份還沒到
+function planSkipRows() {
+  const t = today(), ms = new Date(t.getFullYear(), t.getMonth(), 1), cur = ms.getFullYear() * 12 + ms.getMonth();
+  const rows = [];
+  S.devices.filter(devVisible).forEach(d => {
+    const k = catOfKind(d.kind);
+    if (!SKIP_CATS.includes(k)) return;
+    if (rosterRowOf(d, ms)) return;                       // 本月要保養 → 不列入這張表
+    const c = custOf(d);
+    if (!c || !custVisible(c) || !custMatch(c, planQ)) return;
+    const cyc = devCycle(d);
+    const prev = svcVisitsOf(d.id).filter(l => monIdxOf(l) < cur).pop() || null;
+    const dueIdx = prev ? monIdxOf(prev) + cyc.m : null;
+    rows.push({d, c, k, cycLabel: cyc.label, last: prev ? prev.date : null,
+      dueYm: dueIdx == null ? '' : `${Math.floor(dueIdx / 12)} 年 ${dueIdx % 12 + 1} 月`,
+      wait: dueIdx == null ? null : dueIdx - cur});
+  });
+  return rows.sort((a, b) => (a.wait == null ? 99 : a.wait) - (b.wait == null ? 99 : b.wait) || (a.c.name || '').localeCompare(b.c.name || ''));
+}
+function planSkipHtml() { return `<div id="planSkipWrap">${planSkipCardHtml()}</div>`; }   // V73：外層固定，搜尋時只換裡面
+function planSkipCardHtml() {
+  const rows = planSkipRows();
+  const cnt = k => rows.filter(r => r.k === k).length;
+  const head = SKIP_CATS.map(k => `${esc(kindCatLabel(k))} <b>${cnt(k)}</b> 台`).join('　・　');
+  const grp = k => {
+    const rs = rows.filter(r => r.k === k);
+    if (!rs.length) return `<div style="margin-top:12px"><b>${esc(kindCatLabel(k))}</b><div class="empty" style="margin-top:4px">本月沒有「不需保養」的${esc(kindCatLabel(k))}。</div></div>`;
+    return `<div style="margin-top:12px"><b>${esc(kindCatLabel(k))}（${rs.length} 台）</b>
+      <div style="overflow-x:auto;margin-top:4px"><table style="min-width:780px"><thead><tr>
+        <th>客戶</th><th>設備</th><th>地點</th><th>保養週期</th><th>上次保養</th><th>下次應保養</th></tr></thead><tbody>
+      ${rs.map(r => `<tr><td>${esc(r.c.name)}</td><td>${esc(r.d.model || '—')}</td><td>${esc(r.d.location || '—')}</td>
+        <td style="white-space:nowrap">${esc(r.cycLabel || '—')}</td><td style="white-space:nowrap">${esc(r.last || '—')}</td>
+        <td style="white-space:nowrap">${esc(r.dueYm || '—')}${r.wait != null && r.wait > 0 ? ` <span class="muted">（還有 ${r.wait} 個月）</span>` : ''}</td></tr>`).join('')}
+      </tbody></table></div></div>`;
+  };
+  return `<div class="card" id="planSkip" style="margin-top:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <div><b style="font-size:16px">本月不需保養</b>　<span style="font-size:15px">${head}</span></div>
+      <button class="ghost" type="button" onclick="togglePlanSkip()">${planSkipOpen ? '收合清單' : '展開清單'}</button></div>
+    ${planSkipOpen ? SKIP_CATS.map(grp).join('') : ''}
+    <p class="note" style="margin:10px 0 0">只列<b>事務設備</b>與<b>商用空氣清淨機</b>：依各設備的保養週期推算，<b>這個月輪不到保養</b>的設備（本月應保養的不會出現在這裡，兩張表相加＝在冊台數）。跟著上方「客戶搜尋」篩選，<b>不受分類按鈕影響</b>。所有人都看得到。</p></div>`;
 }
 const PLAN_RANK = {overdue: 0, due: 1, new: 2, done: 3};
 const planStTags = due => ['overdue', 'due', 'new', 'done'].map(k => { const n = due.filter(x => x.status === k).length;
@@ -3101,7 +3251,7 @@ function viewPlan() {
   const year = `<details class="card" id="planYear" ${planOpen.has('year') ? 'open' : ''} ontoggle="planTog('year', this.open)">
     <summary style="cursor:pointer;font-weight:700;font-size:16px">全部客戶（${Y} 年保養一覽表）<span class="muted" style="font-size:13px;font-weight:400">　點此展開／收合</span></summary>
     ${yearNav}<div id="planGrid">${planGridHtml()}</div></details>`;
-  return planFilterHtml() + histPanelHtml() + planCustHtml() + year + `<div id="planDue">${planDueHtml()}</div>` + planMonthHtml();
+  return planFilterHtml() + planSkipHtml() + histPanelHtml() + planCustHtml() + year + `<div id="planDue">${planDueHtml()}</div>` + planMonthHtml();
 }
 function planGridHtml() {
   const t = today(), Y = planYear || t.getFullYear(), curIdx = t.getFullYear() * 12 + t.getMonth();

@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 設備保養系統 v73</title>
+<title>普印通 設備保養系統 v74</title>
 <style>
 :root{--yellow:#ca8a04;--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -217,7 +217,7 @@ details.tag-editor>summary{cursor:pointer;font-weight:600}
 </head>
 <body>
 <header>
-  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v73</span></h1>
+  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v74</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="dash" class="active" onclick="go('dash')">儀表板</button>
     <button data-v="plan" onclick="go('plan')">保養客戶一覽</button>
@@ -4816,6 +4816,12 @@ function staffExtraFrom(f) {
   S.staffFields.forEach(fd => { extra[fd.key] = (f.get('x_' + fd.key) || '').toString().trim(); });
   return extra;
 }
+// V74：刪除人員的按鈕（只有管理者看得到；目前登入的自己不給刪）
+function staffDelHtml(s) {
+  if (!isAdmin()) return '';
+  if (s.id === CUR) return '<div class="muted" style="font-size:12px;margin-top:6px">目前登入中，無法刪除自己</div>';
+  return `<div style="margin-top:6px"><button class="ghost danger" type="button" data-id="${esc(s.id)}" onclick="delStaff(this.dataset.id)">刪除人員與權限</button></div>`;
+}
 function staffHtml() {
   const rows = S.staff.map(s => `<tr><td><b>${esc(s.name)}</b>${s.email ? `<div class="muted" style="font-size:12px">${esc(s.email)}</div>` : ''}</td><td>${esc(s.title || '—')}</td><td>${esc(s.phone || '—')}</td>
       <td>${s.active ? '<span class="tag t-ok">在職</span>' : '<span class="muted">停用</span>'}</td>
@@ -4831,13 +4837,14 @@ function staffHtml() {
           <div><label>身份</label><select name="role">${ROLES.map(r => `<option ${roleOf(s) === r ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
           ${CLOUD_ON ? '' : `<div><label>重設密碼（不改請留空）</label><input type="password" name="newpw" minlength="4" autocomplete="new-password"></div>`}
           ${staffExtraInputs(s)}
-          <div><button class="primary" type="submit">儲存</button></div></form></details></td></tr>`).join('');
+          <div><button class="primary" type="submit">儲存</button></div></form></details>${staffDelHtml(s)}</td></tr>`).join('');
   const fieldList = S.staffFields.length
     ? S.staffFields.map(fd => `<span class="tag t-info">${esc(fd.label)}</span>`).join(' ')
     : '<span class="muted">尚無自訂欄位</span>';
   return `<div class="card sec-set"><h2>人員與權限</h2>
-    <p class="note">${CLOUD_ON ? '每位人員以 Google 帳號登入，「登入信箱」必須與該 Google 帳號相同。' : '每位人員以「姓名＋密碼」登入。'}身份分四種：<b>管理者</b>（全部功能，含設定頁的備份、匯出、還原、匯入、人員與耗材目錄）；<b>工程部</b>（只看得到事務設備、商用空氣清淨機、商用臭氧機）；<b>會計部、行政人員</b>（看得到全部設備，並可進入計張計價系統）。管理者也可進入計張計價系統。停用的人員無法登入，也不會出現在服務紀錄的選單中。</p>
-    <form onsubmit="addStaff(event)" class="form-row" style="margin-top:10px">
+    <p class="note">${CLOUD_ON ? '每位人員以 Google 帳號登入，「登入信箱」必須與該 Google 帳號相同。' : '每位人員以「姓名＋密碼」登入。'}身份分四種：<b>管理者</b>（全部功能，含設定頁的備份、匯出、還原、匯入、人員與耗材目錄）；<b>工程部</b>（只看得到事務設備、商用空氣清淨機、商用臭氧機）；<b>會計部、行政人員</b>（看得到全部設備，並可進入計張計價系統）。管理者也可進入計張計價系統。停用的人員無法登入，也不會出現在服務紀錄的選單中（可隨時恢復）。<b>刪除</b>＝把這個人從名單移除並立刻收回他的登入權限，<b>無法復原</b>；他過去的服務紀錄與操作紀錄仍保留姓名，但庫存系統裡他經手的單據會顯示「—」。暫時不用的人，建議用「停用」就好。計張計價系統另外手動加入的「計價人員」不受這裡影響，要到計張計價系統處理。</p>
+    <div style="font-weight:700;margin-top:12px">新增人員與權限</div>
+    <form onsubmit="addStaff(event)" class="form-row" style="margin-top:6px">
       <div><label>姓名</label><input name="name" required></div>
       <div><label>職稱</label><input name="title"></div>
       <div><label>電話</label><input name="phone"></div>
@@ -4846,7 +4853,8 @@ function staffHtml() {
       <div><label>身份</label><select name="role">${ROLES.map(r => `<option ${r === '工程部' ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
       ${staffExtraInputs(null)}
       <div><button class="primary" type="submit">新增人員</button></div></form>
-    <div style="overflow-x:auto;margin-top:12px"><table style="min-width:640px"><thead><tr><th>姓名</th><th>職稱</th><th>電話</th><th>狀態</th><th>身份</th><th>自訂欄位</th><th></th></tr></thead>
+    <div style="font-weight:700;margin-top:14px">現有人員與權限（共 ${S.staff.length} 位，在職 ${S.staff.filter(x => x.active).length} 位）</div>
+    <div style="overflow-x:auto;margin-top:6px"><table style="min-width:640px"><thead><tr><th>姓名</th><th>職稱</th><th>電話</th><th>狀態</th><th>身份</th><th>自訂欄位</th><th></th></tr></thead>
       <tbody>${rows || '<tr><td colspan="7" class="empty">尚無人員。</td></tr>'}</tbody></table></div>
     <h2 style="margin-top:14px">人員自訂欄位</h2>
     <div style="margin-bottom:8px">${fieldList}</div>
@@ -4867,6 +4875,7 @@ function addStaff(e) {
   const s = {id: uid(), name: t('name'), title: t('title'), phone: t('phone'), email: t('email').toLowerCase(), active: true, admin: role === '管理者', role, pw: null, extra: staffExtraFrom(f)};
   if (pw) setPw(s, pw);
   S.staff.push(s);
+  if (S.ui && S.ui.goneStaff) S.ui.goneStaff = S.ui.goneStaff.filter(n => n !== s.name);
   logOp('新增人員', `${s.name}（${s.role}）`);
   save(); toast('已新增人員'); render();
 }
@@ -4889,11 +4898,17 @@ function saveStaff(e, id) {
   if (newPw) { setPw(s, newPw); logOp('重設密碼', s.name); }
   save(); toast('已更新人員'); render();
 }
-function delStaff(id) {
-  if (!denyDelete()) return;
-  const s = S.staff.find(x => x.id === id); if (!s) return;
-  if (!confirmTwice(`刪除人員「${s.name}」？既有服務紀錄會保留姓名。`)) return;
-  S.staff = S.staff.filter(x => x.id !== id); save(); render();
+function delStaff(id) {   // V74：真的刪除。管理者專用；不能刪自己；至少留一位在職管理者；要連按兩次確認
+  if (!guardAdmin('僅管理者可刪除人員')) return;
+  const s = S.staff.find(x => x.id === id); if (!s) return toast('找不到此人員');
+  if (s.id === CUR) return toast('不能刪除自己（目前登入中的帳號）');
+  if (s.admin && s.active && !S.staff.some(x => x.admin && x.active && x.id !== id)) return toast('至少需保留一位在職管理者');
+  if (!confirmTwice(`刪除「${s.name}」並收回登入權限？無法復原（暫時不用請改「停用」）`)) return;
+  const n = (S.logs || []).filter(l => l.engineer === s.name).length;
+  logOp('刪除人員', `${s.name}（${roleOf(s)}${s.email ? '｜' + s.email : ''}）`);
+  S.staff = S.staff.filter(x => x.id !== id);
+  if (!CLOUD_ON) S.ui.goneStaff = [...new Set([...(S.ui.goneStaff || []), s.name])];   // 單機模式：避免重新開啟時被服務紀錄的姓名自動加回
+  save(); toast(`已刪除「${s.name}」${n ? `；${n} 筆服務紀錄仍保留其姓名` : ''}`); render();
 }
 function addStaffField(e) {
   e.preventDefault(); if (!guardAdmin('僅管理者可新增欄位')) return;
@@ -5342,8 +5357,9 @@ const checkPw = (s, pw) => !!(s.pw && hashPw(pw, s.pw.salt) === s.pw.h);
 const fmtTs = t => t ? new Date(t).toLocaleString('zh-TW', {hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'}) : '—';
 const OP_KEEP = 20000;
 // 操作紀錄：每筆記錄人員、時間（ISO）、動作與內容，供管理者分析；寫入前需先呼叫此函式再 save()
-function importEngineers() {   // 本機模式：服務紀錄中出現的工程師姓名，自動加入人員名單
-  (S.logs || []).forEach(l => { const n = (l.engineer || '').trim(); if (n && !S.staff.some(s => s.name === n)) S.staff.push({id: uid(), name: n, title: '', phone: '', active: true, admin: false, pw: null, extra: {}}); });
+function importEngineers() {   // 本機模式：服務紀錄中出現的工程師姓名，自動加入人員名單（V74：已被刪除的人不再加回）
+  const gone = (S.ui && S.ui.goneStaff) || [];
+  (S.logs || []).forEach(l => { const n = (l.engineer || '').trim(); if (n && !gone.includes(n) && !S.staff.some(s => s.name === n)) S.staff.push({id: uid(), name: n, title: '', phone: '', active: true, admin: false, pw: null, extra: {}}); });
 }
 function logOp(action, summary, who) {
   const s = who || curStaff();

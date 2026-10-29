@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 設備保養系統 v74</title>
+<title>普印通 設備保養系統 v75</title>
 <style>
 :root{--yellow:#ca8a04;--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -98,6 +98,12 @@ button.primary:disabled{opacity:.45;cursor:default}   /* V69：停用的藍色�
 .ptag-btn{color:#fff;border:0;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;cursor:pointer}
 .ptag-btn.off{opacity:.45}
 .ghost.danger{color:#b91c1c;border-color:#fca5a5}
+/* V75：表單下方的按鈕列（儲存、取消、刪除）；刪除鈕離「取消」約 4 公分，避免誤按；按鈕文字一律橫排 */
+.form-acts{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;row-gap:14px}
+.form-acts button,button.del-far{white-space:nowrap;writing-mode:horizontal-tb;flex:0 0 auto}
+button.del-far{margin-left:4cm}
+@media (max-width:560px){button.del-far{margin-left:16px}}
+.next-note{margin-top:4px;padding:3px 8px;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;font-size:13px;white-space:pre-wrap}
 .tag-bar{border:1.5px dashed #94a3b8;border-radius:12px;padding:10px 12px;margin:10px 0;background:var(--card,#fff)}
 .tag-bar-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 .tag-bar-title{font-weight:700}
@@ -217,7 +223,7 @@ details.tag-editor>summary{cursor:pointer;font-weight:600}
 </head>
 <body>
 <header>
-  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v74</span></h1>
+  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v75</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="dash" class="active" onclick="go('dash')">儀表板</button>
     <button data-v="plan" onclick="go('plan')">保養客戶一覽</button>
@@ -772,7 +778,7 @@ function stockAlertHtml(dev) {
 function custEditFromPlan(e, cid) { e.preventDefault(); e.stopPropagation(); histCust = null; planVisit = null; planCust = cid; planCustEdit = true; planDevId = null; editLogId = null; lastStockAlert = null; render(); setTimeout(scrollPlan, 0); }
 function custEditFromManage(e, cid) { e.preventDefault(); e.stopPropagation(); startEditCust(cid); }
 function scrollPlan() { const el = document.getElementById('planPanel'); if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); }
-const LOG_KEEP = ['date', 'type', 'engineer', 'serviceRecord', 'customerInstruction', 'purchaseSignal', 'note', 'engConfirmed', 'consOther'];
+const LOG_KEEP = ['date', 'type', 'engineer', 'serviceRecord', 'customerInstruction', 'nextNote', 'purchaseSignal', 'note', 'engConfirmed', 'consOther'];
 function keepLogForm(fid) {
   const f = document.getElementById(fid); if (!f) return null;
   const o = {}; LOG_KEEP.forEach(n => { const el = f.elements[n]; if (el) o[n] = el.type === 'checkbox' ? el.checked : el.value; }); return o;
@@ -814,6 +820,8 @@ function logFormHtml(dev, l, o) {
       <textarea class="taBox" name="serviceRecord" rows="2" placeholder="本次做了什麼、結果如何">${sv(l && l.serviceRecord)}</textarea></div></div>
     <div class="form-row"><div style="grid-column:1/-1"><label>客戶交代事宜</label>
       <textarea class="taBox" name="customerInstruction" rows="2" placeholder="客戶提出的要求或需要注意的事">${sv(l && l.customerInstruction)}</textarea></div></div>
+    <div class="form-row"><div style="grid-column:1/-1"><label>下回保養提醒（選填。下次要保養這台設備時，會顯示在該設備旁；只顯示最近一次填的）</label>
+      <textarea class="taBox" name="nextNote" rows="2" maxlength="300" placeholder="例如：下次請帶感光滾筒、先電話約管理員">${sv(l && l.nextNote)}</textarea></div></div>
     ${isPrint(dev) ? `<div class="form-row"><div style="grid-column:1/-1"><label>耗材庫存（依機型列出；每項填手邊庫存件數，空白不變；「其他」只需文字說明）</label>
       ${consStockFormHtml(dev, l)}</div></div>` : `<input type="hidden" name="consOther" value="${sv(l && l.consOther)}">`}
     <div class="form-row"><div style="grid-column:1/-1"><label>採購信號</label>
@@ -858,7 +866,7 @@ function saveLogEdit(e, id) {
   commitNewCats(dev, ncs, txt('date'));
   if (od) Object.assign(l, {svcItems: od.svcItems, consRepl: od.consRepl});
   Object.assign(l, {date, type: od ? od.type : txt('type'), bw, color, colorLarge, engineer: txt('engineer'),
-    serviceRecord: txt('serviceRecord'), customerInstruction: txt('customerInstruction'),
+    serviceRecord: txt('serviceRecord'), customerInstruction: txt('customerInstruction'), nextNote: txt('nextNote').slice(0, 300),
     consumableStock: od ? (l.consumableStock || '') : stockText(dev, ncs, other), consOther: other, purchaseSignal: txt('purchaseSignal'), note: txt('note'),
     engConfirmed: f.get('engConfirmed') === 'on'});
   editLogId = null; chartIdx = null; histEdit = null; remEditLog = null;
@@ -870,7 +878,7 @@ function startLogEdit(id) { editLogId = id; planVisit = null; render(); setTimeo
 function cancelLogEdit() { editLogId = null; render(); }
 function openPlanCust(id) { histCust = null; planVisit = null; planCust = planCust === id ? null : id; planCustEdit = false; planDevId = null; editLogId = null; lastStockAlert = null; render(); if (planCust) setTimeout(scrollPlan, 0); }
 function openPlanFromCust(id) { planCust = id; planCustEdit = false; planDevId = null; editLogId = null; lastStockAlert = null; go('plan'); setTimeout(scrollPlan, 0); }   // 設備資料總覽 → 保養紀錄面板
-// 保養客戶一覽：展開後可直接編輯客戶資料、新增與修改保養紀錄（刪除僅管理者，且需連續按兩次）
+// 保養客戶一覽：展開後可直接編輯客戶資料、新增與修改保養紀錄（刪除服務紀錄僅管理者；所有刪除都要連續按三次）
 // V51：保養客戶一覽 —「新增客戶」與「歷史服務紀錄」
 let planNewCust = false, histCust = null, histDev = null, histVisit = null, histEdit = null, planVisit = null;   // V53：histVisit／histEdit／planVisit 皆為紀錄編號
 function openHist(cid) {
@@ -917,12 +925,12 @@ function histPanelHtml() {
     const mms = vs.map((x, k) => visitMetrics(dev, vs, k));
     const rows = vs.map((x, k) => k).reverse().map(k => { const x = vs[k]; return `<tr class="hist-row" data-vk="${k}" data-seq="${seqNo(n, k)}" data-lid="${esc(x.id)}" onclick="openHistVisit(${k})" title="點擊查看這次服務的詳細內容" style="cursor:pointer;${histVisit === x.id || histEdit === x.id ? 'background:#eff6ff' : lastSavedLogId === x.id ? 'background:#fef9c3' : ''}">
       <td style="white-space:nowrap"><button class="ghost seq-btn" type="button" style="padding:3px 8px;white-space:nowrap" onclick="event.stopPropagation();openHistVisit(${k})">第 ${seqNo(n, k)} 筆 ›</button>${seqTag(n, k)}</td><td style="white-space:nowrap">${esc(x.date)}</td><td>${svcHtml(x)}</td>
-      <td class="num">${pr && x.bw != null ? fmt(x.bw) : '—'}</td><td class="num">${pr && dev.hasColor && x.color != null ? fmt(x.color) : '—'}</td>${lg ? `<td class="num">${x.colorLarge != null ? fmt(x.colorLarge) : '—'}</td>` : ''}
-      <td class="num" style="white-space:nowrap">${avgCellHtml(dev, mms[k])}</td>
+      ${pr ? `<td class="num">${x.bw != null ? fmt(x.bw) : '—'}</td><td class="num">${dev.hasColor && x.color != null ? fmt(x.color) : '—'}</td>${lg ? `<td class="num">${x.colorLarge != null ? fmt(x.colorLarge) : '—'}</td>` : ''}
+      <td class="num" style="white-space:nowrap">${avgCellHtml(dev, mms[k])}</td>` : ''}
       <td style="white-space:nowrap">${esc(x.engineer || '—')}</td><td style="font-size:13px;white-space:pre-wrap;min-width:160px">${clip(x.serviceRecord, 50)}</td>
       <td style="font-size:13px">${clip(x.customerInstruction, 30)}</td>
-      <td style="white-space:nowrap"><button class="ghost" type="button" onclick="event.stopPropagation();startHistEdit('${x.id}')">編輯</button> <button class="ghost danger" type="button" onclick="event.stopPropagation();delLog('${x.id}')">刪除</button></td></tr>`; });
-    const hRow = `<thead><tr><th style="white-space:nowrap">序號<div class="muted" style="font-weight:400;font-size:11px">1＝日期最近</div></th><th>日期</th><th>服務類型</th><th class="num">黑白</th><th class="num">彩色</th>${lg ? '<th class="num">彩色大尺寸</th>' : ''}<th class="num">${avgHeadOf(dev)}</th><th>擔當工程師</th><th>服務紀錄</th><th>客戶交代事宜</th><th>操作</th></tr></thead>`;
+      <td style="white-space:nowrap"><button class="ghost" type="button" onclick="event.stopPropagation();startHistEdit('${x.id}')">編輯</button> <button class="ghost danger del-far" type="button" onclick="event.stopPropagation();delLog('${x.id}')">刪除</button></td></tr>`; });
+    const hRow = `<thead><tr><th style="white-space:nowrap">序號<div class="muted" style="font-weight:400;font-size:11px">1＝日期最近</div></th><th>日期</th><th>服務類型</th>${pr ? `<th class="num">黑白</th><th class="num">彩色</th>${lg ? '<th class="num">彩色大尺寸</th>' : ''}<th class="num">${avgHeadOf(dev)}</th>` : ''}<th>擔當工程師</th><th>服務紀錄</th><th>客戶交代事宜</th><th>操作</th></tr></thead>`;
     const nowAvg = pr ? (() => {
       const b = avgOf(dev.id, 'bw'), co = dev.hasColor ? avgOf(dev.id, 'color') : null;
       const t = x => x.avg != null ? `${fmt(x.avg)} 張／月` : `<span class="muted">${esc(x.msg)}</span>`;
@@ -933,7 +941,7 @@ function histPanelHtml() {
         <b>${esc(KIND[dev.kind])} ${esc(dev.model || '')}${dev.location ? '｜' + esc(dev.location) : ''}：共 ${n} 筆服務紀錄</b>
         <button class="ghost" type="button" onclick="openDevFromHist('${dev.id}')">到設備資料總覽開啟此設備</button></div>
       ${nowAvg}
-      ${n ? `<div class="muted" style="font-size:13px;margin-bottom:4px">依服務日期排列，日期最近的為第 1 筆（與登打先後無關）。點擊任一列可查看詳細內容；「刪除」需連續按兩次確認。平均月印量為截至該次的近六個月平均。</div>
+      ${n ? `<div class="muted" style="font-size:13px;margin-bottom:4px">依服務日期排列，日期最近的為第 1 筆（與登打先後無關）。點擊任一列可查看詳細內容；「刪除」需連續按三次確認。${devsOf(histCust).some(x => isPrint(x)) ? '平均月印量為截至該次的近六個月平均。' : ''}</div>
         ${recentSplitHtml(rows, hRow, 'min-width:1080px', focus >= 0 && seqNo(n, focus) > HIST_SHOW)}
         ${ek >= 0 ? histEditHtml(dev, vs[ek], ek) : hk >= 0 ? histDetailHtml(dev, vs, hk, mms[hk], 'hist') : ''}` : '<div class="empty">此設備尚無服務紀錄。</div>'}`;
   }
@@ -1021,13 +1029,13 @@ function histDetailHtml(dev, vs, k, mm, ctx) {
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px">${grid}</div>
     <div style="margin-top:12px"><div class="muted" style="font-size:12px">系統提示</div>${alerts}</div>
     <div style="margin-top:10px"><div class="muted" style="font-size:12px">本次更換耗材</div>${evs}</div>
-    ${tx('服務紀錄', v.serviceRecord)}${tx('客戶交代事宜', v.customerInstruction)}${tx('耗材庫存', v.consumableStock)}
+    ${tx('服務紀錄', v.serviceRecord)}${tx('客戶交代事宜', v.customerInstruction)}${tx('下回保養提醒', v.nextNote, 1)}${tx('耗材庫存', v.consumableStock)}
     ${tx('採購信號', v.purchaseSignal, 1)}${tx('備註', v.note, 1)}${tx('主訴（客戶反映）', v.complaint, 1)}${tx('處置與建議', v.treatment, 1)}${tx('主管意見', v.supOpinion, 1)}
     ${logPhotoHtml(v)}
     <div class="act-bar">
       <div class="act-l"><button class="primary" type="button" onclick="${isH ? `startHistEdit('${v.id}')` : `startLogEdit('${v.id}')`}">編輯此次紀錄</button>
         <button class="ghost" type="button" onclick="openDevVisit('${dev.id}', ${k})">到設備資料總覽開啟</button></div>
-      <div class="act-r"><span class="muted" style="font-size:12px">需連續按兩次</span><button class="ghost danger" type="button" onclick="delLog('${v.id}')">刪除此次紀錄</button></div></div>
+      <div class="act-r"><span class="muted" style="font-size:12px">需連續按三次</span><button class="ghost danger" type="button" onclick="delLog('${v.id}')">刪除此次紀錄</button></div></div>
   </div>`;
 }
 function planCustHtml() {
@@ -1055,18 +1063,19 @@ function planCustHtml() {
   devs.forEach(d => { const vs = visitsOf(d.id); vs.forEach((x, k) => info.set(x.id, {d, vs, k, mm: visitMetrics(d, vs, k)})); });
   if (planVisit && !info.has(planVisit)) planVisit = null;
   const shown = logs.slice(0, 60);
+  const showCounts = shown.some(x => isPrint(x.d));   // V75：只有事務設備才有張數欄
   const rowsArr = shown.map(({l, d}) => { const inf = info.get(l.id), sq = seqNo(inf.vs.length, inf.k); return `<tr class="plan-row" data-lid="${esc(l.id)}" data-seq="${sq}" onclick="openPlanVisit('${l.id}')" title="點擊查看這次服務的詳細內容" style="cursor:pointer;${editLogId === l.id || planVisit === l.id ? 'background:#eff6ff' : lastSavedLogId === l.id ? 'background:#fef9c3' : ''}">
       <td style="white-space:nowrap"><b>第 ${sq} 筆</b>${seqTag(inf.vs.length, inf.k)}</td>
       <td style="white-space:nowrap">${esc(l.date)}<div class="muted">${svcHtml(l)}</div></td>
       <td>${esc(KIND[d.kind])} ${esc(d.model || '')}<div class="muted">${esc(d.location || '—')}</div></td>
-      <td class="num">${isPrint(d) && l.bw != null ? fmt(l.bw) : '—'}</td>
-      <td class="num">${isPrint(d) && d.hasColor && l.color != null ? fmt(l.color) : '—'}</td>
+      ${showCounts ? (isPrint(d) ? `<td class="num">${l.bw != null ? fmt(l.bw) : '—'}</td>
+      <td class="num">${d.hasColor && l.color != null ? fmt(l.color) : '—'}</td>
       <td class="num">${isLarge(d) && l.colorLarge != null ? fmt(l.colorLarge) : '—'}</td>
-      <td class="num" style="white-space:nowrap">${avgCellHtml(d, info.get(l.id).mm)}</td>
+      <td class="num" style="white-space:nowrap">${avgCellHtml(d, info.get(l.id).mm)}</td>` : '<td></td><td></td><td></td><td></td>') : ''}
       <td style="font-size:13px">${clip(l.serviceRecord, 40)}</td>
-      <td style="white-space:nowrap"><button class="ghost" type="button" onclick="event.stopPropagation();startLogEdit('${l.id}')">編輯</button> <button class="ghost danger" type="button" onclick="event.stopPropagation();delLog('${l.id}')">刪除</button></td></tr>`; });
-  const pHead = `<thead><tr><th style="white-space:nowrap">序號<div class="muted" style="font-weight:400;font-size:11px">${devs.length > 1 ? '各設備分別編號' : '1＝日期最近'}</div></th><th>日期</th><th>設備</th><th class="num">黑白</th><th class="num">彩色</th><th class="num">彩色大尺寸</th><th class="num">平均月印量（黑白／彩色）</th><th>服務紀錄</th><th>操作</th></tr></thead>`;
-  const pTbl = rs => `<div style="overflow-x:auto"><table class="plan-log-tbl" style="min-width:1040px">${pHead}<tbody>${rs.join('')}</tbody></table></div>`;
+      <td style="white-space:nowrap"><button class="ghost" type="button" onclick="event.stopPropagation();startLogEdit('${l.id}')">編輯</button> <button class="ghost danger del-far" type="button" onclick="event.stopPropagation();delLog('${l.id}')">刪除</button></td></tr>`; });
+  const pHead = `<thead><tr><th style="white-space:nowrap">序號<div class="muted" style="font-weight:400;font-size:11px">${devs.length > 1 ? '各設備分別編號' : '1＝日期最近'}</div></th><th>日期</th><th>設備</th>${showCounts ? '<th class="num">黑白</th><th class="num">彩色</th><th class="num">彩色大尺寸</th><th class="num">平均月印量（黑白／彩色）</th>' : ''}<th>服務紀錄</th><th>操作</th></tr></thead>`;
+  const pTbl = rs => `<div style="overflow-x:auto"><table class="plan-log-tbl" style="min-width:${showCounts ? 1040 : 700}px">${pHead}<tbody>${rs.join('')}</tbody></table></div>`;
   const olderIdx = shown.findIndex(x => x.l.id === planVisit || x.l.id === editLogId);
   const logTables = pTbl(rowsArr.slice(0, HIST_SHOW))
     + (rowsArr.length > HIST_SHOW ? `<details class="plan-older" ${olderIdx >= HIST_SHOW ? 'open' : ''} style="margin-top:6px"><summary style="cursor:pointer;font-weight:600">顯示更早的 ${rowsArr.length - HIST_SHOW} 筆紀錄（點此展開）</summary>${pTbl(rowsArr.slice(HIST_SHOW))}</details>` : '');
@@ -1082,8 +1091,8 @@ function planCustHtml() {
         <div><button class="primary" type="submit">儲存客戶資料</button></div></form>${delCustBtnHtml(c)}</details>
     ${mg ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:600">耗材合併設定（需要時再展開）</summary>${mg}</details>` : ''}
     <h2 style="margin-top:14px">保養紀錄（依服務日期，最近的排第 1 筆；只顯示最近 3 筆）</h2>
-    ${logs.length ? `<div class="muted" style="font-size:13px;margin-bottom:4px">序號依服務日期排列，與登打先後無關${devs.length > 1 ? '；多台設備時各設備分別編號' : ''}。點擊任一列可查看詳細內容。平均月印量為該設備截至該次的近六個月平均。</div>${logTables}${planDetail}` : '<div class="empty">尚無保養紀錄。</div>'}
-    <p class="note">修改會更新該筆紀錄內容；刪除需連續按兩次確認（8 秒內）。淡黃色為剛儲存的紀錄；最多列出最近 60 筆，完整紀錄請用「歷史服務紀錄」。</p>
+    ${logs.length ? `<div class="muted" style="font-size:13px;margin-bottom:4px">序號依服務日期排列，與登打先後無關${devs.length > 1 ? '；多台設備時各設備分別編號' : ''}。點擊任一列可查看詳細內容。${devs.some(x => isPrint(x)) ? '平均月印量為該設備截至該次的近六個月平均。' : ''}</div>${logTables}${planDetail}` : '<div class="empty">尚無保養紀錄。</div>'}
+    <p class="note">修改會更新該筆紀錄內容；刪除需連續按三次確認（每次間隔 8 秒內）。淡黃色為剛儲存的紀錄；最多列出最近 60 筆，完整紀錄請用「歷史服務紀錄」。</p>
   </div>`;
 }
 
@@ -1177,7 +1186,7 @@ async function cloudPush() {
         }
       }
     } while (pendingPush);
-    if (delRefused) { LOGIDX = null; cacheLocal(); scheduleRender(); toast(`有 ${delRefused} 筆資料的刪除未被雲端資料庫接受，已還原。資料庫的刪除權限可能尚未更新，請管理者到 Supabase 執行「V51 更新 SQL」。`); }
+    if (delRefused) { LOGIDX = null; cacheLocal(); scheduleRender(); toast(`有 ${delRefused} 筆資料的刪除未被雲端資料庫接受，已還原。可能是你的身份沒有刪除這些資料的權限，或資料庫的刪除權限尚未更新（工程部要刪除客戶與設備，需管理者先到 Supabase 執行「V75 更新 SQL」）。`); }
     if (rejected) { setCloudSt(`☁ 已同步（${rejected} 筆被拒絕）`); toast(`有 ${rejected} 筆變更被資料庫拒絕（權限或格式不符），已停止重送，請通知管理者`); }
     else setCloudSt('☁ 已同步');
     savePending();
@@ -2999,7 +3008,7 @@ function planMonthHtml() {
       <td class="ck"><button type="button" class="ck-btn" title="${tip}" aria-label="完成" ${future ? 'disabled' : `onclick="togglePlanDone('${r.d.id}','${mStr}')"`}>${box}</button></td><td>${seq}</td>
       <td><b>${esc(c.name || '（未指定）')}</b>${c.contact ? `<div>${esc(c.contact)}</div>` : ''}${c.phone ? `<div>☎ ${esc(c.phone)}</div>` : ''}${c.phone2 ? `<div>備用 ☎ ${esc(c.phone2)}</div>` : ''}</td>
       <td>${esc(c.address || '—')}</td>
-      <td>${esc(KIND[r.d.kind])}　${esc(r.d.brand || '')} ${esc(r.d.model || '')}</td>
+      <td>${esc(KIND[r.d.kind])}　${esc(r.d.brand || '')} ${esc(r.d.model || '')}${nextNoteHtml(r.d, mStr)}</td>
       <td>${esc(r.d.location || '—')}</td>
       <td>${esc(r.label)}</td>
       <td>${r.last || '—'}</td>
@@ -3125,6 +3134,14 @@ const planStTags = due => ['overdue', 'due', 'new', 'done'].map(k => { const n =
 const dueDevOpen = new Set();
 function openDueDev(cid) { if (dueDevOpen.has(cid)) dueDevOpen.delete(cid); else dueDevOpen.add(cid); editDevId = null; render(); }
 const dueClassOf = r => r.st.done ? 'done' : r.status === 'overdue' ? 'overdue' : 'todo';
+// V75：下回保養提醒——只取該設備「最近一次」服務紀錄上填的提醒（隔次、更早的不顯示）；而且只在「還沒保養」的月份才顯示（該筆紀錄所在月份之後）
+function nextNoteOf(d, monthKey) {
+  const vs = visitsOf(d.id); if (!vs.length) return '';
+  const last = vs[vs.length - 1], t = String(last.nextNote || '').trim();
+  if (!t || String(last.date).slice(0, 7) >= monthKey) return '';
+  return t;
+}
+const nextNoteHtml = (d, monthKey) => { const t = nextNoteOf(d, monthKey); return t ? `<div class="next-note" title="上次保養時交辦的事">📌 下回保養提醒：${esc(t)}</div>` : ''; };
 // V64：同一個客戶只出現一列——名稱相同，或名稱以另一位客戶的完整名稱開頭（至少 2 個字，例如「榮總」與「榮總行政大樓8F」）合併；展開後分「單位」（每筆客戶資料）列出設備
 const gNorm = s => String(s || '').replace(/\s+/g, '').toLowerCase();
 function custGroupMap() {
@@ -3188,8 +3205,8 @@ function dueRemCell(d, items) {
     <div class="due-rem">${items.map(i => esc(String(i.tag).replace(/<[^>]*>/g, ''))).join('、')}</div>`;
 }
 function dueUnitHtml(u, multi, cg) {
-  const c = u.c;
-  const devRows = u.rs.map(r => `<tr data-duedev="${esc(r.d.id)}"><td>${kindTag(r.d)} <b>${esc(r.d.model || '—')}</b><div class="muted">${esc(r.d.location || '—')}</div></td><td>${esc(r.label)}</td><td>${r.last || '—'}</td>
+  const c = u.c, nowKey = planKeyOf(new Date(today().getFullYear(), today().getMonth(), 1));
+  const devRows = u.rs.map(r => `<tr data-duedev="${esc(r.d.id)}"><td>${kindTag(r.d)} <b>${esc(r.d.model || '—')}</b><div class="muted">${esc(r.d.location || '—')}</div>${nextNoteHtml(r.d, nowKey)}</td><td>${esc(r.label)}</td><td>${r.last || '—'}</td>
         <td>${dueStTag(r)}</td><td>${dueRemCell(r.d, reminderItems(r.d, cg))}</td><td>${asgLabelHtml(r.d)}</td></tr>${remRowHtml(r.d, 6)}`).join('');
   const hd = multi ? `<div class="due-unit-h"><b>${esc(c.name)}</b>${c.address ? `<span class="muted">${esc(c.address)}</span>` : ''}${c.contact ? `<span class="muted">聯絡人：${esc(c.contact)}</span>` : ''}
       <span class="muted">${u.total} 台｜已保養 ${dnCell(u.n.done, 'dn-ok')}　未保養 ${dnCell(u.n.todo, 'dn-un')}　逾期 ${dnCell(u.n.overdue, 'dn-od')}</span></div>` : '';
@@ -3308,7 +3325,7 @@ function viewSettings() {
           <div><button class="primary" type="submit">儲存</button></div></form>
         ${isAdmin() ? `<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e2e8f0">
           <button class="ghost danger" type="button" onclick="delCatalog('${k.id}')">刪除此耗材</button>
-          <span class="muted" style="font-size:13px">${used ? `目前有 ${used} 台設備使用，刪除時會一併移除這些設備的此耗材與其更換事件（需二次確認）。` : '未被使用，可直接刪除（需二次確認）。'}</span></div>` : ''}
+          <span class="muted" style="font-size:13px">${used ? `目前有 ${used} 台設備使用，刪除時會一併移除這些設備的此耗材與其更換事件（需連續按三次確認）。` : '未被使用，可直接刪除（需連續按三次確認）。'}</span></div>` : ''}
       </details></td></tr>`;
   }).join('');
   return (CLOUD_ON ? accessHtml() : '') + dataCheckHtml() + asgCfgHtml() + qrCfgHtml() + odorItemsHtml() + consCardHtml() + staffHtml() + exportPanelHtml() + backupPanelHtml() + clearPanelHtml() + restorePanelHtml() + importPanelHtml() + `<div class="card sec-set"><h2>耗材目錄</h2>
@@ -3399,7 +3416,7 @@ function saveAssignees(e) {
   const defIdx = +f.get('asgDef'), def = names.find(x => x.i === defIdx) || names[0];
   const next = [def.n, ...uniq.filter(n => n !== def.n)];
   const gone = old.filter(n => !next.includes(n)), inUse = gone.filter(n => S.devices.some(d => asgOf(d) === n));
-  if (inUse.length && !confirmTwice(`移除「${inUse.join('、')}」？仍有設備設給他，之後會顯示「（已不在名單）」`)) return;
+  if (inUse.length && !confirmThrice(`移除「${inUse.join('、')}」？仍有設備設給他，之後會顯示「（已不在名單）」`)) return;
   S.ui.assignees = next;
   logOp('修改指定擔當名單', `${old.join('、')} → ${next.join('、')}`);
   asgCfgOpen = true;
@@ -3969,8 +3986,16 @@ function custMatch(c, q) {
 let preDevCust = null;   // 從「尚無設備」的客戶列按下新增設備時，預先選取該客戶
 function startEditDev(id) { editDevId = id; render(); }
 function cancelEditDev() { editDevId = null; render(); }
+// V75：客戶選單（目前所屬客戶一定列出；工程部只列看得到的客戶）
+function custOptsForDev(d) {
+  const list = S.customers.filter(c => c.id === d.customerId || custVisible(c))
+    .slice().sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'zh-TW') || String(a.address || '').localeCompare(String(b.address || ''), 'zh-TW'));
+  return list.map(c => `<option value="${esc(c.id)}" ${c.id === d.customerId ? 'selected' : ''}>${esc(c.name || '（未命名）')}${c.address ? '｜' + esc(c.address) : ''}</option>`).join('');
+}
 function devEditFormHtml(d) {
   return `<tr><td colspan="4"><form onsubmit="saveDeviceInfo(event,'${d.id}')" class="form-row" style="margin:6px 0">
+    <div style="grid-column:1/-1;border:1px dashed #cbd5e1;border-radius:8px;padding:8px 10px"><label>所屬客戶（設備放錯客戶時在這裡更換；儲存時會再確認一次，服務紀錄與耗材會跟著設備一起移過去）</label>
+      <select name="customerId">${custOptsForDev(d)}</select></div>
     <div><label>設備類別</label><select name="kind" onchange="syncKindFields(this)">${kindOptsHtml(baseKind(d.kind))}</select></div>
     <div><label>品牌</label><input name="brand" value="${esc(d.brand || '')}"></div>
     <div><label>型號</label><input name="model" required value="${esc(d.model || '')}"></div>
@@ -3982,7 +4007,7 @@ function devEditFormHtml(d) {
     ${newKindFieldsHtml(d)}
     ${featFormHtml(d)}
     ${tagCheckHtml(d)}
-    <div style="display:flex;gap:6px"><button class="primary" type="submit">儲存設備</button><button class="ghost" type="button" onclick="cancelEditDev()">取消</button>${delDevBtnHtml(d)}</div></form></td></tr>`;
+    <div class="form-acts"><button class="primary" type="submit">儲存設備</button><button class="ghost" type="button" onclick="cancelEditDev()">取消</button>${delDevBtnHtml(d)}</div></form></td></tr>`;
 }
 function saveDeviceInfo(e, id) {
   e.preventDefault();
@@ -3996,6 +4021,16 @@ function saveDeviceInfo(e, id) {
   if (!contractsFor(kind).includes(contract)) return toast('請選擇合約型態');
   const as0 = asgOf(d), rawA = String(f.get('assignee') ?? '').trim(), as1 = rawA ? asgFrom(f, 'assignee', d) : as0;
   if (!as1) return toast('指定擔當請從名單中選擇');
+  const cid0 = d.customerId, cid1 = String(f.get('customerId') || cid0);
+  let mv = null;   // V75：更換客戶
+  if (cid1 !== cid0) {
+    const nc = S.customers.find(x => x.id === cid1);
+    if (!nc) return toast('找不到所選的客戶');
+    if (!custVisible(nc)) return toast('你的身份不能把設備改到這位客戶底下');
+    mv = {nc, oldName: custName(d)};
+    const bill = devContract(d) === '計張' ? '；這是計張設備，換客戶後請到「計張計價」為新客戶重新設定計費群組' : '';
+    if (!confirmTwice(`把設備「${t('model')}」從「${mv.oldName}」改到「${nc.name}」？服務紀錄與耗材會跟著設備一起移過去${bill}`)) return;
+  }
   if (devContract(d) !== contract) logOp('修改合約型態', `${custName(d)}｜${t('model')}｜${devContract(d) || '未設定'} → ${contract}`);
   const cyc = cycleIn(f, 'cycleMonths', devCycle(d).m);
   if (cyc !== devCycle(d).m || !cycOpt(d.cycleMonths)) { if (cyc !== devCycle(d).m) logOp('修改保養週期', `${custName(d)}｜${t('model')}｜${devCycle(d).label} → ${cycOpt(cyc).label}`); d.cycleMonths = cyc; }
@@ -4007,73 +4042,13 @@ function saveDeviceInfo(e, id) {
   d.tags = readTags(f);
   Object.assign(d, featFrom(f, kind));
   if (NEW_KINDS.includes(kind)) Object.assign(d, newKindFrom(f));   // V61：改成其他類別時保留（不顯示），改回來會再出現
-  if (kindDraft && kindDraft.id === id) kindDraft = null;
   delete d.kindUnsure;
-  editDevId = null; logOp('修改設備', `${custName(d)}｜${d.model}`); save(); toast('已更新設備資料'); render();
+  if (mv) { d.customerId = mv.nc.id; openCusts.add(mv.nc.id); openCustSet.add(mv.nc.id); selCust = mv.nc.id; logOp('更換設備客戶', `${d.model || ''}｜${mv.oldName} → ${mv.nc.name}`); }
+  editDevId = null; logOp('修改設備', `${custName(d)}｜${d.model}`); save(); toast(mv ? `已修改設備資料，並把設備改到「${mv.nc.name}」` : '已更新設備資料'); render();
 }
-// V61：設備類別直接在清單上修改。選了新類別不會立刻存；按「確認修改」要連續按兩下（8 秒內）才儲存。所有同仁都可以修改
-let kindDraft = null;   // {id, kind, contract, color, cycle}
+// V75：設備類別不能在清單上直接修改，只能到「編輯設備」修改（清單上只顯示類別標籤）
 const baseKind = k => k === 'printer' ? 'copier' : k;
-function kindSelHtml(d) {
-  const cur = kindDraft && kindDraft.id === d.id ? kindDraft.kind : baseKind(d.kind);
-  return `<select class="kind-sel ${kindIsPrint(cur) ? 'ks-print' : 'ks-other'}" aria-label="設備類別" title="直接選擇可修改設備類別" onchange="draftKind('${d.id}', this.value)">${kindOptsHtml(cur, false)}</select>`;
-}
-function draftKind(id, k) {
-  const d = S.devices.find(x => x.id === id);
-  if (!d || !KIND_ORDER.includes(k)) return;
-  if (!kindVisible(k)) { toast('你的身份不能使用此設備類別'); return render(); }
-  if (k === baseKind(d.kind)) kindDraft = null;
-  else kindDraft = {id, kind: k, contract: grpOfKind(k) === grpOfKind(d.kind) ? devContract(d) : '', color: '', cycle: String(grpOfKind(k) === grpOfKind(d.kind) ? devCycle(d).m : defCycleOfKind(k).m)};
-  armedMsg = null; render();
-}
-function draftSet(field, v) { if (kindDraft && ['contract', 'color', 'cycle'].includes(field)) kindDraft[field] = String(v || ''); }
-function cancelKind() { kindDraft = null; armedMsg = null; render(); }
-function kindImpact(d, k, contract) {
-  const out = [];
-  if (grpOfKind(k) === grpOfKind(d.kind)) return out;
-  if (devContract(d) === '計張') out.push('此設備原為計張，修改後將不再出現在計張計價系統（已開立的收費單不受影響）');
-  if (contract === '計張') out.push('修改後會出現在計張計價系統');
-  out.push(`保養週期改為「${(cycOpt(+(kindDraft && kindDraft.id === d.id ? kindDraft.cycle : 0)) || defCycleOfKind(k)).label}」（可在下方修改）`);
-  out.push(kindIsPrint(k) ? '之後的保養紀錄改用事務設備表單（張數、耗材庫存）' : '之後的保養紀錄改用除味表單（服務紀錄、耗材更換）；彩色／黑白與選用功能不再顯示，資料保留');
-  return out;
-}
-function confirmKind(id) {
-  const d = S.devices.find(x => x.id === id);
-  if (!d) { kindDraft = null; return toast('找不到此設備，可能已被刪除'); }
-  if (!kindDraft || kindDraft.id !== id) return;
-  if (!kindVisible(kindDraft.kind) || !devVisible(d)) { kindDraft = null; return toast('你的身份不能使用此設備類別'); }
-  const k = kindDraft.kind, cross = grpOfKind(k) !== grpOfKind(d.kind);
-  const contract = cross ? kindDraft.contract : devContract(d);
-  if (cross && !contractsFor(k).includes(contract)) return toast('類別改到另一組（事務設備／除味），請先選擇新的合約型態');
-  if (cross && kindIsPrint(k) && !['0', '1'].includes(kindDraft.color)) return toast('改為事務設備，請選擇彩色或黑白');
-  const imp = kindImpact(d, k, contract);
-  const msg = `將把「${d.model || ''}」由 ${KIND[d.kind]} 改為 ${KIND[k]}${cross ? `（合約：${devContract(d) || '未設定'} → ${contract}）` : ''}${imp.length ? '。' + imp.join('；') : ''}`;
-  if (!confirmTwice(msg)) return;
-  const fromK = KIND[d.kind], fromC = devContract(d) || '未設定';
-  d.kind = k; delete d.kindUnsure;
-  if (cross) {
-    d.contract = contract; d.billing = kindIsPrint(k) && contract === '計張';
-    if (kindIsPrint(k)) d.hasColor = kindDraft.color === '1';
-    d.cycleMonths = cycOpt(+kindDraft.cycle) ? +kindDraft.cycle : defCycleOfKind(k).m;
-  }
-  logOp('修改設備類別', `${custName(d)}｜${d.model || ''}｜${fromK} → ${KIND[k]}${cross ? `（合約：${fromC} → ${contract}）` : ''}`);
-  kindDraft = null; save(); toast(`已修改設備類別：${fromK} → ${KIND[k]}`); render();
-}
-function kindDraftRowHtml(d) {
-  if (!kindDraft || kindDraft.id !== d.id) return '';
-  const k = kindDraft.kind, cross = grpOfKind(k) !== grpOfKind(d.kind);
-  const imp = kindImpact(d, k, kindDraft.contract);
-  const ctSel = cross ? `<label style="display:flex;gap:6px;align-items:center;margin:0">新的合約型態 <select class="kd-contract" onchange="draftSet('contract', this.value)">${contractOptsHtml(k, kindDraft.contract)}</select></label>` : '';
-  const cySel = cross ? `<label style="display:flex;gap:6px;align-items:center;margin:0">保養週期 <select class="kd-cycle" onchange="draftSet('cycle', this.value)">${CYCLE_OPTS.map(o => `<option value="${o.m}" ${String(o.m) === kindDraft.cycle ? 'selected' : ''}>${o.label}</option>`).join('')}</select></label>` : '';
-  const colSel = cross && kindIsPrint(k) ? `<label style="display:flex;gap:6px;align-items:center;margin:0">色彩 <select class="kd-color" onchange="draftSet('color', this.value)"><option value="">請選擇</option><option value="1" ${kindDraft.color === '1' ? 'selected' : ''}>彩色</option><option value="0" ${kindDraft.color === '0' ? 'selected' : ''}>黑白</option></select></label>` : '';
-  return `<tr class="kind-draft"><td colspan="4" style="background:#fff7ed;border:2px solid #fdba74">
-    <div><b>修改設備類別：</b>${esc(KIND[d.kind])} → <b>${esc(KIND[k])}</b>${cross ? ' <span class="tag t-warn">跨組修改（事務設備 ↔ 除味）</span>' : ''}</div>
-    ${imp.length ? `<ul style="margin:6px 0;padding-left:20px;font-size:13px">${imp.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div class="muted" style="font-size:13px;margin:4px 0">同組修改：合約型態保留不變。</div>'}
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px">${ctSel}${colSel}${cySel}
-      <button class="primary" type="button" onclick="confirmKind('${d.id}')">確認修改</button>
-      <button class="ghost" type="button" onclick="cancelKind()">取消</button>
-      <span class="muted" style="font-size:12px">「確認修改」需連續按兩下（8 秒內）</span></div></td></tr>`;
-}
+function kindSelHtml(d) { return kindTag(d); }
 function devRowHtml(d) {
   if (editDevId === d.id) return devEditFormHtml(d) + photoRowHtml(d);
   const sv = svcStatus(d), n = reminderItems(d).length;
@@ -4085,7 +4060,7 @@ function devRowHtml(d) {
     <td class="num">${n ? `<button type="button" class="tag t-warn rem-btn" aria-expanded="${remOpen.has(d.id) ? 'true' : 'false'}" title="點一下直接展開提醒項目" onclick="toggleRem('${esc(d.id)}')">${n} ${remOpen.has(d.id) ? '▾' : '▸'}</button>` : '0'}</td>
     <td style="white-space:nowrap"><button class="primary" onclick="quickLog('${d.id}')">快速紀錄</button>
       <button class="ghost" onclick="startEditDev('${d.id}')">編輯設備</button>
-      <button class="ghost" title="列印這台設備的 QR 標籤" onclick="qrLabOpen(['${d.id}'])">QR</button>${delDevBtnHtml(d)}</td></tr>${remRowHtml(d)}${kindDraftRowHtml(d)}`;
+      <button class="ghost" title="列印這台設備的 QR 標籤" onclick="qrLabOpen(['${d.id}'])">QR</button>${delDevBtnHtml(d)}</td></tr>${remRowHtml(d)}`;
 }
 // 客戶優先：每位客戶為一區塊，底下列出其設備，並可直接在該客戶下新增設備
 // 設備頁（v29）：以客戶為單位收合，底下列出該客戶的所有設備，並可直接在該客戶下新增設備
@@ -4118,7 +4093,6 @@ function devListHtml(slot) {
 }
 function devListHtmlInner(slot) {
   const pd = panelDev(); if (devPanel && !pd) devPanel = null;
-  if (kindDraft && !S.devices.some(d => d.id === kindDraft.id)) kindDraft = null;
   let placed = false;
   const panelOut = () => slot ? '<div id="devPanelSlot"></div>' : devPanelHtml(pd);
   const kindFilter = devKind !== 'all';
@@ -4166,7 +4140,7 @@ function consCardHtml() {
 }
 function clearConsumables() {
   if (!guardAdmin('僅管理者可清空耗材')) return;
-  if (!confirmTwice(`清空全部 ${S.consumables.length} 項耗材與 ${S.events.length} 筆更換事件？耗材目錄保留，此動作無法復原。`)) return;
+  if (!confirmThrice(`清空全部 ${S.consumables.length} 項耗材與 ${S.events.length} 筆更換事件？耗材目錄保留，此動作無法復原。`)) return;
   S.consumables = []; S.events = []; S.ui.consReset29 = true;
   logOp('清空耗材', '全部耗材與更換事件已清空');
   save(); toast('已清空耗材'); render();
@@ -4217,7 +4191,7 @@ function overviewHtml() {
     <p class="note" style="margin-top:0">以客戶為主：先列出客戶，點客戶那一行展開該客戶的設備，可在該客戶下新增設備。保養完成後按「快速紀錄」，紀錄區會直接展開在該客戶的設備下方。</p>
     <div id="devTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${tabs}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><button class="ghost" type="button" onclick="setAllCustOpen(true)">全部展開</button><button class="ghost" type="button" onclick="setAllCustOpen(false)">全部收合</button><button class="ghost" type="button" onclick="qrLabOpen([])">設備 QR 標籤列印</button>
-      <span class="muted" style="font-size:13px">預設只顯示客戶；點客戶那一行展開設備。設備類別可直接在清單上選擇修改（需按兩下「確認修改」）。搜尋時符合的客戶會自動展開。</span></div>
+      <span class="muted" style="font-size:13px">預設只顯示客戶；點客戶那一行展開設備。設備類別要修改，請按該設備的「編輯設備」。搜尋時符合的客戶會自動展開。</span></div>
     <div class="form-row" style="margin:0">
       <div style="grid-column:span 2"><label>搜尋設備或客戶</label>
         <input type="search" value="${esc(devQuery)}" placeholder="設備、地點、機型，或客戶名稱、聯絡人、電話、地址、標籤" oninput="filterDevices(this.value)"></div>
@@ -4321,12 +4295,13 @@ function deviceHtml(dev) {
           <th style="width:110px">安裝地點</th><td>${esc(dev.location || '—')}</td></tr>
       <tr><th style="width:110px">機型</th><td>${esc(KIND[dev.kind])}｜${esc(dev.brand)} ${esc(dev.model)}${isPrint(dev) ? `｜${dev.hasColor ? '彩色機' : '黑白機'}` : ''}</td>
           <th>保養週期</th><td>${devCycle(dev).label}${cycOpt(dev.cycleMonths) ? '' : '（沿用客戶原本的週期，儲存設備後固定）'}　${svTag}</td><th>上次服務</th><td>${sv.last || '—'}</td></tr>
-      <tr><th>黑白月均</th><td>${isPrint(dev) ? avgTxt(avgOf(dev.id, 'bw')) : '—'}</td>
-          <th>彩色月均</th><td>${isPrint(dev) && dev.hasColor ? avgTxt(avgOf(dev.id, 'color')) : '—'}</td></tr>
+      ${isPrint(dev) ? `      <tr><th>黑白月均</th><td>${avgTxt(avgOf(dev.id, 'bw'))}</td>
+          <th>彩色月均</th><td>${dev.hasColor ? avgTxt(avgOf(dev.id, 'color')) : '—'}</td></tr>
       <tr><th>最近讀數</th><td>${(() => { const lv = visitsOf(dev.id).filter(x => x.bw != null).pop();
             return lv ? `黑白 ${fmt(lv.bw)}${dev.hasColor && lv.color != null ? ` ／ 彩色 ${fmt(lv.color)}` : ''}（${lv.date}）` : '—'; })()}</td>
           ${isLarge(dev) ? (() => { const g = visitsOf(dev.id).filter(x => x.colorLarge != null).pop();
             return `<th>彩色大尺寸</th><td>${g ? `${fmt(g.colorLarge)}（${g.date}）` : '—'}</td>`; })() : ''}</tr>
+` : ''}
       ${featRowsHtml(dev)}
       ${isPrint(dev) ? '' : `<tr><th>上次保養清潔</th><td colspan="3">${lastCleanSvc(dev) ? esc(lastCleanSvc(dev)) : '<span class="muted">尚無紀錄</span>'}</td></tr>
       <tr><th>耗材最近更換</th><td colspan="3">${odorReplHtml(dev)}</td></tr>`}
@@ -4358,17 +4333,20 @@ function visitPageHtml(dev, visits, i) {
     : '<span class="muted">本次未更換耗材</span>';
   return `<div>
     <h2>第 ${seqNo(visits.length, i)} 筆｜${esc(v.date)}｜${esc(svcText(v))}${seqTag(visits.length, i)}</h2>
-    <table style="min-width:0"><thead><tr><th>拜訪日期</th><th>服務類型</th><th class="num">黑白張數</th><th class="num">彩色張數</th>${isLarge(dev) ? '<th class="num">彩色大尺寸張數</th>' : ''}
+    ${isPrint(dev) ? `<table style="min-width:0"><thead><tr><th>拜訪日期</th><th>服務類型</th><th class="num">黑白張數</th><th class="num">彩色張數</th>${isLarge(dev) ? '<th class="num">彩色大尺寸張數</th>' : ''}
       <th class="num">本次增量（黑白 ／ 彩色${isLarge(dev) ? '含大尺寸' : ''}）</th><th class="num">距上次</th><th class="num">近六個月平均</th></tr></thead>
     <tbody><tr><td>${esc(v.date)}<div class="muted">擔當工程師：${esc(v.engineer || '—')}</div></td><td>${svcHtml(v)}</td>
       <td class="num">${bwCell}</td><td class="num">${coCell}</td>${isLarge(dev) ? `<td class="num">${v.colorLarge != null ? fmt(v.colorLarge) : '—'}</td>` : ''}<td class="num">${deltaCell}</td>
-      <td class="num">${m.gap == null ? '首次拜訪' : m.gap + ' 天'}</td><td class="num">${avgCell}</td></tr></tbody></table>
+      <td class="num">${m.gap == null ? '首次拜訪' : m.gap + ' 天'}</td><td class="num">${avgCell}</td></tr></tbody></table>`
+    : `<table style="min-width:0"><thead><tr><th>拜訪日期</th><th>服務類型</th><th class="num">距上次</th></tr></thead>
+    <tbody><tr><td>${esc(v.date)}<div class="muted">擔當工程師：${esc(v.engineer || '—')}</div></td><td>${svcHtml(v)}</td>
+      <td class="num">${m.gap == null ? '首次拜訪' : m.gap + ' 天'}</td></tr></tbody></table>`}
     <h2 style="margin-top:14px">系統提示</h2><div>${alertHtml}</div>
     <h2 style="margin-top:14px">本次更換耗材</h2><div>${evHtml}</div>
     <h2 style="margin-top:14px">登錄內容</h2>
     <div style="display:grid;gap:8px;margin-bottom:12px">
       <div><label>服務卡客戶已親簽</label><div>${v.engConfirmed ? '<span class="tag t-ok">客戶已親簽</span>' : '<span class="muted">未勾選</span>'}</div></div>
-      ${[['服務紀錄', v.serviceRecord], ['客戶交代事宜', v.customerInstruction], ['耗材庫存', v.consumableStock], ['採購信號', v.purchaseSignal, 1], ['備註', v.note, 1]]
+      ${[['服務紀錄', v.serviceRecord], ['客戶交代事宜', v.customerInstruction], ['下回保養提醒', v.nextNote, 1], ['耗材庫存', v.consumableStock], ['採購信號', v.purchaseSignal, 1], ['備註', v.note, 1]]
         .filter(([k, x, opt]) => !opt || String(x || '').trim()).map(([k, x]) => `<div><label>${k}</label><div style="white-space:pre-wrap">${esc(x || '—')}</div></div>`).join('')}
     </div>
     <form onsubmit="saveVisitNote(event,'${v.id}')">
@@ -4377,7 +4355,7 @@ function visitPageHtml(dev, visits, i) {
       <div class="form-row"><div style="grid-column:1/-1"><label>處置與建議</label>
         <textarea class="taBox" name="treatment" rows="3">${esc(v.treatment || '')}</textarea></div></div>
       <div class="act-bar"><div class="act-l"><button class="primary" type="submit">儲存主訴與處置</button></div>
-        <div class="act-r"><span class="muted" style="font-size:12px">需連續按兩次</span><button class="ghost danger" type="button" onclick="delLog('${v.id}')">刪除此次服務紀錄</button></div></div>
+        <div class="act-r"><span class="muted" style="font-size:12px">需連續按三次</span><button class="ghost danger" type="button" onclick="delLog('${v.id}')">刪除此次服務紀錄</button></div></div>
     </form></div>`;
 }
 
@@ -4410,15 +4388,15 @@ function serviceHtml(dev) {
       return `<tr class="visit-row" data-seq="${seqNo(n, k)}" onclick="goVisit(${k})" title="點擊查看這次服務的詳細內容" style="cursor:pointer;${k === i ? 'background:#eff6ff' : lastSavedLogId === x.id ? 'background:#fef9c3' : ''}">
         <td style="white-space:nowrap"><button class="ghost seq-btn" type="button" onclick="event.stopPropagation();goVisit(${k})">第 ${seqNo(n, k)} 筆</button>${seqTag(n, k)}</td>
         <td>${esc(x.date)}</td><td>${svcHtml(x)}</td>
-        <td class="num">${isPrint(dev) && x.bw != null ? fmt(x.bw) : '—'}</td>
-        <td class="num">${isPrint(dev) && dev.hasColor && x.color != null ? fmt(x.color) : '—'}</td>${isLarge(dev) ? `<td class="num">${x.colorLarge != null ? fmt(x.colorLarge) : '—'}</td>` : ''}
-        <td class="num" style="white-space:nowrap">${avgCellHtml(dev, mm)}</td>
+        ${isPrint(dev) ? `<td class="num">${x.bw != null ? fmt(x.bw) : '—'}</td>
+        <td class="num">${dev.hasColor && x.color != null ? fmt(x.color) : '—'}</td>${isLarge(dev) ? `<td class="num">${x.colorLarge != null ? fmt(x.colorLarge) : '—'}</td>` : ''}
+        <td class="num" style="white-space:nowrap">${avgCellHtml(dev, mm)}</td>` : ''}
         <td style="font-size:13px">${clip(x.purchaseSignal, 20)}</td>
         <td>${mm.alerts.length ? `<span class="tag t-warn">${mm.alerts.length} 則提示</span>` : '<span class="tag t-ok">無</span>'}</td>
         <td><button class="ghost danger" type="button" onclick="event.stopPropagation();delLog('${x.id}')">刪除</button></td></tr>`;
     });
-    const hRow = `<thead><tr><th style="white-space:nowrap">序號<div class="muted" style="font-weight:400;font-size:11px">1＝日期最近</div></th><th>日期</th><th>服務</th><th class="num">黑白</th><th class="num">彩色</th>${isLarge(dev) ? '<th class="num">彩色大尺寸</th>' : ''}
-      <th class="num">${avgHeadOf(dev)}</th><th>採購信號</th><th>系統提示</th><th></th></tr></thead>`;
+    const hRow = `<thead><tr><th style="white-space:nowrap">序號<div class="muted" style="font-weight:400;font-size:11px">1＝日期最近</div></th><th>日期</th><th>服務</th>${isPrint(dev) ? `<th class="num">黑白</th><th class="num">彩色</th>${isLarge(dev) ? '<th class="num">彩色大尺寸</th>' : ''}
+      <th class="num">${avgHeadOf(dev)}</th>` : ''}<th>採購信號</th><th>系統提示</th><th></th></tr></thead>`;
     summary = `<div class="muted" style="font-size:13px;margin-bottom:4px">依服務日期排列，日期最近的為第 1 筆（與登打先後無關）。點擊任一列，詳細內容顯示在列表下方。</div>${recentSplitHtml(rowsArr, hRow, 'min-width:900px', seqNo(n, i) > HIST_SHOW)}`;
   }
   return `<div class="card sec-svc"><h2>服務紀錄</h2>${form}</div>
@@ -4542,8 +4520,22 @@ function manageHtml() {
 /* 清除示範資料（僅管理者）：只刪除「範例客戶」及其設備、服務紀錄、耗材、事件，以及示範擔當工程師；耗材目錄與其他資料保留 */
 /* 確認方式：頁面內「按兩次」，不使用瀏覽器確認視窗（部分預覽環境會直接阻擋，造成按鈕沒有反應） */
 let armedMsg = null, armedAt = 0;
+// V75：所有「刪除、清空、移除」都要連續按三次（每次間隔 8 秒內），第一次、第二次只提醒，第三次才真的做
+let armed3 = {msg: null, n: 0, at: 0};
+function confirmThrice(msg, key) {   // key：同一天、同名的不同項目也各算各的（例如同一天的兩筆服務紀錄）
+  const now = Date.now(); armedMsg = null; const id3 = (key == null ? '' : key + '|') + msg;
+  if (armed3.msg === id3 && now - armed3.at < 8000) {
+    armed3.n++; armed3.at = now;
+    if (armed3.n >= 3) { armed3 = {msg: null, n: 0, at: 0}; return true; }
+    toast(`${msg}　刪除要連續按 3 次：目前第 ${armed3.n} 次，請再按 ${3 - armed3.n} 次（每次間隔 8 秒內）`);
+    return false;
+  }
+  armed3 = {msg: id3, n: 1, at: now};
+  toast(`${msg}　刪除要連續按 3 次：目前第 1 次，請再按 2 次（每次間隔 8 秒內）`);
+  return false;
+}
 function confirmTwice(msg) {
-  const now = Date.now();
+  const now = Date.now(); armed3 = {msg: null, n: 0, at: 0};
   if (armedMsg === msg && now - armedAt < 8000) { armedMsg = null; return true; }
   armedMsg = msg; armedAt = now;
   toast(`${msg}　請再按一次確認（8 秒內）`);
@@ -4558,7 +4550,7 @@ function clearDemo() {
   const demo = S.customers.filter(isDemoCust).map(c => c.id);
   const hasStaff = S.staff.some(isDemoStaff);
   if (!demo.length && !hasStaff) return toast('目前沒有示範資料');
-  if (!confirmTwice(`清除 ${demo.length} 位範例客戶及其所有設備、服務紀錄、耗材與事件？此動作無法復原。`)) return;
+  if (!confirmThrice(`清除 ${demo.length} 位範例客戶及其所有設備、服務紀錄、耗材與事件？此動作無法復原。`)) return;
   const devIds = S.devices.filter(d => demo.includes(d.customerId)).map(d => d.id);
   const consIds = S.consumables.filter(c => devIds.includes(c.deviceId)).map(c => c.id);
   S.devices = S.devices.filter(d => !devIds.includes(d.id));
@@ -4632,12 +4624,13 @@ function addDevice(e) {
   save(); toast('已新增設備'); render();
 }
 function delCustomer(id) {
-  if (!curStaff()) return toast('請先登入');
+  if (!canDelData()) return toast('只有管理者與工程部可以刪除客戶');
   const c = S.customers.find(x => x.id === id); if (!c) return toast('找不到此客戶');
+  if (S.devices.some(d => d.customerId === id && !devVisible(d))) return toast('這位客戶底下有你的身份看不到的設備，請管理者刪除');
   const devIds = S.devices.filter(d => d.customerId === id).map(d => d.id);
   const logN = S.logs.filter(l => devIds.includes(l.deviceId)).length;
   const consIds = S.consumables.filter(k => devIds.includes(k.deviceId)).map(k => k.id);
-  if (!confirmTwice(`刪除客戶「${c.name}」？將一併刪除 ${devIds.length} 台設備、${logN} 筆服務紀錄、${consIds.length} 項耗材。`)) return;
+  if (!confirmThrice(`刪除客戶「${c.name}」？將一併刪除 ${devIds.length} 台設備、${logN} 筆服務紀錄、${consIds.length} 項耗材。`, id)) return;
   S.devices = S.devices.filter(d => !devIds.includes(d.id));
   S.logs = S.logs.filter(l => !devIds.includes(l.deviceId));
   S.consumables = S.consumables.filter(k => !devIds.includes(k.deviceId));
@@ -4650,12 +4643,13 @@ function delCustomer(id) {
   selDev = null; chartIdx = null; quickDev = null; ensureSel(); save(); toast(`已刪除客戶「${c.name}」`); render();
 }
 function delDevice(id) {
-  if (!guardAdmin('僅管理者可刪除設備')) return;
+  if (!canDelData()) return toast('只有管理者與工程部可以刪除設備');
   const d = S.devices.find(x => x.id === id);
   if (!d) { toast('找不到此設備，可能已被刪除'); render(); return; }
+  if (!devVisible(d)) return toast('你的身份看不到這類設備，不能刪除');
   const logN = S.logs.filter(x => x.deviceId === id).length;
   const cIds = S.consumables.filter(c => c.deviceId === id).map(c => c.id);
-  if (!confirmTwice(`刪除設備「${custName(d)}｜${d.model || ''}${d.location ? '｜' + d.location : ''}」？將一併刪除 ${logN} 筆服務紀錄、${cIds.length} 項耗材。此動作無法復原。`)) return;
+  if (!confirmThrice(`刪除設備「${custName(d)}｜${d.model || ''}${d.location ? '｜' + d.location : ''}」？將一併刪除 ${logN} 筆服務紀錄、${cIds.length} 項耗材。此動作無法復原。`, id)) return;
   S.devices = S.devices.filter(x => x.id !== id);
   S.logs = S.logs.filter(x => x.deviceId !== id);
   S.consumables = S.consumables.filter(x => x.deviceId !== id);
@@ -4666,7 +4660,8 @@ function delDevice(id) {
   selDev = null; chartIdx = null; quickDev = null; ensureSel(); save(); toast('已刪除設備'); render();
 }
 // V49：刪除設備按鈕（僅管理者可見）
-const delDevBtnHtml = d => isAdmin() ? ` <button class="ghost danger" type="button" onclick="delDevice('${d.id}')">刪除設備</button>` : '';
+const canDelData = () => isAdmin() || myRole() === '工程部';
+const delDevBtnHtml = d => canDelData() && devVisible(d) ? ` <button class="ghost danger del-far" type="button" onclick="delDevice('${d.id}')">刪除設備</button>` : '';
 
 // 逐次拜訪：增量、距上次天數、截至該次的近六個月平均、系統提示
 function visitMetrics(dev, visits, i) {
@@ -4759,7 +4754,7 @@ function addLog(e) {
   S.logs.push({id:newLogId, deviceId:dev.id, date:f.get('date'), type: od ? od.type : f.get('type'), bw, color, colorLarge,
                ...(od ? {svcItems: od.svcItems, consRepl: od.consRepl} : {}),
                engineer: txt('engineer'), serviceRecord: txt('serviceRecord'),
-               customerInstruction: txt('customerInstruction'), consumableStock: od ? '' : stockText(dev, ncs, other), consOther: other,
+               customerInstruction: txt('customerInstruction'), nextNote: txt('nextNote').slice(0, 300), consumableStock: od ? '' : stockText(dev, ncs, other), consOther: other,
                purchaseSignal: txt('purchaseSignal'), note: txt('note'),
                engConfirmed: f.get('engConfirmed') === 'on'});
   chartIdx = null; quickDev = null; remAddDev = null;
@@ -4780,7 +4775,7 @@ function delLog(id) {
   if (!curStaff()) return toast('請先登入');
   const l = S.logs.find(x => x.id === id); if (!l) return toast('找不到此服務紀錄');
   const d = devOfLog(l);
-  if (!confirmTwice(`刪除此筆服務紀錄（${l.date}）？刪除後無法復原。`)) return;
+  if (!confirmThrice(`刪除此筆服務紀錄（${l.date}）？刪除後無法復原。`, id)) return;
   logOp('刪除服務紀錄', `${d ? custName(d) + '｜' + d.model : '（設備已不存在）'}｜${l.date}`);
   S.logs = S.logs.filter(x => x.id !== id);
   if (editLogId === id) editLogId = null;
@@ -4842,7 +4837,7 @@ function staffHtml() {
     ? S.staffFields.map(fd => `<span class="tag t-info">${esc(fd.label)}</span>`).join(' ')
     : '<span class="muted">尚無自訂欄位</span>';
   return `<div class="card sec-set"><h2>人員與權限</h2>
-    <p class="note">${CLOUD_ON ? '每位人員以 Google 帳號登入，「登入信箱」必須與該 Google 帳號相同。' : '每位人員以「姓名＋密碼」登入。'}身份分四種：<b>管理者</b>（全部功能，含設定頁的備份、匯出、還原、匯入、人員與耗材目錄）；<b>工程部</b>（只看得到事務設備、商用空氣清淨機、商用臭氧機）；<b>會計部、行政人員</b>（看得到全部設備，並可進入計張計價系統）。管理者也可進入計張計價系統。停用的人員無法登入，也不會出現在服務紀錄的選單中（可隨時恢復）。<b>刪除</b>＝把這個人從名單移除並立刻收回他的登入權限，<b>無法復原</b>；他過去的服務紀錄與操作紀錄仍保留姓名，但庫存系統裡他經手的單據會顯示「—」。暫時不用的人，建議用「停用」就好。計張計價系統另外手動加入的「計價人員」不受這裡影響，要到計張計價系統處理。</p>
+    <p class="note">${CLOUD_ON ? '每位人員以 Google 帳號登入，「登入信箱」必須與該 Google 帳號相同。' : '每位人員以「姓名＋密碼」登入。'}身份分四種：<b>管理者</b>（全部功能，含設定頁的備份、匯出、還原、匯入、人員與耗材目錄）；<b>工程部</b>（只看得到事務設備、商用空氣清淨機、商用臭氧機；可以刪除這些設備，以及底下只有這些設備的客戶）；<b>會計部、行政人員</b>（看得到全部設備，並可進入計張計價系統）。管理者也可進入計張計價系統。停用的人員無法登入，也不會出現在服務紀錄的選單中（可隨時恢復）。<b>刪除</b>＝把這個人從名單移除並立刻收回他的登入權限，<b>無法復原</b>；他過去的服務紀錄與操作紀錄仍保留姓名，但庫存系統裡他經手的單據會顯示「—」。暫時不用的人，建議用「停用」就好。計張計價系統另外手動加入的「計價人員」不受這裡影響，要到計張計價系統處理。</p>
     <div style="font-weight:700;margin-top:12px">新增人員與權限</div>
     <form onsubmit="addStaff(event)" class="form-row" style="margin-top:6px">
       <div><label>姓名</label><input name="name" required></div>
@@ -4898,12 +4893,12 @@ function saveStaff(e, id) {
   if (newPw) { setPw(s, newPw); logOp('重設密碼', s.name); }
   save(); toast('已更新人員'); render();
 }
-function delStaff(id) {   // V74：真的刪除。管理者專用；不能刪自己；至少留一位在職管理者；要連按兩次確認
+function delStaff(id) {   // V74：真的刪除。管理者專用；不能刪自己；至少留一位在職管理者；要連按三次確認
   if (!guardAdmin('僅管理者可刪除人員')) return;
   const s = S.staff.find(x => x.id === id); if (!s) return toast('找不到此人員');
   if (s.id === CUR) return toast('不能刪除自己（目前登入中的帳號）');
   if (s.admin && s.active && !S.staff.some(x => x.admin && x.active && x.id !== id)) return toast('至少需保留一位在職管理者');
-  if (!confirmTwice(`刪除「${s.name}」並收回登入權限？無法復原（暫時不用請改「停用」）`)) return;
+  if (!confirmThrice(`刪除「${s.name}」並收回登入權限？無法復原（暫時不用請改「停用」）`, s.id)) return;
   const n = (S.logs || []).filter(l => l.engineer === s.name).length;
   logOp('刪除人員', `${s.name}（${roleOf(s)}${s.email ? '｜' + s.email : ''}）`);
   S.staff = S.staff.filter(x => x.id !== id);
@@ -4920,7 +4915,7 @@ function addStaffField(e) {
 function delStaffField(key) {
   if (!denyDelete()) return;
   const fd = S.staffFields.find(x => x.key === key); if (!fd) return;
-  if (!confirmTwice(`移除欄位「${fd.label}」？各人員此欄資料將一併刪除。`)) return;
+  if (!confirmThrice(`移除欄位「${fd.label}」？各人員此欄資料將一併刪除。`, key)) return;
   S.staffFields = S.staffFields.filter(x => x.key !== key);
   S.staff.forEach(s => { if (s.extra) delete s.extra[key]; });
   save(); render();
@@ -4946,11 +4941,12 @@ function customerEditHtml(c) {
 }
 // 刪除客戶按鈕：只有管理者會看到；第一次按會提示，8 秒內再按一次才會刪除
 function delCustBtnHtml(c) {
-  if (!curStaff()) return '';
+  if (!canDelData()) return '';
+  if (S.devices.some(d => d.customerId === c.id && !devVisible(d))) return '<div class="muted" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">這位客戶底下有你的身份看不到的設備，只有管理者可以刪除這位客戶。</div>';
   const n = devsOf(c.id).length;
   return `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">
     <button class="ghost" type="button" style="color:var(--danger)" onclick="delCustomer('${c.id}')">刪除此客戶資料</button>
-    <span class="muted" style="margin-left:8px">需連續按兩次確認；會一併刪除 ${n} 台設備及其服務紀錄、耗材。</span></div>`;
+    <span class="muted" style="margin-left:8px">需連續按三次確認；會一併刪除 ${n} 台設備及其服務紀錄、耗材。</span></div>`;
 }
 function customerInfoCard() {
   const c = S.customers.find(x => x.id === selCust); if (!c) return '';
@@ -5119,7 +5115,7 @@ const RESTORE_COLLS = ['customers', 'devices', 'logs', 'consumables', 'events', 
 function clearCustConsData() {
   if (!guardAdmin('僅管理者可清空客戶與耗材資料')) return;
   const c = S.customers.length, d = S.devices.length, l = S.logs.length, k = S.consumables.length;
-  if (!confirmTwice(`清空客戶 ${c} 位、設備 ${d} 台、服務紀錄 ${l} 筆、耗材 ${k} 項？人員、耗材目錄與操作紀錄會保留。請先確認已完成一鍵備份。`)) return;
+  if (!confirmThrice(`清空客戶 ${c} 位、設備 ${d} 台、服務紀錄 ${l} 筆、耗材 ${k} 項？人員、耗材目錄與操作紀錄會保留。請先確認已完成一鍵備份。`)) return;
   S.customers = []; S.devices = []; S.logs = []; S.consumables = []; S.events = [];
   selCust = null; selDev = null; chartIdx = null; quickDev = null;
   planCust = null; planDevId = null; editLogId = null; lastStockAlert = null; restorePreview = null;
@@ -5205,7 +5201,7 @@ function applyRestore() {
 
 function clearPanelHtml() {
   return `<div class="card sec-set"><h2>清空客戶與耗材資料（僅管理者）</h2>
-    <p class="note">用於重新匯入備份前清空。會清除：客戶、設備、服務紀錄、耗材與耗材更換事件。<b>保留</b>：人員、耗材目錄、操作紀錄。需按兩次確認；請先完成「一鍵備份」。</p>
+    <p class="note">用於重新匯入備份前清空。會清除：客戶、設備、服務紀錄、耗材與耗材更換事件。<b>保留</b>：人員、耗材目錄、操作紀錄。需連續按三次確認；請先完成「一鍵備份」。</p>
     <button class="ghost danger" onclick="clearCustConsData()">清空客戶與耗材資料</button></div>`;
 }
 
@@ -5582,7 +5578,7 @@ function delCatalog(id) {
   const msg = cons.length
     ? `刪除耗材目錄「${k.name}」？將一併移除 ${cons.length} 台設備的此耗材與 ${evN} 筆更換事件（服務紀錄保留）。此動作無法復原。`
     : `刪除耗材目錄「${k.name}」？此動作無法復原。`;
-  if (!confirmTwice(msg)) return;
+  if (!confirmThrice(msg, id)) return;
   logOp('刪除耗材目錄', `${k.name}${cons.length ? `（連帶移除 ${cons.length} 台設備耗材）` : ''}`);
   S.consumables = S.consumables.filter(c => !ids.has(c.id));
   S.events = S.events.filter(e => !ids.has(e.consId));
@@ -5683,7 +5679,7 @@ function markReplaced(id) {
 }
 function delCons(id) {
   if (!denyDelete()) return;
-  if (!confirmTwice('刪除此耗材設定？相關更換紀錄會保留。')) return;
+  if (!confirmThrice('刪除此耗材設定？相關更換紀錄會保留。', id)) return;
   S.consumables = S.consumables.filter(x => x.id !== id); save(); render();
 }
 

@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 設備保養系統 v80</title>
+<title>普印通 設備保養系統 v81</title>
 <style>
 :root{--yellow:#ca8a04;--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -120,6 +120,18 @@ button.chg-btn{font-size:13px;color:#64748b;border:1px dashed #cbd5e1;background
 .stopped-blk{margin-top:10px}
 button.stopped-chip{font-size:13px;padding:4px 10px}
 .stop-banner{background:#f3f4f6;border:1px solid #d1d5db;color:#374151}
+.cpk{position:relative}
+.cpk-box{display:flex;gap:6px;align-items:center}
+.cpk-box input{flex:1;min-width:0}
+.cpk-list{position:absolute;left:0;right:0;top:calc(100% + 2px);z-index:25;max-height:340px;overflow:auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.cpk-gh{position:sticky;top:0;padding:4px 10px;background:#eef2f7;color:#475569;font-size:12px;font-weight:600;border-bottom:1px solid #e2e8f0}
+.cpk-it{padding:9px 10px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.cpk-it.in{padding-left:22px}
+.cpk-it.on{background:#e0ecff}
+.cpk-it.sel .nm{font-weight:700;color:var(--brand)}
+.cpk-it .nm{font-size:15px}
+.cpk-it small{color:var(--muted);font-size:12px}
+.cpk-empty{padding:12px;color:var(--muted);font-size:13px}
 .next-note{margin-top:4px;padding:3px 8px;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;font-size:13px;white-space:pre-wrap}
 .tag-bar{border:1.5px dashed #94a3b8;border-radius:12px;padding:10px 12px;margin:10px 0;background:var(--card,#fff)}
 .tag-bar-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}
@@ -255,7 +267,7 @@ button.qr-act{font-size:17px;font-weight:600;padding:14px 10px}
 </head>
 <body>
 <header>
-  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v80</span></h1>
+  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v81</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="dash" class="active" onclick="go('dash')">儀表板</button>
     <button data-v="plan" onclick="go('plan')">保養客戶一覽</button>
@@ -3279,7 +3291,6 @@ function planMonthHtml() {
       <div class="muted print-only" style="margin-bottom:8px">列印日期：${iso(today())}　排序：逾期 → 本月應保養 → 首次保養 → 已完成，同狀態依客戶地址　共 ${total} 台，尚待保養 ${pending} 台</div>
       ${body}
     </div>
-    ${extraBlockHtml(ms)}
     <p class="note noprint">只列出這個月依保養週期應保養的設備（事務設備、除味分區）：逾期未保養排在最前面，從未保養的設備每個月都會列出（首次保養）。本月有任何服務紀錄（含抄表、送貨）會自動打勾；按「完成」欄可手動取消或手動標記，<b>只影響這張行程表</b>，上方年度表、逾期判斷與下次保養月份仍依保養紀錄。未來月份不會自動打勾。</p></div>`;
 }
 
@@ -3375,11 +3386,6 @@ function planRecHtml() {
     ${ext.length ? recTableHtml(ext, true) : '<div class="empty">這個月沒有額外到場的紀錄。</div>'}</details>`;
 }
 // 保養行程表底下：本月額外到場（不在上面的行程內，但已有服務紀錄）
-function extraBlockHtml(ms) {
-  const key = planKeyOf(ms); if (key > curMonthKey()) return '';
-  const ext = monthVisitRows(key).filter(r => r.extra); if (!ext.length) return '';
-  return `<div class="noprint" id="planExtra" style="margin-top:14px"><h3 style="margin:0 0 6px">本月額外到場 ${ext.length} 筆<span class="muted" style="font-size:13px;font-weight:400">　不在上面的行程內，但本月已有服務紀錄</span></h3>${recTableHtml(ext, true)}</div>`;
-}
 function editRec(id) {
   const l = S.logs.find(x => x.id === id); if (!l) return toast('找不到此服務紀錄');
   const d = S.devices.find(x => x.id === l.deviceId); if (!d || !devVisible(d) || !devActive(d)) return toast('找不到設備，或此設備已停用');
@@ -3639,7 +3645,7 @@ function viewPlan() {
   const year = `<details class="card" id="planYear" ${planOpen.has('year') ? 'open' : ''} ontoggle="planTog('year', this.open)">
     <summary style="cursor:pointer;font-weight:700;font-size:16px">全部客戶（${Y} 年保養一覽表）<span class="muted" style="font-size:13px;font-weight:400">　點此展開／收合</span></summary>
     ${yearNav}<div id="planGrid">${planGridHtml()}</div></details>`;
-  return planFilterHtml() + planSkipHtml() + histPanelHtml() + planCustHtml() + year + `<div id="planDue">${planDueHtml()}</div>` + `<div id="planRecWrap">${planRecHtml()}</div>` + planMonthHtml();
+  return planFilterHtml() + planSkipHtml() + `<div id="planRecWrap">${planRecHtml()}</div>` + histPanelHtml() + planCustHtml() + year + `<div id="planDue">${planDueHtml()}</div>` + planMonthHtml();
 }
 function planGridHtml() {
   const t = today(), Y = planYear || t.getFullYear(), curIdx = t.getFullYear() * 12 + t.getMonth();
@@ -4489,7 +4495,7 @@ function devListHtmlInner(slot) {
   let placed = false;
   const panelOut = () => slot ? '<div id="devPanelSlot"></div>' : devPanelHtml(pd);
   const kindFilter = devKind !== 'all';
-  const custs = visCusts().filter(c => !devCust || c.id === devCust);
+  const custs = cpkSorted(visCusts()).filter(c => !devCust || c.id === devCust);
   const sortDevs = arr => arr.slice().sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || (a.location || '').localeCompare(b.location || '', 'zh-TW'));
   const blocks = custs.map(c => {
     const all = devsOf(c.id), stopped = devsStoppedOf(c.id);
@@ -4580,7 +4586,6 @@ function devTabsHtml() {
 }
 function overviewHtml() {
   const tabs = devTabsHtml();
-  const custOpts = visCusts().map(c => `<option value="${c.id}" ${c.id === devCust ? 'selected' : ''}>${esc(c.name)}${c.contact ? '｜' + esc(c.contact) : ''}${c.address ? '｜' + esc(c.address) : ''}</option>`).join('');
   return `<div class="card"><h2>設備資料總覽</h2>
     <p class="note" style="margin-top:0">以客戶為主：先列出客戶，點客戶那一行展開該客戶的設備，可在該客戶下新增設備。保養完成後按「快速紀錄」，紀錄區會直接展開在該客戶的設備下方。</p>
     ${moveNoticeHtml()}<div id="devTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${tabs}</div>
@@ -4589,7 +4594,10 @@ function overviewHtml() {
     <div class="form-row" style="margin:0">
       <div style="grid-column:span 2"><label>搜尋設備或客戶</label>
         <input type="search" value="${esc(devQuery)}" placeholder="設備、地點、機型，或客戶名稱、聯絡人、電話、地址、標籤" oninput="filterDevices(this.value)"></div>
-      <div><label>客戶（輔助篩選）</label><select onchange="setDevCust(this.value)"><option value="">全部客戶</option>${custOpts}</select></div></div>
+      <div class="cpk"><label>客戶（輔助篩選）</label>
+        <div class="cpk-box"><input id="cpkIn" type="text" autocomplete="off" role="combobox" value="${esc(cpkNameOf())}" placeholder="打字找客戶，或點一下看清單"
+          onfocus="cpkFocus(this)" onclick="cpkShow()" oninput="cpkType(this.value)" onkeydown="cpkKey(event)" onblur="cpkBlur(this)">${devCust ? '<button class="ghost" type="button" onclick="setDevCust(\'\')">清除</button>' : ''}</div>
+        <div class="cpk-list" id="cpkList" role="listbox" hidden onmousedown="event.preventDefault()"></div></div></div>
     ${tagBarHtml()}
     <div id="devList" style="margin-top:12px;overflow-x:auto">${devListHtml()}</div>
     <details ${preDevCust ? 'open' : ''} style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">＋ 新增設備</summary>
@@ -4600,6 +4608,97 @@ function setDevKind(k) { devKind = okKindCat(k) ? k : 'all'; render(); }
 // 分類按鈕：點選篩選，再點一次同一個分類就取消（回到顯示全部）
 function toggleDevKind(k) { setDevKind(devKind === k ? 'all' : k); }
 function setDevCust(v) { devCust = v; render(); }
+/* ===== V81：客戶輔助篩選 =====
+   排序：依注音（瀏覽器不支援注音排序時退回一般中文排序）。
+   聚集：先用既有的「名稱前綴」規則（V64），再看名稱有沒有「單位 空白/橫線/斜線 部門」的寫法；同單位 2 家以上就加標題。
+   最近服務過：沒打字時，最上面列最近有服務紀錄的客戶（最多 8 家）。 */
+const ZH_COLL = (() => { try { return new Intl.Collator('zh-u-co-zhuyin'); } catch (e) { return new Intl.Collator('zh-TW'); } })();
+const cpkCmp = (a, b) => ZH_COLL.compare(String(a || ''), String(b || ''));
+const CPK_SEP = /[\s\-－—–_／\/·・｜|、，,（(]/;
+let cpkQ = '', cpkIdx = -1, cpkRows = [];
+function cpkNameOf() { const c = devCust && S.customers.find(x => x.id === devCust); return c ? c.name : ''; }
+function cpkBlocks(list) {
+  const gm = custGroupMap(), key1 = new Map(), cnt = new Map();
+  list.forEach(c => { const g = gm.get(c.id), k = g ? g.key : gNorm(c.name); key1.set(c.id, {key: k, name: g ? g.name : String(c.name || '').trim()}); cnt.set(k, (cnt.get(k) || 0) + 1); });
+  const by = new Map();
+  list.forEach(c => {
+    let g = key1.get(c.id);
+    if (cnt.get(g.key) < 2) {
+      const nm = String(c.name || '').trim(), head = nm.split(CPK_SEP)[0], hk = gNorm(head);
+      if (hk.length >= 2 && hk !== gNorm(nm)) g = {key: hk, name: head};
+    }
+    if (!by.has(g.key)) by.set(g.key, {key: g.key, name: g.name, members: []});
+    by.get(g.key).members.push(c);
+  });
+  const blocks = [...by.values()];
+  blocks.forEach(b => { b.members.sort((x, y) => cpkCmp(x.name, y.name)); b.head = b.members.length >= 2; if (!b.head) b.name = b.members[0].name; });
+  blocks.sort((x, y) => cpkCmp(x.name, y.name));
+  return blocks;
+}
+function cpkSorted(list) { return cpkBlocks(list).flatMap(b => b.members); }
+function cpkRecent(list, n) {
+  const dm = new Map(S.devices.map(d => [d.id, d.customerId])), last = new Map(), t = iso(today());
+  S.logs.forEach(l => { const cid = dm.get(l.deviceId); if (cid && l.date && l.date <= t && (!last.has(cid) || l.date > last.get(cid))) last.set(cid, l.date); });
+  return list.filter(c => last.has(c.id)).sort((a, b) => last.get(b.id).localeCompare(last.get(a.id)) || cpkCmp(a.name, b.name))
+    .slice(0, n).map(c => ({c, date: last.get(c.id)}));
+}
+function cpkModel(q) {
+  const all = visCusts(), list = all.filter(c => custMatch(c, q)), rows = [{t: 'all'}];
+  if (!q.trim()) {
+    const rc = cpkRecent(all, 8);
+    if (rc.length) { rows.push({t: 'head', text: '最近服務過'}); rc.forEach(r => rows.push({t: 'item', c: r.c, date: r.date, recent: true})); }
+    rows.push({t: 'head', text: '全部客戶（依注音排序）'});
+  } else rows.push({t: 'head', text: `符合「${q.trim()}」的客戶 ${list.length} 家`});
+  cpkBlocks(list).forEach(b => {
+    if (b.head) rows.push({t: 'head', text: `${b.name}（${b.members.length} 家）`});
+    b.members.forEach(c => rows.push({t: 'item', c, inGroup: b.head}));
+  });
+  if (!list.length) rows.push({t: 'none'});
+  return rows;
+}
+function cpkRender() {
+  const box = document.getElementById('cpkList'); if (!box) return;
+  const keep = box.scrollTop; cpkRows = cpkModel(cpkQ);
+  const frag = document.createDocumentFragment();
+  cpkRows.forEach((r, i) => {
+    const el = document.createElement('div');
+    if (r.t === 'head') { el.className = 'cpk-gh'; el.textContent = r.text; }
+    else if (r.t === 'none') { el.className = 'cpk-empty'; el.textContent = '找不到符合的客戶，換個關鍵字試試'; }
+    else {
+      el.className = 'cpk-it' + (r.inGroup ? ' in' : '') + (i === cpkIdx ? ' on' : '') + ((r.t === 'all' ? !devCust : r.c.id === devCust) ? ' sel' : '');
+      el.setAttribute('role', 'option');
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = r.t === 'all' ? '全部客戶（不篩選）' : r.c.name; el.appendChild(nm);
+      if (r.c) {
+        const sub = [r.recent ? '最近服務 ' + r.date.slice(5).replace('-', '/') : '', r.c.contact, r.c.address].filter(Boolean).join('｜');
+        if (sub) { const sm = document.createElement('small'); sm.textContent = sub; el.appendChild(sm); }
+      }
+      el.addEventListener('mousedown', ev => { ev.preventDefault(); cpkPick(i); });
+    }
+    frag.appendChild(el);
+  });
+  box.replaceChildren(frag); box.scrollTop = keep;
+  const on = box.querySelector('.cpk-it.on'); if (on) on.scrollIntoView({block: 'nearest'});
+}
+function cpkShow() { const l = document.getElementById('cpkList'); if (l && l.hidden) { l.hidden = false; cpkRender(); } }
+function cpkFocus(inp) { cpkQ = ''; cpkIdx = -1; inp.placeholder = cpkNameOf() || '打字找客戶，或點一下看清單'; inp.value = ''; const l = document.getElementById('cpkList'); if (l) { l.hidden = false; cpkRender(); } }
+function cpkBlur(inp) { const l = document.getElementById('cpkList'); if (l) l.hidden = true; inp.value = cpkNameOf(); }
+function cpkType(v) {
+  cpkQ = v; const l = document.getElementById('cpkList'); if (!l) return; l.hidden = false;
+  const rows = cpkModel(v); cpkIdx = v.trim() ? rows.findIndex(r => r.t === 'item') : -1; cpkRender(); l.scrollTop = 0;
+}
+function cpkPick(i) { const r = cpkRows[i]; if (!r || (r.t !== 'all' && r.t !== 'item')) return; setDevCust(r.t === 'all' ? '' : r.c.id); }
+function cpkKey(ev) {
+  const k = ev.key, l = document.getElementById('cpkList'); if (!l) return;
+  if (k === 'Escape') { l.hidden = true; return; }
+  if (k === 'ArrowDown' || k === 'ArrowUp') {
+    ev.preventDefault(); if (l.hidden) { cpkShow(); return; }
+    const sel = cpkRows.map((r, i) => (r.t === 'all' || r.t === 'item') ? i : -1).filter(i => i >= 0); if (!sel.length) return;
+    const at = sel.indexOf(cpkIdx);
+    cpkIdx = k === 'ArrowDown' ? sel[at < 0 ? 0 : Math.min(at + 1, sel.length - 1)] : sel[at < 0 ? sel.length - 1 : Math.max(at - 1, 0)];
+    cpkRender(); return;
+  }
+  if (k === 'Enter') { ev.preventDefault(); if (!l.hidden && cpkIdx >= 0) cpkPick(cpkIdx); }
+}
 function quickLog(id) { selDev = id; devPanel = id; chartIdx = null; quickDev = id; pendingScroll = true; render(); }
 // 最近 30 日保養紀錄（含主管簽核）
 function recentRowsHtml() {

@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 設備保養系統 v81</title>
+<title>普印通 設備保養系統 v82</title>
 <style>
 :root{--yellow:#ca8a04;--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -267,7 +267,7 @@ button.qr-act{font-size:17px;font-weight:600;padding:14px 10px}
 </head>
 <body>
 <header>
-  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v81</span></h1>
+  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v82</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="dash" class="active" onclick="go('dash')">儀表板</button>
     <button data-v="plan" onclick="go('plan')">保養客戶一覽</button>
@@ -929,6 +929,7 @@ function saveLogEdit(e, id) {
   editLogId = null; chartIdx = null; histEdit = null; remEditLog = null;
   lastStockAlert = {devId: dev.id, html: stockAlertHtml(dev)};
   logOp('修改服務紀錄', `${custName(dev)}｜${dev.model}｜${date}`);
+  if (thisRec && thisRec.id === id) { thisRec.edit = false; setTimeout(qrThisScroll, 0); }
   save(); toast('已儲存服務紀錄修改'); render();
 }
 function startLogEdit(id) { editLogId = id; planVisit = null; render(); setTimeout(() => { const el = document.getElementById('planEditBox'); if (el) el.scrollIntoView({block: 'start'}); }, 0); }
@@ -2108,6 +2109,7 @@ const QR_COL = new Intl.Collator('zh-TW');
 let qrPending = null;      // 掃 QR 進來、等著登入後開啟的設備代碼
 let qrMiss = null;         // V70：掃 QR 進來但沒能打開那台設備時，留在畫面上的說明 {id, why: 'none'|'perm'}（按「知道了」或換頁才消失）
 let qrFocus = null;        // 目前停在「掃描落地頁」的設備
+let thisRec = null;       // V82：落地頁「本次服務紀錄」{dev, id, edit}
 let qrSaved = null;        // 剛在落地頁儲存的紀錄 {dev, date}
 let qrPrinted = null;      // 剛送出列印、等著確認「有印出來」{ids}
 let qrScrollTop = false;
@@ -2185,7 +2187,7 @@ function qrOpen(id) {
   const dev = S.devices.find(d => d.id === id), c = dev ? custOf(dev) : null;
   if (!dev || !c) { qrMiss = {id, why: 'none'}; toast('找不到這台設備：可能已被刪除或換機。請到「設備資料總覽」搜尋客戶。'); render(); return false; }
   if (!devVisible(dev) || !custVisible(c)) { qrMiss = {id, why: 'perm'}; toast('您的身分沒有權限查看這台設備'); render(); return false; }
-  qrMiss = null; qrFocus = dev.id; qrSaved = null; qrPrinted = null; qrLab.open = false; qrNoteDev = lastNoteOf(dev.id) ? dev.id : null;
+  qrMiss = null; qrFocus = dev.id; qrSaved = null; thisRec = null; qrPrinted = null; qrLab.open = false; qrNoteDev = lastNoteOf(dev.id) ? dev.id : null;
   selDev = dev.id; devPanel = null; quickDev = null; editDevId = null; chartIdx = null;
   if (typeof remReset === 'function') remReset();
   view = 'manage'; qrScrollTop = true; render();
@@ -2224,10 +2226,8 @@ function qrNoteMaskHtml(dev) {
       <button class="ghost" type="button" onclick="qrMaskClose('qrNoteMask');qrLastOpen('${esc(dev.id)}')">看上次服務紀錄</button></div></div></div>`;
 }
 function qrToHist() { const el = document.getElementById('svcHist'); if (el) el.scrollIntoView({block: 'start'}); }
-function qrLastHtml(dev, k) {
-  const vs = visitsOf(dev.id), n = vs.length;
-  k = Math.max(0, Math.min(n - 1, k));
-  const v = vs[k], mm = visitMetrics(dev, vs, k), pr = isPrint(dev);
+function qrRecBlockHtml(dev, v, mm) {   // V82：一筆服務紀錄的內容（日期、張數、各欄位、照片縮圖）
+  const pr = isPrint(dev);
   const sg = x => x == null ? '—' : (x > 0 ? '+' : '') + fmt(x);
   const kv = (label, val) => `<div><div class="muted" style="font-size:12px">${label}</div><div style="font-weight:600">${val}</div></div>`;
   const tx = (label, val, hi) => String(val || '').trim() ? `<div style="margin-top:8px"><div class="muted" style="font-size:12px">${label}</div><div class="${hi ? 'next-note' : ''}" style="white-space:pre-wrap;padding:6px 8px;${hi ? '' : 'background:#f8fafc;'}border-radius:6px;margin-top:2px">${esc(val)}</div></div>` : '';
@@ -2241,17 +2241,24 @@ function qrLastHtml(dev, k) {
     ...(pr && dev.hasColor ? [kv('彩色張數', v.color != null ? fmt(v.color) : '—')] : []),
     ...(pr ? [kv('本次增量（黑白' + (dev.hasColor ? '／彩色' : '') + '）', sg(mm.bwDelta) + (dev.hasColor ? ' ／ ' + sg(mm.coDelta) : ''))] : [])
   ].join('');
+  return `    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">${grid}</div>
+    ${tx('下回保養提醒', v.nextNote, 1)}${tx('服務紀錄', v.serviceRecord)}${tx('客戶交代事宜', v.customerInstruction)}${tx('耗材庫存', v.consumableStock)}
+    ${tx('採購信號', v.purchaseSignal)}${tx('備註', v.note)}${tx('主訴（客戶反映）', v.complaint)}${tx('處置與建議', v.treatment)}
+    ${ph ? `<div style="margin-top:8px"><div class="muted" style="font-size:12px">照片（${(v.photos || []).length} 張）</div><div>${ph}</div></div>` : ''}`;
+}
+function qrLastHtml(dev, k) {
+  const vs = visitsOf(dev.id), n = vs.length;
+  k = Math.max(0, Math.min(n - 1, k));
+  const v = vs[k], mm = visitMetrics(dev, vs, k), pr = isPrint(dev);
   return `<div class="qr-mask" id="qrLastMask" onclick="if(event.target===this)qrMaskClose('qrLastMask')"><div class="qr-dlg" role="dialog" aria-modal="true">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">上次服務紀錄</h2>
       <button class="ghost" type="button" onclick="qrMaskClose('qrLastMask')">關閉</button></div>
     <div class="muted" style="font-size:13px;margin:4px 0 8px">${esc(custName(dev))}｜${esc(dev.model || '')}｜第 ${seqNo(n, k)} 筆 ／ 共 ${n} 筆（1＝日期最近）</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">${grid}</div>
-    ${tx('下回保養提醒', v.nextNote, 1)}${tx('服務紀錄', v.serviceRecord)}${tx('客戶交代事宜', v.customerInstruction)}${tx('耗材庫存', v.consumableStock)}
-    ${tx('採購信號', v.purchaseSignal)}${tx('備註', v.note)}${tx('主訴（客戶反映）', v.complaint)}${tx('處置與建議', v.treatment)}
-    ${ph ? `<div style="margin-top:8px"><div class="muted" style="font-size:12px">照片（${(v.photos || []).length} 張）</div><div>${ph}</div></div>` : ''}
+    ${qrRecBlockHtml(dev, v, mm)}
     <div class="qr-row"><button class="ghost" type="button" ${k >= n - 1 ? 'disabled' : `onclick="qrLastOpen('${esc(dev.id)}',${k + 1})"`}>← 較新一筆</button>
       <button class="ghost" type="button" ${k <= 0 ? 'disabled' : `onclick="qrLastOpen('${esc(dev.id)}',${k - 1})"`}>較舊一筆 →</button>
-      <button class="ghost" type="button" onclick="qrMaskClose('qrLastMask');goVisit(${k})">在服務歷史中打開</button></div></div></div>`;
+      <button class="ghost" type="button" onclick="qrMaskClose('qrLastMask');goVisit(${k})">在服務歷史中打開</button>
+      <button class="ghost" type="button" onclick="qrThisOpen('${esc(dev.id)}','${esc(v.id)}',true)">修改這筆</button></div></div></div>`;
 }
 function qrLastOpen(id, k) {
   const dev = S.devices.find(d => d.id === id); if (!dev) return toast('找不到這台設備');
@@ -2305,6 +2312,7 @@ async function qrCamPicked(devId, file) {
     logOp('拍照存證', `${custName(dev)}｜${dev.model || ''}｜${lg ? '掛在 ' + lg.date + ' 保養紀錄' : '先存在設備照片'}`);
     save();
     const info = document.getElementById('qrCamInfo'); if (info) info.textContent = camInfoText(dev);
+    qrThisRefresh(dev);
     toast(lg ? `已存到今天（${lg.date}）的保養紀錄` : '已存到這台設備；今天儲存保養紀錄時會自動併入');
   } finally { qrCamBusy = false; }
 }
@@ -2317,11 +2325,51 @@ function mergeCamPhotos(dev, log) {
   log.photos = (Array.isArray(log.photos) ? log.photos : []).concat(take.map(p => { const q = {...p}; delete q.cam; return q; }));
   return take.length;
 }
-function qrNew(id) { qrSaved = null; quickLog(id); }
-function qrExit() { qrMaskClose('qrLastMask'); qrMaskClose('qrNoteMask'); qrFocus = null; qrSaved = null; devPanel = null; quickDev = null; qrScrollTop = true; go('manage'); }
+function qrNew(id) { qrSaved = null; thisRec = null; quickLog(id); }
+/* ===== V82：落地頁「本次服務紀錄」：查看、修改（含歷史紀錄）、補拍照片 ===== */
+function qrTodayLogs(dev) { const day = iso(today()); return visitsOf(dev.id).filter(l => l.date === day); }
+function qrThisScroll() { const el = document.getElementById('qrThisBox'); if (el) el.scrollIntoView({block: 'start'}); }
+function qrThisOpen(devId, logId, edit) {
+  const dev = S.devices.find(d => d.id === devId); if (!dev) return toast('找不到這台設備');
+  if (!devVisible(dev)) return toast('您的身分沒有權限查看這台設備');
+  qrMaskClose('qrLastMask'); qrMaskClose('qrNoteMask');
+  const l = logId ? visitsOf(devId).find(x => x.id === logId) : qrTodayLogs(dev).pop();
+  if (!l) return toast(logId ? '找不到此服務紀錄' : '今天這台設備還沒有服務紀錄');
+  thisRec = {dev: devId, id: l.id, edit: !!edit}; render(); setTimeout(qrThisScroll, 0);
+}
+function qrThisEditOn() { if (thisRec) { thisRec.edit = true; render(); setTimeout(qrThisScroll, 0); } }
+function qrThisCancel() { if (thisRec) { thisRec.edit = false; render(); setTimeout(qrThisScroll, 0); } }
+function qrThisClose() { thisRec = null; render(); }
+function qrThisHtml(dev) {
+  if (!thisRec || thisRec.dev !== dev.id) return '';
+  const vs = visitsOf(dev.id), k = vs.findIndex(x => x.id === thisRec.id);
+  if (k < 0) { thisRec = null; return ''; }
+  const v = vs[k], mm = visitMetrics(dev, vs, k), isToday = v.date === iso(today()), vid = esc(v.id), title = isToday ? '本次服務紀錄' : '服務紀錄';
+  if (thisRec.edit) return `<div class="card" id="qrThisBox" style="border:2px solid var(--brand,#1e5fbf);margin-top:12px"><h2>修改${title}｜${esc(v.date)}</h2>
+    ${logFormHtml(dev, v, {formId: '', banner: '', onsubmit: `saveLogEdit(event,'${vid}')`,
+      buttons: '<button class="primary" type="submit">儲存修改</button><button class="ghost" type="button" onclick="qrThisCancel()">取消修改</button>'})}
+    <p class="muted" style="font-size:12px;margin:6px 0 0">要補照片：先按「儲存修改」，回到這一筆之後再拍照或上傳（修改中途上傳照片會讓還沒儲存的內容消失）。</p></div>`;
+  const tl = qrTodayLogs(dev);
+  const pick = isToday && tl.length > 1 ? `<div class="qr-row">${tl.map((x, j) => `<button class="${x.id === v.id ? 'primary' : 'ghost'}" type="button" onclick="qrThisOpen('${esc(dev.id)}','${esc(x.id)}')">今天第 ${j + 1} 筆</button>`).join('')}</div>` : '';
+  const up = CLOUD_ON ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px">從相簿補上傳照片（選檔案）</summary>
+    <form onsubmit="uploadLogPhoto(event,'${vid}')" class="form-row" style="margin:6px 0 0"><div><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" required></div>
+      <div><button class="ghost" type="submit">上傳保養照片</button></div></form></details>` : '';
+  return `<div class="card" id="qrThisBox" style="border:2px solid var(--brand,#1e5fbf);margin-top:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">${title}</h2><button class="ghost" type="button" onclick="qrThisClose()">關閉</button></div>
+    <div class="muted" style="font-size:13px;margin:4px 0 8px">${esc(custName(dev))}｜${esc(dev.model || '')}｜${esc(v.date)}（第 ${seqNo(vs.length, k)} 筆／共 ${vs.length} 筆）</div>${pick}
+    ${qrRecBlockHtml(dev, v, mm)}
+    <div class="qr-row" style="margin-top:10px"><button class="primary" type="button" id="qrThisEditBtn" onclick="qrThisEditOn()">修改這筆紀錄</button>${isToday ? `<button class="ghost" type="button" onclick="qrCamStart('${esc(dev.id)}')">📷 拍照存證</button>` : ''}</div>${up}</div>`;
+}
+function qrThisRefresh(dev) {   // 拍照存證之後只更新這張卡（不整頁重繪，避免清掉其他欄位還沒儲存的內容）
+  if (!thisRec || thisRec.dev !== dev.id || thisRec.edit) return;
+  const old = document.getElementById('qrThisBox'); if (!old) return;
+  const el = new DOMParser().parseFromString(qrThisHtml(dev), 'text/html').body.firstElementChild;
+  if (el) { old.replaceWith(document.importNode(el, true)); if (cloudReady) loadPhotoThumbs(); }
+}
+function qrExit() { qrMaskClose('qrLastMask'); qrMaskClose('qrNoteMask'); qrFocus = null; qrSaved = null; thisRec = null; devPanel = null; quickDev = null; qrScrollTop = true; go('manage'); }
 function qrToCust(cid) {
   qrMaskClose('qrLastMask'); qrMaskClose('qrNoteMask');
-  qrFocus = null; qrSaved = null; devPanel = null; quickDev = null;
+  qrFocus = null; qrSaved = null; thisRec = null; devPanel = null; quickDev = null;
   if (typeof openCustSet !== 'undefined') openCustSet.add(cid);
   qrScrollTop = true; render();
 }
@@ -2331,7 +2379,7 @@ function qrPageHtml(dev) {
   const sub = [c.contact, phones, c.address].filter(Boolean).join('　');
   const id = esc(dev.id);
   const saved = qrSaved && qrSaved.dev === dev.id ? `<div class="alert-box qr-ok" id="qrSaved">已儲存「${esc(qrSaved.date)}」的保養紀錄。${qrSaved.photos ? `已把今天拍的 ${qrSaved.photos} 張照片併進這筆紀錄。` : ''}
-      <div class="qr-row"><button class="primary" type="button" onclick="qrNew('${id}')">再新增一筆</button><button class="ghost" type="button" onclick="qrExit()">回設備資料總覽</button></div></div>` : '';
+      <div class="qr-row"><button class="primary" type="button" onclick="qrNew('${id}')">再新增一筆</button>${qrSaved.id ? `<button class="ghost" type="button" id="qrSavedView" onclick="qrThisOpen('${id}','${esc(qrSaved.id)}')">查看／修改本次紀錄</button>` : ''}<button class="ghost" type="button" onclick="qrExit()">回設備資料總覽</button></div></div>` : '';
   const head = `<div class="card qr-land" id="qrLand" data-dev="${id}">
     <span class="qr-chip">已由設備 QR 標籤開啟</span>
     <h2>${esc(c.name || '')}</h2>
@@ -2339,15 +2387,17 @@ function qrPageHtml(dev) {
     ${sub ? `<div class="muted" style="font-size:14px">${esc(sub)}</div>` : ''}
     <div class="muted" style="font-size:13px;margin-top:4px">請先核對：上面的客戶、機型、地點要和眼前這台設備一樣，再新增紀錄。</div>
     ${saved}${qrPrintedHtml()}${qrNoteBannerHtml(dev)}
-    <button class="primary qr-big" type="button" onclick="qrNew('${id}')">新增保養紀錄</button>
+    ${qrTodayLogs(dev).length ? `<button class="primary qr-big" type="button" id="qrNewBtn" onclick="qrThisOpen('${id}')">今天已有 ${qrTodayLogs(dev).length} 筆：查看／修改本次紀錄</button>
+    <div class="qr-row"><button class="ghost qr-act" type="button" id="qrNewMore" onclick="qrNew('${id}')">再新增一筆</button></div>` : `<button class="primary qr-big" type="button" id="qrNewBtn" onclick="qrNew('${id}')">新增保養紀錄</button>`}
     <div class="qr-row"><button class="ghost qr-act" id="qrCamBtn" type="button" onclick="qrCamStart('${id}')">📷 拍照存證</button>
-      <button class="ghost qr-act" id="qrLastBtn" type="button" ${visitsOf(dev.id).length ? '' : 'disabled title="這台設備還沒有服務紀錄"'} onclick="qrLastOpen('${id}')">上次服務紀錄</button></div>
+      <button class="ghost qr-act" id="qrThisBtn" type="button" ${qrTodayLogs(dev).length ? '' : 'disabled title="今天這台設備還沒有服務紀錄"'} onclick="qrThisOpen('${id}')">本次服務紀錄</button></div>
     <div class="muted" id="qrCamInfo" style="font-size:12px;margin-top:4px">${esc(camInfoText(dev))}</div>
-    <div class="qr-row"><button class="ghost" type="button" onclick="qrToHist()">全部服務歷史</button>
-      <button class="ghost" type="button" onclick="qrToCust('${esc(c.id)}')">看此客戶的其他設備</button>
+    <div class="qr-row"><button class="ghost qr-act" id="qrLastBtn" type="button" ${visitsOf(dev.id).length ? '' : 'disabled title="這台設備還沒有服務紀錄"'} onclick="qrLastOpen('${id}')">上次服務紀錄</button>
+      <button class="ghost qr-act" type="button" onclick="qrToHist()">全部服務歷史</button></div>
+    <div class="qr-row"><button class="ghost" type="button" onclick="qrToCust('${esc(c.id)}')">看此客戶的其他設備</button>
       <button class="ghost" type="button" onclick="qrExit()">回設備資料總覽</button></div></div>`;
   const noteMask = qrNoteDev === dev.id && lastNoteOf(dev.id) ? qrNoteMaskHtml(dev) : '';
-  return head + noteMask + `<div id="qrPanel" data-dev="${id}">${deviceHtml(dev)}${remindHtml(dev, true)}${serviceHtml(dev)}${consHtml(dev)}${customerInfoCard()}</div>`;
+  return head + noteMask + qrThisHtml(dev) + `<div id="qrPanel" data-dev="${id}">${deviceHtml(dev)}${remindHtml(dev, true)}${serviceHtml(dev)}${consHtml(dev)}${customerInfoCard()}</div>`;
 }
 
 /* ---- QR 產生（qrcode-generator，MIT；容錯 M） ---- */
@@ -3028,14 +3078,14 @@ function saveQrBase(e) {
 /* ================= 共用 UI ================= */
 let view = 'dash';
 function go(v) {
-  qrMiss = null; qrFocus = null; qrSaved = null; qrPrinted = null; qrLab.open = false; qrPrintDone();   // V66：換頁就離開 QR 落地頁／標籤列印，並還原列印設定
-  if (v !== view) { if (v === 'plan' && typeof planOpen !== 'undefined') { planOpen.clear(); if (typeof dueDevOpen !== 'undefined') { dueDevOpen.clear(); editDevId = null; } if (typeof remReset === 'function') remReset(); } if (v === 'manage' && typeof openCustSet !== 'undefined') { openCustSet.clear(); devPanel = null; quickDev = null; editDevId = null; if (typeof remReset === 'function') remReset(); } }
+  qrMiss = null; qrFocus = null; qrSaved = null; thisRec = null; qrPrinted = null; qrLab.open = false; qrPrintDone();   // V66：換頁就離開 QR 落地頁／標籤列印，並還原列印設定
+  if (v !== view) { if (v === 'plan' && typeof planOpen !== 'undefined') { planOpen.clear(); planCustSel = ''; if (typeof dueDevOpen !== 'undefined') { dueDevOpen.clear(); editDevId = null; } if (typeof remReset === 'function') remReset(); } if (v === 'manage' && typeof openCustSet !== 'undefined') { openCustSet.clear(); devPanel = null; quickDev = null; editDevId = null; if (typeof remReset === 'function') remReset(); } }
   view = v;
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
   render();
 }
 function render() {
-  LOGIDX = null; formDirty = false;
+  LOGIDX = null; formDirty = false; planScopeCache = null;
   if (!curStaff()) { $('#main').innerHTML = loginHtml(); $('#nav').style.display = 'none'; $('#roleBox').style.display = 'none'; return; }
   if (view === 'ops' && !isAdmin()) view = 'dash';
   const fn = {dash:viewDash, plan:viewPlan, manage:viewManage, settings:viewSettings, me:viewMe, ops:viewOps}[view] || viewDash;
@@ -3328,7 +3378,7 @@ function monthVisitRows(key) {
     const c = custById.get(d.customerId) || null;
     if (c && !custVisible(c)) return;
     if (planKind !== 'all' && catOfKind(d.kind) !== planKind) return;
-    if (c && !custMatch(c, planQ)) return;
+    if (c && !planMatch(c)) return;
     if (!inRos.has(d.id)) inRos.set(d.id, devActive(d) ? !!rosterRowOf(d, ms) : true);
     const flagged = isExtraLog(l);
     rows.push({l, d, c, flagged, extra: flagged || !inRos.get(d.id)});
@@ -3402,7 +3452,7 @@ function toggleExtra(id) {
   save(); toast(on ? '已改為額外到場：不影響下次保養月份' : '已改為算定期保養：下次保養從這次往後推算'); render();
 }
 
-let planYear = null, planQ = '', planKind = 'all';
+let planYear = null, planQ = '', planKind = 'all', planCustSel = '', planScopeCache = null;
 function setPlanYear(y) { planYear = y; render(); }
 function setPlanKind(k) { planKind = okKindCat(k) ? k : 'all'; render(); }
 // 分類按鈕：點選篩選，再點一次同一個分類就取消（回到全部客戶）
@@ -3412,8 +3462,8 @@ const planOpen = new Set();
 function planTog(key, open) { if (open) planOpen.add(key); else planOpen.delete(key); }
 // 搜尋時只更新清單，輸入框不會失去焦點
 function filterPlan(v) {
-  planQ = String(v || '').slice(0, 100);
-  [['planGrid', planGridHtml], ['planDue', planDueHtml], ['planRecWrap', planRecHtml], ['planTabs', planTabsHtml], ['planSkipWrap', planSkipCardHtml]].forEach(([id, fn]) => { const el = document.getElementById(id); if (el) el.innerHTML = fn(); });
+  planQ = String(v || '').slice(0, 100); planScopeCache = null;
+  [['planHint', planHintHtml], ['planGrid', planGridHtml], ['planDue', planDueHtml], ['planRecWrap', planRecHtml], ['planTabs', planTabsHtml], ['planSkipWrap', planSkipCardHtml]].forEach(([id, fn]) => { const el = document.getElementById(id); if (el) el.innerHTML = fn(); });
 }
 // 本月應保養（與「月保養名單」相同定義與用詞）：逾期未保養、本月應保養、首次保養、本月已保養
 function planMonthStatus() { const t = today(); return new Map(rosterRows(new Date(t.getFullYear(), t.getMonth(), 1)).map(r => [r.d.id, r])); }
@@ -3422,7 +3472,7 @@ function planRows() {
   const st = planKind === 'all' ? null : planMonthStatus();
   const rows = [];
   visCusts().forEach(c => {
-    if (!custMatch(c, planQ)) return;
+    if (!planMatch(c)) return;
     if (planKind === 'all') { rows.push({c, devs: devsOf(c.id), due: null}); return; }
     const devs = devsOf(c.id).filter(d => catOfKind(d.kind) === planKind);
     if (devs.length) rows.push({c, devs, due: devs.map(d => st.get(d.id)).filter(Boolean)});
@@ -3431,7 +3481,7 @@ function planRows() {
 }
 // V65：分類按鈕的數字＝本月應保養的「設備台數」（含已保養；跟著搜尋），與下方「本月應保養」表的台數一致
 function planDueCount(k) {
-  return [...planMonthStatus().values()].filter(r => catOfKind(r.d.kind) === k && r.c && custVisible(r.c) && custMatch(r.c, planQ)).length;
+  return [...planMonthStatus().values()].filter(r => catOfKind(r.d.kind) === k && r.c && custVisible(r.c) && planMatch(r.c)).length;
 }
 function planTabsHtml() {
   return visCats().map(c => `<button class="${planKind === c.k ? 'primary' : 'ghost'}" onclick="togglePlanKind('${c.k}')">${esc(c.label)} ${planDueCount(c.k)} 台 / 本月應保養</button>`).join('');
@@ -3439,8 +3489,10 @@ function planTabsHtml() {
 function planFilterHtml() {
   const t = today(), ym = `${t.getFullYear()} 年 ${t.getMonth() + 1} 月`;
   return `<div class="card" id="planFilter">
-    <label for="planSearch">客戶搜尋</label>
-    <input type="search" id="planSearch" value="${esc(planQ)}" placeholder="客戶名稱、聯絡人、電話、地址、標籤（可輸入多個關鍵字）" oninput="filterPlan(this.value)">
+    <div class="form-row" style="margin:0"><div style="grid-column:span 2"><label for="planSearch">客戶搜尋</label>
+      <input type="search" id="planSearch" value="${esc(planQ)}" placeholder="客戶名稱、聯絡人、電話、地址、標籤（可輸入多個關鍵字）" oninput="filterPlan(this.value)"></div>
+      ${cpkBoxHtml()}</div>
+    <div id="planHint">${planHintHtml()}</div>
     <div id="planTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${planTabsHtml()}</div>
     <p class="note" style="margin:8px 0 0">${planKind === 'all'
       ? `分類按鈕上的數字是<b>本月（${ym}）應保養的設備台數</b>（台，含已保養）。點設備分類，下方「本月應保養」與「保養行程表」只算該分類的設備；再點一次取消。`
@@ -3451,6 +3503,11 @@ const SKIP_CATS = ['office', 'purifier'];
 let planSkipOpen = false;
 function togglePlanSkip() { planSkipOpen = !planSkipOpen; render(); }
 // 本月不需保養＝本月不在保養行程內（rosterRowOf 回傳 null）：已有上次保養紀錄，而且下次應保養月份還沒到
+function skipDueIdx(d, cur) {   // 下次應保養月份（月序）；planSkipRows 與搜尋提示共用
+  const cyc = devCycle(d), sc = schedOf(d);
+  const prev = svcVisitsOf(d.id).filter(l => monIdxOf(l) < cur).pop() || null;
+  return {idx: sc ? schedNextOpen(d, cur) : (prev ? monIdxOf(prev) + cyc.m : null), sc, cyc, prev};
+}
 function planSkipRows() {
   const t = today(), ms = new Date(t.getFullYear(), t.getMonth(), 1), cur = ms.getFullYear() * 12 + ms.getMonth();
   const rows = [];
@@ -3459,10 +3516,8 @@ function planSkipRows() {
     if (!SKIP_CATS.includes(k)) return;
     if (rosterRowOf(d, ms)) return;                       // 本月要保養 → 不列入這張表
     const c = custOf(d);
-    if (!c || !custVisible(c) || !custMatch(c, planQ)) return;
-    const cyc = devCycle(d), sc = schedOf(d);
-    const prev = svcVisitsOf(d.id).filter(l => monIdxOf(l) < cur).pop() || null;
-    const dueIdx = sc ? schedNextOpen(d, cur) : (prev ? monIdxOf(prev) + cyc.m : null);
+    if (!c || !custVisible(c) || !planMatch(c)) return;
+    const {idx: dueIdx, sc, cyc, prev} = skipDueIdx(d, cur);
     rows.push({d, c, k, cycLabel: sc ? schedLabel(sc) : cyc.label, last: prev ? prev.date : null,
       dueYm: dueIdx == null ? '' : `${Math.floor(dueIdx / 12)} 年 ${dueIdx % 12 + 1} 月`,
       wait: dueIdx == null ? null : dueIdx - cur});
@@ -3533,7 +3588,7 @@ function custGroupMap() {
 }
 function dueCustRows() {
   const t = today(), ms = new Date(t.getFullYear(), t.getMonth(), 1), key = planKeyOf(ms);
-  const rows = rosterRows(ms).filter(r => r.c && custVisible(r.c) && custMatch(r.c, planQ) && (planKind === 'all' || catOfKind(r.d.kind) === planKind))
+  const rows = rosterRows(ms).filter(r => r.c && custVisible(r.c) && planMatch(r.c) && (planKind === 'all' || catOfKind(r.d.kind) === planKind))
     .map(r => ({...r, st: {done: r.status === 'done', mark: planMarkOf(r.d, key)}}));
   const byC = new Map(); rows.forEach(r => { if (!byC.has(r.c.id)) byC.set(r.c.id, []); byC.get(r.c.id).push(r); });
   const units = [...byC.values()].map(rs => {
@@ -4330,9 +4385,11 @@ const tagNamesOf = x => tagsOf(x).map(tagName).join(' ');
 function tagChipsHtml(x) {
   return tagsOf(x).map(i => `<span class="ptag" style="background:${tagHex(i)}" title="標籤${i}">${esc(tagName(i))}</span>`).join('');
 }
-function tagCheckHtml(x) {
-  return `<div style="grid-column:1/-1"><label>標籤（可複選，用來搜尋與分類；名稱與顏色請到「設備資料總覽」的標籤設定修改）</label><div class="tagck-row">${[1, 2, 3, 4, 5, 6, 7].map(i =>
-    `<label class="tgck"><input type="checkbox" name="tag" value="${i}" ${tagsOf(x).includes(i) ? 'checked' : ''}><span class="ptag" style="background:${tagHex(i)};margin:0">${esc(tagName(i))}</span></label>`
+function tagCheckHtml(x) {   // V82：只列已命名的標籤（這筆資料自己已勾的標籤也保留）；一個都沒有就整列不顯示
+  const own = tagsOf(x), cfg = configuredTags(), show = [1, 2, 3, 4, 5, 6, 7].filter(i => cfg.includes(i) || own.includes(i));
+  if (!show.length) return '';
+  return `<div style="grid-column:1/-1"><label>標籤（可複選，用來搜尋與分類；名稱與顏色請到「設備資料總覽」的標籤設定修改）</label><div class="tagck-row">${show.map(i =>
+    `<label class="tgck"><input type="checkbox" name="tag" value="${i}" ${own.includes(i) ? 'checked' : ''}><span class="ptag" style="background:${tagHex(i)};margin:0">${esc(tagName(i))}</span></label>`
   ).join('')}</div></div>`;
 }
 function readTags(f) { return f.getAll('tag').map(Number).filter(i => Number.isInteger(i) && i >= 1 && i <= 7); }
@@ -4340,7 +4397,11 @@ function setTagFilter(i) { tagFilter = tagFilter === i ? 0 : i; render(); }
 let tagEditOpen = false;   // 記住「編輯標籤」是否展開（重新繪製後保持）
 // 只列出已命名的標籤（有名稱才代表已設定）
 const configuredTags = () => [1, 2, 3, 4, 5, 6, 7].filter(i => tagCfg(i).name);
+// V82：完全沒有命名任何標籤時，不顯示標籤卡與表單的勾選列，只在「全部展開」那一排留一個「🏷 標籤設定」按鈕
+function openTagEditor() { tagEditOpen = true; render(); }
+const tagMinBtnHtml = () => configuredTags().length || tagEditOpen ? '' : '<button class="ghost" type="button" id="tagMinBtn" onclick="openTagEditor()">🏷 標籤設定</button>';
 function tagBarHtml() {
+  if (!configuredTags().length && !tagEditOpen) return '';
   const list = configuredTags();
   const chips = list.length
     ? `<div class="tag-chips">${list.map(i => `<button type="button" class="ptag-btn ${tagFilter && tagFilter !== i ? 'off' : ''}" style="background:${tagHex(i)}" onclick="setTagFilter(${i})" title="依此標籤篩選">${esc(tagName(i))}</button>`).join('')}
@@ -4362,7 +4423,7 @@ function tagSettingsHtml() {
         <input name="tn${i}" maxlength="10" value="${esc(cur.name)}" placeholder="標籤${i}（未命名）"></div>
       <div class="swatches" role="radiogroup" aria-label="標籤${i}的顏色">${swatches}</div></div>`;
   }).join('');
-  return `<details id="tagEditor" class="tag-editor" ${tagEditOpen ? 'open' : ''} ontoggle="tagEditOpen=this.open">
+  return `<details id="tagEditor" class="tag-editor" ${tagEditOpen ? 'open' : ''} ontoggle="tagEditOpen=this.open;if(!this.open&&!configuredTags().length)render()">
     <summary>標籤設定（名稱與顏色，所有人員都可修改）</summary>
     <form onsubmit="saveTagNames(event)" style="margin-top:8px">${rows}
       <div style="margin-top:10px"><button class="primary" type="submit">儲存標籤設定</button></div></form>
@@ -4376,7 +4437,7 @@ function saveTagNames(e) {
     const color = Number.isInteger(raw) && raw >= 0 && raw < TAG_PALETTE.length ? raw : tagCfg(i).color;
     return {name: String(f.get('tn' + i) || '').trim().slice(0, 10), color};
   });
-  S.ui.tags = next;
+  S.ui.tags = next; if (!configuredTags().length) tagEditOpen = false;   // V82：全部留空＝回到只剩「標籤設定」按鈕
   logOp('修改標籤設定', next.map((t, k) => `${t.name || '標籤' + (k + 1)}（${TAG_PALETTE[t.color].n}）`).join('、'));
   save(); toast('已儲存標籤設定'); render();
 }
@@ -4589,15 +4650,12 @@ function overviewHtml() {
   return `<div class="card"><h2>設備資料總覽</h2>
     <p class="note" style="margin-top:0">以客戶為主：先列出客戶，點客戶那一行展開該客戶的設備，可在該客戶下新增設備。保養完成後按「快速紀錄」，紀錄區會直接展開在該客戶的設備下方。</p>
     ${moveNoticeHtml()}<div id="devTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${tabs}</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><button class="ghost" type="button" onclick="setAllCustOpen(true)">全部展開</button><button class="ghost" type="button" onclick="setAllCustOpen(false)">全部收合</button><button class="ghost" type="button" onclick="qrLabOpen([])">設備 QR 標籤列印</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center"><button class="ghost" type="button" onclick="setAllCustOpen(true)">全部展開</button><button class="ghost" type="button" onclick="setAllCustOpen(false)">全部收合</button><button class="ghost" type="button" onclick="qrLabOpen([])">設備 QR 標籤列印</button>${tagMinBtnHtml()}
       <span class="muted" style="font-size:13px">預設只顯示客戶；點客戶那一行展開設備。設備類別要修改，請按該設備的「編輯設備」；轉移、停用、刪除設備在「編輯設備」裡的「設備異動」。已停用的設備預設收起來，點「已停用 N 台」才展開。搜尋時符合的客戶會自動展開。</span></div>
     <div class="form-row" style="margin:0">
       <div style="grid-column:span 2"><label>搜尋設備或客戶</label>
         <input type="search" value="${esc(devQuery)}" placeholder="設備、地點、機型，或客戶名稱、聯絡人、電話、地址、標籤" oninput="filterDevices(this.value)"></div>
-      <div class="cpk"><label>客戶（輔助篩選）</label>
-        <div class="cpk-box"><input id="cpkIn" type="text" autocomplete="off" role="combobox" value="${esc(cpkNameOf())}" placeholder="打字找客戶，或點一下看清單"
-          onfocus="cpkFocus(this)" onclick="cpkShow()" oninput="cpkType(this.value)" onkeydown="cpkKey(event)" onblur="cpkBlur(this)">${devCust ? '<button class="ghost" type="button" onclick="setDevCust(\'\')">清除</button>' : ''}</div>
-        <div class="cpk-list" id="cpkList" role="listbox" hidden onmousedown="event.preventDefault()"></div></div></div>
+      ${cpkBoxHtml()}</div>
     ${tagBarHtml()}
     <div id="devList" style="margin-top:12px;overflow-x:auto">${devListHtml()}</div>
     <details ${preDevCust ? 'open' : ''} style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">＋ 新增設備</summary>
@@ -4616,7 +4674,61 @@ const ZH_COLL = (() => { try { return new Intl.Collator('zh-u-co-zhuyin'); } cat
 const cpkCmp = (a, b) => ZH_COLL.compare(String(a || ''), String(b || ''));
 const CPK_SEP = /[\s\-－—–_／\/·・｜|、，,（(]/;
 let cpkQ = '', cpkIdx = -1, cpkRows = [];
-function cpkNameOf() { const c = devCust && S.customers.find(x => x.id === devCust); return c ? c.name : ''; }
+const cpkSel = () => view === 'plan' ? planCustSel : devCust;
+function cpkNameOf() { const s = cpkSel(), c = s && S.customers.find(x => x.id === s); return c ? c.name : ''; }
+const cpkPool = () => view === 'plan' ? visCusts().filter(c => planScope(planKind).has(c.id)) : visCusts();
+const cpkStatus = c => view === 'plan' ? planStatText(c.id) : '';
+function cpkChoose(id) { if (view === 'plan') setPlanCust(id); else setDevCust(id); }
+/* ===== V82：保養客戶一覽的客戶輔助篩選與搜尋範圍 =====
+   範圍＝本月應保養的客戶（含本月已保養的）；本月整家都不需保養的客戶，不在文字搜尋與選單的範圍內（打字剛好搜到時，只用一行提示告知）。
+   沒有輸入搜尋字、也沒選客戶時，所有區塊照舊（「本月不需保養」卡片照常列出）。 */
+function planScope(kind) {
+  const k = kind || 'all'; if (!planScopeCache) planScopeCache = {};
+  if (planScopeCache[k]) return planScopeCache[k];
+  const t = today(), ms = new Date(t.getFullYear(), t.getMonth(), 1), map = new Map();
+  const add = (c, d, status) => {
+    if (!c || !custVisible(c) || (k !== 'all' && catOfKind(d.kind) !== k)) return;
+    const o = map.get(c.id) || {n: {overdue: 0, due: 0, new: 0, done: 0}, total: 0};
+    o.n[status] = (o.n[status] || 0) + 1; o.total++; map.set(c.id, o);
+  };
+  const inRos = new Set();
+  rosterRows(ms).forEach(r => { inRos.add(r.d.id); add(r.c, r.d, r.status); });
+  const cur = t.getFullYear() * 12 + t.getMonth();   // 本月有任何紀錄（含勾選額外到場）、但不在行程表內的設備：客戶也算「本月保養過」
+  S.devices.forEach(d => { if (devVisible(d) && !inRos.has(d.id) && visitsOf(d.id).some(l => monIdxOf(l) === cur)) add(S.customers.find(x => x.id === d.customerId), d, 'done'); });
+  planScopeCache[k] = map; return map;
+}
+function planMatch(c) {
+  if (!planQ.trim() && !planCustSel) return true;
+  if (!planScope('all').has(c.id)) return false;
+  if (planCustSel && c.id !== planCustSel) return false;
+  return custMatch(c, planQ);
+}
+function planStatText(id) {
+  const o = planScope(planKind).get(id); if (!o) return '';
+  return [['overdue', '逾期'], ['due', '待保養'], ['new', '首次'], ['done', '已完成']].filter(([k]) => o.n[k]).map(([k, l]) => `${l} ${o.n[k]} 台`).join('・');
+}
+function setPlanCust(id) {
+  planCustSel = id || ''; planScopeCache = null;
+  if (id) { planOpen.add('c:' + id); if (!dueCustRows().some(x => x.units.some(u => u.c.id === id))) planOpen.add('rec'); }   // 這家本月沒有應保養設備（只有提早／額外的紀錄）→ 直接展開「本月已保養紀錄」
+  render();
+}
+function planHintHtml() {
+  const q = planQ.trim(); if (!q) return '';
+  const sc = planScope('all'), t = today(), cur = t.getFullYear() * 12 + t.getMonth();
+  const miss = visCusts().filter(c => !sc.has(c.id) && custMatch(c, q));
+  if (!miss.length) return '';
+  const nextOf = c => {
+    const ix = devsOf(c.id).filter(d => devVisible(d) && devActive(d)).map(d => skipDueIdx(d, cur).idx).filter(x => x != null);
+    return ix.length ? `下次應保養 ${Math.floor(Math.min(...ix) / 12)} 年 ${Math.min(...ix) % 12 + 1} 月` : '本月不需保養';
+  };
+  return `<p class="note noprint" id="planHintP" style="margin:8px 0 0">「${esc(q)}」另外符合 <b>${miss.length}</b> 家<b>本月不需保養</b>的客戶（這裡的搜尋範圍只含本月應保養的客戶）：${miss.slice(0, 5).map(c => `${esc(c.name)}（${nextOf(c)}）`).join('、')}${miss.length > 5 ? ' …' : ''}</p>`;
+}
+function cpkBoxHtml() {
+  return `<div class="cpk"><label>客戶（輔助篩選）</label>
+        <div class="cpk-box"><input id="cpkIn" type="text" autocomplete="off" role="combobox" value="${esc(cpkNameOf())}" placeholder="打字找客戶，或點一下看清單"
+          onfocus="cpkFocus(this)" onclick="cpkShow()" oninput="cpkType(this.value)" onkeydown="cpkKey(event)" onblur="cpkBlur(this)">${cpkSel() ? '<button class="ghost" type="button" onclick="cpkChoose(\'\')">清除</button>' : ''}</div>
+        <div class="cpk-list" id="cpkList" role="listbox" hidden onmousedown="event.preventDefault()"></div></div>`;
+}
 function cpkBlocks(list) {
   const gm = custGroupMap(), key1 = new Map(), cnt = new Map();
   list.forEach(c => { const g = gm.get(c.id), k = g ? g.key : gNorm(c.name); key1.set(c.id, {key: k, name: g ? g.name : String(c.name || '').trim()}); cnt.set(k, (cnt.get(k) || 0) + 1); });
@@ -4643,15 +4755,15 @@ function cpkRecent(list, n) {
     .slice(0, n).map(c => ({c, date: last.get(c.id)}));
 }
 function cpkModel(q) {
-  const all = visCusts(), list = all.filter(c => custMatch(c, q)), rows = [{t: 'all'}];
+  const all = cpkPool(), list = all.filter(c => custMatch(c, q)), rows = [{t: 'all'}];
   if (!q.trim()) {
     const rc = cpkRecent(all, 8);
-    if (rc.length) { rows.push({t: 'head', text: '最近服務過'}); rc.forEach(r => rows.push({t: 'item', c: r.c, date: r.date, recent: true})); }
+    if (rc.length) { rows.push({t: 'head', text: '最近服務過'}); rc.forEach(r => rows.push({t: 'item', c: r.c, date: r.date, recent: true, st: cpkStatus(r.c)})); }
     rows.push({t: 'head', text: '全部客戶（依注音排序）'});
   } else rows.push({t: 'head', text: `符合「${q.trim()}」的客戶 ${list.length} 家`});
   cpkBlocks(list).forEach(b => {
     if (b.head) rows.push({t: 'head', text: `${b.name}（${b.members.length} 家）`});
-    b.members.forEach(c => rows.push({t: 'item', c, inGroup: b.head}));
+    b.members.forEach(c => rows.push({t: 'item', c, inGroup: b.head, st: cpkStatus(c)}));
   });
   if (!list.length) rows.push({t: 'none'});
   return rows;
@@ -4665,11 +4777,11 @@ function cpkRender() {
     if (r.t === 'head') { el.className = 'cpk-gh'; el.textContent = r.text; }
     else if (r.t === 'none') { el.className = 'cpk-empty'; el.textContent = '找不到符合的客戶，換個關鍵字試試'; }
     else {
-      el.className = 'cpk-it' + (r.inGroup ? ' in' : '') + (i === cpkIdx ? ' on' : '') + ((r.t === 'all' ? !devCust : r.c.id === devCust) ? ' sel' : '');
+      el.className = 'cpk-it' + (r.inGroup ? ' in' : '') + (i === cpkIdx ? ' on' : '') + ((r.t === 'all' ? !cpkSel() : r.c.id === cpkSel()) ? ' sel' : '');
       el.setAttribute('role', 'option');
       const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = r.t === 'all' ? '全部客戶（不篩選）' : r.c.name; el.appendChild(nm);
       if (r.c) {
-        const sub = [r.recent ? '最近服務 ' + r.date.slice(5).replace('-', '/') : '', r.c.contact, r.c.address].filter(Boolean).join('｜');
+        const sub = [r.st, r.recent ? '最近服務 ' + r.date.slice(5).replace('-', '/') : '', r.c.contact, r.c.address].filter(Boolean).join('｜');
         if (sub) { const sm = document.createElement('small'); sm.textContent = sub; el.appendChild(sm); }
       }
       el.addEventListener('mousedown', ev => { ev.preventDefault(); cpkPick(i); });
@@ -4686,7 +4798,7 @@ function cpkType(v) {
   cpkQ = v; const l = document.getElementById('cpkList'); if (!l) return; l.hidden = false;
   const rows = cpkModel(v); cpkIdx = v.trim() ? rows.findIndex(r => r.t === 'item') : -1; cpkRender(); l.scrollTop = 0;
 }
-function cpkPick(i) { const r = cpkRows[i]; if (!r || (r.t !== 'all' && r.t !== 'item')) return; setDevCust(r.t === 'all' ? '' : r.c.id); }
+function cpkPick(i) { const r = cpkRows[i]; if (!r || (r.t !== 'all' && r.t !== 'item')) return; cpkChoose(r.t === 'all' ? '' : r.c.id); }
 function cpkKey(ev) {
   const k = ev.key, l = document.getElementById('cpkList'); if (!l) return;
   if (k === 'Escape') { l.hidden = true; return; }
@@ -4849,7 +4961,7 @@ function visitPageHtml(dev, visits, i) {
         <textarea class="taBox" name="complaint" rows="2">${esc(v.complaint || '')}</textarea></div></div>
       <div class="form-row"><div style="grid-column:1/-1"><label>處置與建議</label>
         <textarea class="taBox" name="treatment" rows="3">${esc(v.treatment || '')}</textarea></div></div>
-      <div class="act-bar"><div class="act-l"><button class="primary" type="submit">儲存主訴與處置</button></div>
+      <div class="act-bar"><div class="act-l"><button class="primary" type="submit">儲存主訴與處置</button>${qrFocus === dev.id ? `<button class="ghost" type="button" id="qrHistEditBtn" onclick="qrThisOpen('${esc(dev.id)}','${esc(v.id)}',true)">修改這筆紀錄</button>` : ''}</div>
         <div class="act-r"><span class="muted" style="font-size:12px">需連續按三次</span><button class="ghost danger" type="button" onclick="delLog('${v.id}')">刪除此次服務紀錄</button></div></div>
     </form></div>`;
 }
@@ -5500,7 +5612,7 @@ function addLog(e) {
   logOp('新增服務紀錄', `${custName(dev)}｜${dev.model}｜${od ? od.svcItems.join('、') : txt('type')}${mergedPh ? `｜併入 ${mergedPh} 張當天照片` : ''}`);
   if (txt('engineer')) S.ui.lastEngineer = txt('engineer');
   save();
-  if (qrFocus === dev.id) { qrSaved = {dev: dev.id, date: txt('date'), photos: mergedPh}; qrScrollTop = true; }   // V66
+  if (qrFocus === dev.id) { qrSaved = {dev: dev.id, date: txt('date'), photos: mergedPh, id: S.logs[S.logs.length - 1].id}; qrScrollTop = true; }   // V66
   lastStockAlert = {devId: dev.id, html: stockAlertHtml(dev)};
   if (!isP) { toast(`已記錄（${txt('date')}）。${custName(dev)}｜${dev.location || ''}`); return render(); }
   const b = avgOf(dev.id, 'bw'), c = dev.hasColor ? avgOf(dev.id, 'color') : null;

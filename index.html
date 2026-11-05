@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>if (window.top !== window.self) { document.documentElement.style.display = 'none'; }</script>
 <link rel="icon" href="data:,">
-<title>普印通 設備保養系統 v82</title>
+<title>普印通 設備保養系統 v83</title>
 <style>
 :root{--yellow:#ca8a04;--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--muted:#6b7280;--line:#e5e7eb;--brand:#1f5fbf;--warn:#b45309;--danger:#b91c1c;--ok:#15803d}
 *{box-sizing:border-box}
@@ -267,7 +267,7 @@ button.qr-act{font-size:17px;font-weight:600;padding:14px 10px}
 </head>
 <body>
 <header>
-  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v82</span></h1>
+  <h1>普印通 設備保養系統 <span style="font-weight:400;font-size:13px;opacity:.85">v83</span></h1>
   <nav id="nav" style="display:none">
     <button data-v="dash" class="active" onclick="go('dash')">儀表板</button>
     <button data-v="plan" onclick="go('plan')">保養客戶一覽</button>
@@ -698,6 +698,39 @@ function logDateError(d) {
   if (d > iso(today())) return `日期不可晚於今天（${iso(today())}）`;
   return '';
 }
+/* ===== V83：服務類型決定張數規則；儲存一次就存；需要確認時用頁面中央的對話框（一次決定，不再「按兩次」） =====
+   必填類型：定期保養、維修、換耗材、抄表（事務設備；賣斷機不必填）。其他類型可不填，填 0＝本次不記錄（存成空白，不列入計算）。 */
+const COUNT_REQ = ['定期保養', '維修', '換耗材', '抄表'];
+function countNeeded(dev, type) { return isPrint(dev) && COUNT_REQ.includes(type) && devContract(dev) !== '賣斷'; }
+function countHintText(dev, type) {
+  if (!isPrint(dev)) return '';
+  if (COUNT_REQ.includes(type)) return devContract(dev) === '賣斷' ? '這個服務類型一般要填張數；賣斷機可以不填。' : '這個服務類型必須填張數（填正確的計數器讀數，張數不能比上次少）。真的讀不到時，按儲存後可選「這次確實沒有張數，仍要儲存」。';
+  return '這個服務類型可以不填張數；如果填 0，代表本次不記錄張數，系統不會列入計算。';
+}
+function logTypeHint(sel) {   // 換服務類型時只更新說明文字（不重繪整張表單，已填的內容不會被清掉）
+  const f = sel.form; if (!f) return;
+  const dv = f.elements.deviceId, dev = dv && S.devices.find(x => x.id === dv.value), el = f.querySelector('.cntHint');
+  if (el && dev) el.textContent = countHintText(dev, sel.value);
+}
+let logDlgOk = null;
+function logDlgClose() { const el = document.getElementById('logDlgMask'); if (el) el.remove(); logDlgOk = null; }
+function logDlgGo() { const fn = logDlgOk; logDlgClose(); if (fn) fn(); }
+function logDlgOpen(title, lines, okLabel, backLabel, onOk) {
+  logDlgClose(); logDlgOk = onOk;
+  const li = lines.map(x => `<li style="margin:6px 0">${esc(x)}</li>`).join('');
+  const el = new DOMParser().parseFromString(`<div class="qr-mask" id="logDlgMask" style="z-index:40" onclick="if(event.target===this)logDlgClose()"><div class="qr-dlg" role="dialog" aria-modal="true">
+    <h2>${esc(title)}</h2><ul style="padding-left:20px;margin:8px 0 14px;font-size:16px">${li}</ul>
+    <div class="qr-row"><button class="primary qr-act" type="button" id="logDlgBack" onclick="logDlgClose()">${esc(backLabel)}</button>
+      <button class="ghost qr-act" type="button" id="logDlgOk" onclick="logDlgGo()">${esc(okLabel)}</button></div></div></div>`, 'text/html').body.firstElementChild;   // 解析在不執行的文件裡，再放進頁面
+  document.body.appendChild(document.importNode(el, true));
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') logDlgClose(); });
+// 表單裡「拍照存證」旁的說明：新增＝照片先存在設備、儲存時併入日期為今天的這筆；修改＝加到這一筆
+function logCamInfoText(dev, l) {
+  if (l) return `照片會加到這一筆紀錄（目前 ${(l.photos || []).length} 張），不會清掉已填的內容。`;
+  const day = iso(today()), n = (dev.photos || []).filter(p => p && p.cam === true && String(p.at || '').slice(0, 10) === day).length;
+  return n ? `今天已拍 ${n} 張（先存在設備，儲存這筆紀錄時自動併入）。補登過去日期的紀錄不會併入。` : '照片立即上傳，已填的內容不會被清掉；儲存這筆紀錄時自動併入（日期要是今天）。';
+}
 // V49：補登過去日期時，與「日期前後相鄰」的紀錄比對；只要張數依日期不倒退即可直接存檔
 function readingIssues(dev, date, exceptId, bw, co, lg) {
   const vs = visitsOf(dev.id).filter(x => x.id !== exceptId);
@@ -859,12 +892,13 @@ function logFormHtml(dev, l, o) {
     <input type="hidden" name="deviceId" value="${sv(dev.id)}">
     <div class="form-row">
       <div><label>日期（可選過去日期補登）</label><input type="date" name="date" min="2000-01-01" max="${iso(today())}" value="${sv(l ? l.date : iso(today()))}" onchange="logDateSync(this)" required></div>
-      ${isPrint(dev) ? `<div><label>服務類型</label><select name="type">${[...TYPES, ...(l && l.type && !TYPES.includes(l.type) ? [l.type] : [])].map(t => `<option ${(l ? l.type : TYPES[0]) === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>` : ''}
+      ${isPrint(dev) ? `<div><label>服務類型</label><select name="type" onchange="logTypeHint(this)">${[...TYPES, ...(l && l.type && !TYPES.includes(l.type) ? [l.type] : [])].map(t => `<option ${(l ? l.type : TYPES[0]) === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>` : ''}
       ${isPrint(dev) ? `<div><label>黑白張數</label><input type="number" name="bw" min="0" value="${nv('bw')}" placeholder="${!l && lr0 ? '上次 ' + fmt(lr0.bw) : '計數器黑白'}"></div>` : ''}
       ${isPrint(dev) && dev.hasColor ? `<div><label>彩色張數</label><input type="number" name="color" min="0" value="${nv('color')}" placeholder="彩色機必填"></div>` : ''}
       ${isLarge(dev) ? `<div><label>彩色大尺寸張數</label><input type="number" name="colorLarge" min="0" value="${nv('colorLarge')}" placeholder="大尺寸計數器（未用填 0）"></div>` : ''}
       <div><label>擔當工程師</label>${engineerField(l ? (l.engineer || '') : undefined)}</div>
     </div>
+    ${isPrint(dev) ? `<div class="muted cntHint" style="font-size:13px;margin:-4px 0 6px">${esc(countHintText(dev, l ? l.type : TYPES[0]))}</div>` : ''}
     ${isPrint(dev) ? '' : odorFormHtml(dev, l)}
     <div class="form-row"><div style="grid-column:1/-1"><label>${isPrint(dev) ? '服務紀錄' : '服務紀錄說明（細節）'}</label>
       <textarea class="taBox" name="serviceRecord" rows="2" placeholder="本次做了什麼、結果如何">${sv(l && l.serviceRecord)}</textarea></div></div>
@@ -888,42 +922,49 @@ function logFormHtml(dev, l, o) {
         <input type="checkbox" name="engConfirmed" style="width:18px;height:18px" ${l && l.engConfirmed ? 'checked' : ''}> 服務卡客戶已親簽：客戶已在服務卡親簽確認</label>
       <div class="muted" style="margin-top:4px">客戶在服務卡親簽後勾選；主管在「最近30日保養紀錄」看得到此確認。</div>
     </div></div>
+    ${CLOUD_ON ? `<div class="form-row"><div style="grid-column:1/-1"><button class="ghost" type="button" id="logCamBtn" style="min-height:44px;font-size:16px;padding:8px 16px" onclick="qrCamStart('${esc(dev.id)}','${l ? esc(l.id) : '+'}')">📷 拍照存證</button>
+      <span class="muted logCamInfo" data-dev="${esc(dev.id)}" data-log="${l ? esc(l.id) : ''}" style="font-size:12px;margin-left:8px">${esc(logCamInfoText(dev, l))}</span></div></div>` : ''}
     <div class="form-row"><div style="display:flex;gap:8px;flex-wrap:wrap">${o.buttons}</div></div>
   </form>`;
 }
 // 修改服務紀錄：與新增相同的檢查（黑白、彩色、大尺寸不得低於前一次讀數）
-function saveLogEdit(e, id) {
-  e.preventDefault();
+function saveLogEdit(e, id) { e.preventDefault(); saveLogEditFrom(new FormData(e.target), id, false); }
+function saveLogEditFrom(f, id, confirmed) {
   const l = S.logs.find(x => x.id === id); if (!l) return toast('找不到此服務紀錄');
   const dev = S.devices.find(x => x.id === l.deviceId); if (!dev) return toast('找不到設備');
-  const f = new FormData(e.target), txt = n => (f.get(n) || '').toString().trim();
-  const isP = isPrint(dev), date = txt('date');
+  const txt = n => (f.get(n) || '').toString().trim();
+  const isP = isPrint(dev), date = txt('date'), type = isP ? txt('type') : '';
   if (!date) return toast('請填寫日期');
   { const de = logDateError(date); if (de) return toast(de); }
   const bwRaw = f.get('bw'), coRaw = f.get('color'), lRaw = f.get('colorLarge');
-  const bw = isP && bwRaw !== null && bwRaw !== '' ? +bwRaw : null;
-  const color = isP && dev.hasColor && coRaw !== null && coRaw !== '' ? +coRaw : null;
-  const colorLarge = isLarge(dev) && lRaw !== null && lRaw !== '' ? +lRaw : null;
-  if (isP && bw == null && !confirmTwice('尚未填黑白張數。確定要儲存修改嗎？')) return;
-  if (isP && dev.hasColor && bw != null && color == null && !confirmTwice('彩色機未填彩色張數，確定要儲存修改嗎？')) return;
-  if (isLarge(dev) && color != null && colorLarge == null && !confirmTwice('已啟用彩色大尺寸張數但未填寫，本次彩色不計入平均。確定要儲存修改嗎？')) return;
+  let bw = isP && bwRaw !== null && bwRaw !== '' ? +bwRaw : null;
+  let color = isP && dev.hasColor && coRaw !== null && coRaw !== '' ? +coRaw : null;
+  let colorLarge = isLarge(dev) && lRaw !== null && lRaw !== '' ? +lRaw : null;
+  if (isP && !COUNT_REQ.includes(type) && bw === 0) { bw = null; color = null; colorLarge = null; }   // V83：其他類型填 0＝本次不記錄張數
   const coNew = colorOf(dev, {color, colorLarge});
-  const rIss = readingIssues(dev, date, l.id, bw, coNew, colorLarge);
-  if (rIss.length && !confirmTwice(`${rIss.join('；')}。張數應依日期遞增；若為換機或歸零請按確定。`)) return;
-  if (l.supSigned && !isAdmin() && !confirmTwice('此紀錄已由主管簽核，修改後簽核紀錄仍保留。確定要修改嗎？')) return;
   const od = isP ? null : readOdorForm(dev, f, l);
   if (od && !od.ok) return toast(od.msg);
   const stk = od ? {ok: true, changes: []} : applyStockInputs(dev, f);
   if (!stk.ok) return toast(stk.msg);
   const ncs = od ? {ok: true, creates: [], pending: []} : applyNewCats(dev, f, {bw, color: colorOf(dev, {color, colorLarge})});
   if (!ncs.ok) return toast(ncs.msg);
-  const other = txt('consOther').slice(0, 300);
+  const miss = [], other = [];
+  if (isP && countNeeded(dev, type) && l.bw != null) {   // V83：原本就沒有張數的舊紀錄，修改時不強制
+    if (bw == null) miss.push(`這次沒有填黑白張數。「${type}」需要記錄正確張數；真的讀不到才選「這次確實沒有張數，仍要儲存」。`);
+    else if (dev.hasColor && color == null) miss.push(`彩色機沒有填彩色張數。「${type}」需要記錄正確張數；真的讀不到才選「這次確實沒有張數，仍要儲存」。`);
+    else if (isLarge(dev) && color != null && colorLarge == null) other.push('已啟用彩色大尺寸張數但未填寫，本次彩色不計入平均。');
+  }
+  const rIss = readingIssues(dev, date, l.id, bw, coNew, colorLarge);
+  if (rIss.length) other.push(`${rIss.join('；')}。張數應依日期遞增；若為換機或歸零，請選「仍要儲存」。`);
+  if (l.supSigned && !isAdmin()) other.push('此紀錄已由主管簽核，修改後簽核紀錄仍保留。');
+  if ((miss.length || other.length) && !confirmed) return logDlgOpen('儲存前請先確認', [...miss, ...other], other.length ? '仍要儲存' : '這次確實沒有張數，仍要儲存', '回去修改', () => saveLogEditFrom(f, id, true));
+  const other2 = txt('consOther').slice(0, 300);
   commitStock(dev, stk.changes);
   commitNewCats(dev, ncs, txt('date'));
   if (od) Object.assign(l, {svcItems: od.svcItems, consRepl: od.consRepl});
   Object.assign(l, {date, type: od ? od.type : txt('type'), bw, color, colorLarge, engineer: txt('engineer'),
     serviceRecord: txt('serviceRecord'), customerInstruction: txt('customerInstruction'), nextNote: txt('nextNote').slice(0, 300),
-    consumableStock: od ? (l.consumableStock || '') : stockText(dev, ncs, other), consOther: other, purchaseSignal: txt('purchaseSignal'), note: txt('note'),
+    consumableStock: od ? (l.consumableStock || '') : stockText(dev, ncs, other2), consOther: other2, purchaseSignal: txt('purchaseSignal'), note: txt('note'),
     engConfirmed: f.get('engConfirmed') === 'on'});
   if (f.get('cnt') !== null) { if (f.get('counts') !== 'on') l.extra = true; else delete l.extra; }
   editLogId = null; chartIdx = null; histEdit = null; remEditLog = null;
@@ -2246,26 +2287,30 @@ function qrRecBlockHtml(dev, v, mm) {   // V82：一筆服務紀錄的內容（�
     ${tx('採購信號', v.purchaseSignal)}${tx('備註', v.note)}${tx('主訴（客戶反映）', v.complaint)}${tx('處置與建議', v.treatment)}
     ${ph ? `<div style="margin-top:8px"><div class="muted" style="font-size:12px">照片（${(v.photos || []).length} 張）</div><div>${ph}</div></div>` : ''}`;
 }
-function qrLastHtml(dev, k) {
-  const vs = visitsOf(dev.id), n = vs.length;
+function qrLastHtml(dev, k, ctx) {   // ctx＝'plan'：從保養客戶一覽開啟（標題「最近服務紀錄」；「修改這筆」開該筆的編輯）
+  const vs = visitsOf(dev.id), n = vs.length, plan = ctx === 'plan', cx = plan ? 'plan' : '';
   k = Math.max(0, Math.min(n - 1, k));
-  const v = vs[k], mm = visitMetrics(dev, vs, k), pr = isPrint(dev);
+  const v = vs[k], mm = visitMetrics(dev, vs, k), pr = isPrint(dev), did = esc(dev.id);
+  const editBtn = plan ? (devActive(dev) && devVisible(dev) ? `<button class="ghost" type="button" id="qrLastEdit" onclick="qrMaskClose('qrLastMask');editRec('${esc(v.id)}')">修改這筆</button>` : '')
+    : `<button class="ghost" type="button" onclick="qrThisOpen('${did}','${esc(v.id)}',true)">修改這筆</button>`;
+  const histBtn = plan ? `<button class="ghost" type="button" onclick="qrMaskClose('qrLastMask');openDevVisit('${did}',${k})">在服務歷史中打開</button>`
+    : `<button class="ghost" type="button" onclick="qrMaskClose('qrLastMask');goVisit(${k})">在服務歷史中打開</button>`;
   return `<div class="qr-mask" id="qrLastMask" onclick="if(event.target===this)qrMaskClose('qrLastMask')"><div class="qr-dlg" role="dialog" aria-modal="true">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">上次服務紀錄</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">${plan ? '最近服務紀錄' : '上次服務紀錄'}</h2>
       <button class="ghost" type="button" onclick="qrMaskClose('qrLastMask')">關閉</button></div>
     <div class="muted" style="font-size:13px;margin:4px 0 8px">${esc(custName(dev))}｜${esc(dev.model || '')}｜第 ${seqNo(n, k)} 筆 ／ 共 ${n} 筆（1＝日期最近）</div>
     ${qrRecBlockHtml(dev, v, mm)}
-    <div class="qr-row"><button class="ghost" type="button" ${k >= n - 1 ? 'disabled' : `onclick="qrLastOpen('${esc(dev.id)}',${k + 1})"`}>← 較新一筆</button>
-      <button class="ghost" type="button" ${k <= 0 ? 'disabled' : `onclick="qrLastOpen('${esc(dev.id)}',${k - 1})"`}>較舊一筆 →</button>
-      <button class="ghost" type="button" onclick="qrMaskClose('qrLastMask');goVisit(${k})">在服務歷史中打開</button>
-      <button class="ghost" type="button" onclick="qrThisOpen('${esc(dev.id)}','${esc(v.id)}',true)">修改這筆</button></div></div></div>`;
+    <div class="qr-row"><button class="ghost" type="button" ${k >= n - 1 ? 'disabled' : `onclick="qrLastOpen('${did}',${k + 1},'${cx}')"`}>← 較新一筆</button>
+      <button class="ghost" type="button" ${k <= 0 ? 'disabled' : `onclick="qrLastOpen('${did}',${k - 1},'${cx}')"`}>較舊一筆 →</button>
+      ${histBtn}
+      ${editBtn}</div></div></div>`;
 }
-function qrLastOpen(id, k) {
+function qrLastOpen(id, k, ctx) {
   const dev = S.devices.find(d => d.id === id); if (!dev) return toast('找不到這台設備');
   if (!devVisible(dev)) return toast('您的身分沒有權限查看這台設備');
   const n = visitsOf(id).length; if (!n) return toast('這台設備還沒有服務紀錄');
   qrMaskClose('qrLastMask');
-  const el = new DOMParser().parseFromString(qrLastHtml(dev, k == null ? n - 1 : +k), 'text/html').body.firstElementChild;   // 解析在不執行的文件裡，再放進頁面
+  const el = new DOMParser().parseFromString(qrLastHtml(dev, k == null ? n - 1 : +k, ctx || ''), 'text/html').body.firstElementChild;   // 解析在不執行的文件裡，再放進頁面
   document.body.appendChild(document.importNode(el, true));
   if (cloudReady) loadPhotoThumbs();
 }
@@ -2277,16 +2322,16 @@ function camInfoText(dev) {
   if (!onLog && !onDev) return '拍照後自動壓縮並存到今天的保養紀錄；今天還沒有紀錄時先存在設備，儲存紀錄時自動併入。';
   return `今天已拍 ${onLog + onDev} 張（已掛在保養紀錄 ${onLog} 張、先存在設備 ${onDev} 張，儲存保養紀錄時會自動併入）。`;
 }
-function qrCamStart(devId) {
+function qrCamStart(devId, logId) {
   if (!CLOUD_ON) return toast('拍照存證需要啟用雲端同步');
   if (!cloudReady) return toast('雲端尚未連線，暫時無法上傳照片');
   document.querySelectorAll('input.qr-cam-in').forEach(x => x.remove());
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', 'environment'); inp.className = 'qr-cam-in'; inp.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;width:1px;height:1px';   // 不用 display:none（部分手機瀏覽器不肯開相機）
-  inp.onchange = () => { const f = inp.files && inp.files[0]; inp.remove(); if (f) qrCamPicked(devId, f); };
+  inp.onchange = () => { const f = inp.files && inp.files[0]; inp.remove(); if (f) qrCamPicked(devId, f, logId); };
   document.body.appendChild(inp); inp.click();
 }
-async function qrCamPicked(devId, file) {
+async function qrCamPicked(devId, file, logId) {   // logId：'+'＝正在新增的紀錄（先存在設備，儲存時併入）；某筆紀錄編號＝加到那一筆；沒給＝加到今天最後一筆（落地頁）
   if (qrCamBusy) return toast('上一張照片還在處理中，請稍候再拍');
   const dev = S.devices.find(x => x.id === devId); if (!dev) return toast('找不到這台設備');
   if (!devVisible(dev)) return toast('您的身分沒有權限查看這台設備');
@@ -2306,14 +2351,15 @@ async function qrCamPicked(devId, file) {
     if (sh.thumb) { const r2 = await sb.storage.from('photos').upload(base + '-t.jpg', sh.thumb, {contentType: 'image/jpeg'}); if (!r2.error) tpath = base + '-t.jpg'; }
     const at = photoStampText(), by = curStaff() ? curStaff().name : '';
     const rec = {path: base + '.jpg', thumb: tpath, name: 'camera-' + at.replace(/\D/g, '') + '.jpg', at, by};
-    const todays = visitsOf(devId).filter(l => l.date === iso(today())), lg = todays.length ? todays[todays.length - 1] : null;
+    const todays = visitsOf(devId).filter(l => l.date === iso(today())), lg = logId === '+' ? null : logId ? (visitsOf(devId).find(x => x.id === logId) || null) : (todays.length ? todays[todays.length - 1] : null);
     if (lg) { lg.photos = lg.photos || []; lg.photos.push(rec); }
     else { dev.photos = dev.photos || []; dev.photos.push({...rec, cam: true}); }
     logOp('拍照存證', `${custName(dev)}｜${dev.model || ''}｜${lg ? '掛在 ' + lg.date + ' 保養紀錄' : '先存在設備照片'}`);
     save();
     const info = document.getElementById('qrCamInfo'); if (info) info.textContent = camInfoText(dev);
+    document.querySelectorAll('.logCamInfo').forEach(el => { if (el.dataset.dev === devId) el.textContent = logCamInfoText(dev, el.dataset.log ? (visitsOf(devId).find(x => x.id === el.dataset.log) || null) : null); });
     qrThisRefresh(dev);
-    toast(lg ? `已存到今天（${lg.date}）的保養紀錄` : '已存到這台設備；今天儲存保養紀錄時會自動併入');
+    toast(lg ? (logId ? `已把照片加到 ${lg.date} 的這筆紀錄` : `已存到今天（${lg.date}）的保養紀錄`) : '已存到這台設備；今天儲存保養紀錄時會自動併入');
   } finally { qrCamBusy = false; }
 }
 // 儲存保養紀錄時：把這台設備「拍照存證」先存著、且是同一天拍的照片搬進這筆紀錄（只搬資料標記，不重傳照片）
@@ -3406,6 +3452,7 @@ function recRowHtml(r, isExt) {
     : r.flagged ? '<span class="tag t-info">額外到場・不影響下次保養</span>' : '<span class="tag t-warn">算定期保養・下次保養往後推</span>';
   const hint = isExt ? extraHint(r) : '';
   const acts = (canEdit ? `<button class="ghost" type="button" onclick="editRec('${id}')">編輯</button> ` : '')
+    + (devVisible(d) ? `<button class="ghost recLastBtn" type="button" onclick="qrLastOpen('${esc(d.id)}',null,'plan')">最近服務紀錄</button> ` : '')
     + (isExt && devActive(d) ? `<button class="ghost" type="button" onclick="toggleExtra('${id}')">${r.flagged ? '改為算定期保養' : '改為額外到場（不影響下次保養）'}</button>` : '');
   return `<tr data-recid="${id}" data-devid="${esc(d.id)}" data-rflag="${r.flagged ? 1 : 0}" data-rext="${isExt ? 1 : 0}">
       <td style="white-space:nowrap">${esc(l.date)}</td>
@@ -3413,7 +3460,7 @@ function recRowHtml(r, isExt) {
       <td>${esc(KIND[d.kind] || '')} ${esc(d.model || '')}<div class="muted">${esc(d.location || '—')}</div></td>
       <td>${svcHtml(l)}</td><td style="font-size:13px">${clip(l.serviceRecord, 40)}</td><td class="num">${cnt}</td>
       <td>${stat}${hint ? `<div class="muted" style="font-size:12px;margin-top:2px">${esc(hint)}</div>` : ''}</td>
-      <td style="white-space:nowrap">${acts}</td></tr>`;
+      <td><div style="display:flex;gap:6px;flex-wrap:wrap;min-width:230px">${acts}</div></td></tr>`;
 }
 function recTableHtml(rows, isExt) {
   const shown = rows.slice(0, REC_LIM);
@@ -5537,7 +5584,7 @@ function visitMetrics(dev, visits, i) {
   }
 
   if (isPrint(dev)) {
-    if (v.bw == null) { out.alerts.push('本次未記錄張數'); if (devContract(dev) !== '賣斷') out.fix.push('本次未記錄張數'); }   // 賣斷機不需要抄表，不列提醒
+    if (v.bw == null && COUNT_REQ.includes(v.type)) { out.alerts.push('本次未記錄張數'); if (devContract(dev) !== '賣斷') out.fix.push('本次未記錄張數'); }   // V83：只有必填類型才算「沒記錄張數」   // 賣斷機不需要抄表，不列提醒
     const prevR = visits.slice(0, i).reverse().find(x => x.bw != null);
     if (v.bw != null && prevR) {
       out.bwDelta = v.bw - prevR.bw;
@@ -5572,39 +5619,44 @@ function visitMetrics(dev, visits, i) {
   return out;
 }
 
-function addLog(e) {
-  e.preventDefault();
-  const f = new FormData(e.target);
+function addLog(e) { e.preventDefault(); addLogFrom(new FormData(e.target), false); }
+function addLogFrom(f, confirmed) {
   const txt = n => (f.get(n) || '').toString().trim();
   const dev = S.devices.find(x => x.id === f.get('deviceId'));
   if (!dev) return toast('找不到設備');
   { const de = logDateError(txt('date')); if (de) return toast(de); }
-  const isP = isPrint(dev);
+  const isP = isPrint(dev), type = isP ? txt('type') : '';
   const bwRaw = f.get('bw'), coRaw = f.get('color');
-  const bw = isP && bwRaw !== null && bwRaw !== '' ? +bwRaw : null;
-  const color = isP && dev.hasColor && coRaw !== null && coRaw !== '' ? +coRaw : null;
+  let bw = isP && bwRaw !== null && bwRaw !== '' ? +bwRaw : null;
+  let color = isP && dev.hasColor && coRaw !== null && coRaw !== '' ? +coRaw : null;
   const lgRaw = f.get('colorLarge');
-  const colorLarge = isLarge(dev) && lgRaw !== null && lgRaw !== '' ? +lgRaw : null;
-  if (isP && bw == null && !confirmTwice('此為事務設備，尚未填黑白張數。確定要儲存嗎？')) return;
-  if (isP && dev.hasColor && bw != null && color == null && !confirmTwice('彩色機未填彩色張數，確定要儲存嗎？')) return;
+  let colorLarge = isLarge(dev) && lgRaw !== null && lgRaw !== '' ? +lgRaw : null;
+  let zeroed = false;
+  if (isP && !COUNT_REQ.includes(type) && bw === 0) { bw = null; color = null; colorLarge = null; zeroed = true; }   // V83：其他類型填 0＝本次不記錄張數（不列入計算）
   const coComb = colorOf(dev, {color, colorLarge});
-  const rIss = readingIssues(dev, txt('date'), null, bw, coComb, colorLarge);
-  if (rIss.length && !confirmTwice(`${rIss.join('；')}。張數應依日期遞增；若為換機或歸零請按確定。`)) return;
-  if (isLarge(dev) && color != null && colorLarge == null && !confirmTwice('已啟用彩色大尺寸張數但未填寫，本次彩色不計入平均。確定要儲存嗎？')) return;
   const od = isP ? null : readOdorForm(dev, f, null);
   if (od && !od.ok) return toast(od.msg);
   const stk = od ? {ok: true, changes: []} : applyStockInputs(dev, f);
   if (!stk.ok) return toast(stk.msg);
   const ncs = od ? {ok: true, creates: [], pending: []} : applyNewCats(dev, f, {bw, color: colorOf(dev, {color, colorLarge})});
   if (!ncs.ok) return toast(ncs.msg);
-  const other = txt('consOther').slice(0, 300);
+  const miss = [], other = [];
+  if (isP && countNeeded(dev, type)) {   // V83：必填類型沒填張數 → 對話框（真的讀不到才選「這次確實沒有張數，仍要儲存」）
+    if (bw == null) miss.push(`這次沒有填黑白張數。「${type}」需要記錄正確張數；真的讀不到才選「這次確實沒有張數，仍要儲存」。`);
+    else if (dev.hasColor && color == null) miss.push(`彩色機沒有填彩色張數。「${type}」需要記錄正確張數；真的讀不到才選「這次確實沒有張數，仍要儲存」。`);
+    else if (isLarge(dev) && color != null && colorLarge == null) other.push('已啟用彩色大尺寸張數但未填寫，本次彩色不計入平均。');
+  }
+  const rIss = readingIssues(dev, txt('date'), null, bw, coComb, colorLarge);
+  if (rIss.length) other.push(`${rIss.join('；')}。張數應依日期遞增；若為換機或歸零，請選「仍要儲存」。`);
+  if ((miss.length || other.length) && !confirmed) return logDlgOpen('儲存前請先確認', [...miss, ...other], other.length ? '仍要儲存' : '這次確實沒有張數，仍要儲存', '回去修改', () => addLogFrom(f, true));
+  const other2 = txt('consOther').slice(0, 300);
   commitStock(dev, stk.changes);
   commitNewCats(dev, ncs, txt('date'));
   const newLogId = uid(); lastSavedLogId = newLogId;
   S.logs.push({id:newLogId, deviceId:dev.id, date:f.get('date'), type: od ? od.type : f.get('type'), bw, color, colorLarge,
                ...(od ? {svcItems: od.svcItems, consRepl: od.consRepl} : {}),
                engineer: txt('engineer'), serviceRecord: txt('serviceRecord'),
-               customerInstruction: txt('customerInstruction'), nextNote: txt('nextNote').slice(0, 300), consumableStock: od ? '' : stockText(dev, ncs, other), consOther: other,
+               customerInstruction: txt('customerInstruction'), nextNote: txt('nextNote').slice(0, 300), consumableStock: od ? '' : stockText(dev, ncs, other2), consOther: other2,
                purchaseSignal: txt('purchaseSignal'), note: txt('note'),
                engConfirmed: f.get('engConfirmed') === 'on', ...(f.get('cnt') !== null && f.get('counts') !== 'on' ? {extra: true} : {})});
   const mergedPh = mergeCamPhotos(dev, S.logs[S.logs.length - 1]);   // V80
@@ -5614,12 +5666,13 @@ function addLog(e) {
   save();
   if (qrFocus === dev.id) { qrSaved = {dev: dev.id, date: txt('date'), photos: mergedPh, id: S.logs[S.logs.length - 1].id}; qrScrollTop = true; }   // V66
   lastStockAlert = {devId: dev.id, html: stockAlertHtml(dev)};
+  const zmsg = zeroed ? '　張數填 0＝本次不記錄，不列入計算。' : '';
   if (!isP) { toast(`已記錄（${txt('date')}）。${custName(dev)}｜${dev.location || ''}`); return render(); }
   const b = avgOf(dev.id, 'bw'), c = dev.hasColor ? avgOf(dev.id, 'color') : null;
   const parts = [];
   if (b.avg != null) parts.push(`黑白 ${fmt(b.avg)} 張／月`);
   if (c && c.avg != null) parts.push(`彩色 ${fmt(c.avg)} 張／月`);
-  toast(parts.length ? `已記錄（${txt('date')}）。${siteLabel(dev)}：${parts.join('，')}` : `已記錄（${txt('date')}）。${b.msg || ''}`);
+  toast((parts.length ? `已記錄（${txt('date')}）。${siteLabel(dev)}：${parts.join('，')}` : `已記錄（${txt('date')}）。${b.msg || ''}`) + zmsg);
   render();
 }
 function delLog(id) {
